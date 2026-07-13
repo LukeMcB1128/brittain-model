@@ -141,10 +141,9 @@ class Brittain(nn.Module):
             self._rope_cache[key] = build_rope_cache(T, self.cfg.n_embd // self.cfg.n_head, device)
         return self._rope_cache[key]
 
-    def num_params(self, non_embedding=False):
-        n = sum(p.numel() for p in self.parameters())
-        # tok_emb is tied to lm_head, so it's only counted once already.
-        return n
+    def num_params(self):
+        # tok_emb is tied to lm_head, so the vocab matrix is only counted once.
+        return sum(p.numel() for p in self.parameters())
 
     def forward(self, idx, targets=None):
         B, T = idx.shape
