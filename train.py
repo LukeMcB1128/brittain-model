@@ -21,31 +21,42 @@ import torch
 from model import Brittain, GPTConfig
 
 # ----------------------------- CONFIG -----------------------------
-# Size preset (see RECOMMENDATIONS.md). This is the "fast iteration" tier.
-block_size   = 1024      # context length in BPE tokens (~4000 characters)
-n_layer      = 8
-n_head       = 8
-n_embd       = 512
-dropout      = 0.1        # some regularization helps on a small dataset
+# Pick a preset. 'mac_test' = tiny local sanity run on your folder data.
+# 'cloud_124m' = the real from-scratch GPT-2-small-scale run on FineWeb.
+PRESET = os.environ.get("BRITTAIN_PRESET", "mac_test")
 
-batch_size        = 12    # sequences per micro-step; lower if you hit OOM
-grad_accum_steps  = 8     # effective batch = batch_size * grad_accum_steps
-max_iters         = 6000
-warmup_iters      = 200
-learning_rate     = 6e-4
-min_lr            = 6e-5
-weight_decay      = 0.1
-grad_clip         = 1.0
-
-eval_interval = 250
-eval_iters    = 50
-out_path      = "brittain_v2.pt"
-data_dir      = "./data"
-resume        = True      # continue from out_path if it exists
+PRESETS = {
+    # ~51M params — fast, for confirming the pipeline works on the Mac.
+    "mac_test": dict(
+        block_size=1024, n_layer=8, n_head=8, n_embd=512, dropout=0.1,
+        batch_size=12, grad_accum_steps=8,
+        max_iters=2000, warmup_iters=100, learning_rate=6e-4, min_lr=6e-5,
+        eval_interval=200, eval_iters=40, out_path="brittain_mac.pt",
+    ),
+    # ~124M params (GPT-2 small scale) — the real cloud run on real data.
+    "cloud_124m": dict(
+        block_size=1024, n_layer=12, n_head=12, n_embd=768, dropout=0.0,
+        batch_size=32, grad_accum_steps=16,   # ~500K tokens/optimizer-step
+        max_iters=20000, warmup_iters=700, learning_rate=6e-4, min_lr=6e-5,
+        eval_interval=500, eval_iters=100, out_path="brittain_124m.pt",
+    ),
+}
+cfg_run = PRESETS[PRESET]
+globals().update(cfg_run)
+weight_decay = 0.1
+grad_clip = 1.0
+data_dir = "./data"
+resume = True                       # continue from out_path if it exists
+compile_model = True                # torch.compile (big speedup on CUDA)
 # ------------------------------------------------------------------
 
-device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-print(f"--- device: {device} ---")
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+elif torch.backends.mps.is_available():
+    device = torch.device("mps")
+else:
+    device = torch.device("cpu")
+print(f"--- preset: {PRESET} | device: {device} ---")
 
 with open(os.path.join(data_dir, 'meta.pkl'), 'rb') as f:
     meta = pickle.load(f)
@@ -66,18 +77,31 @@ def get_batch(split):
 cfg = GPTConfig(vocab_size=vocab_size, block_size=block_size,
                 n_layer=n_layer, n_head=n_head, n_embd=n_embd, dropout=dropout)
 model = Brittain(cfg).to(device)
+raw_model = model               # keep an un-compiled handle for saving
 print(f"Parameters: {model.num_params():,}")
 
 optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate,
                               betas=(0.9, 0.95), weight_decay=weight_decay)
 
 start_iter = 0
+best_val = float("inf")
 if resume and os.path.exists(out_path):
     ck = torch.load(out_path, map_location=device)
-    model.load_state_dict(ck['model'])
+    raw_model.load_state_dict(ck['model'])
     optimizer.load_state_dict(ck['optim'])
     start_iter = ck['iter'] + 1
-    print(f"Resumed from {out_path} at iter {start_iter}")
+    best_val = ck.get('best_val', float("inf"))
+    print(f"Resumed from {out_path} at iter {start_iter} (best_val {best_val:.4f})")
+
+if compile_model and device.type == "cuda":
+    print("Compiling model (one-time, ~1 min)...")
+    model = torch.compile(model)   # big speedup on CUDA; no-op elsewhere
+
+
+def save_ckpt(path, it, val):
+    torch.save({'iter': it, 'model': raw_model.state_dict(),
+                'optim': optimizer.state_dict(), 'cfg': cfg.__dict__,
+                'best_val': best_val, 'val': val}, path)
 
 
 def lr_at(it):
@@ -126,8 +150,11 @@ for it in range(start_iter, max_iters + 1):
         stats = estimate_loss()
         dt = time.time() - t0
         print(f"iter {it:5d} | train {stats['train']:.4f} | val {stats['val']:.4f} "
-              f"| lr {lr_at(it):.2e} | {dt:.0f}s")
-        torch.save({'iter': it, 'model': model.state_dict(),
-                    'optim': optimizer.state_dict(), 'cfg': cfg.__dict__}, out_path)
+              f"| lr {lr_at(it):.2e} | {dt:.0f}s", flush=True)
+        # always save latest (for crash-resume); also keep the best-val copy
+        save_ckpt(out_path, it, stats['val'])
+        if stats['val'] < best_val:
+            best_val = stats['val']
+            save_ckpt(out_path.replace('.pt', '_best.pt'), it, stats['val'])
 
-print("Done. Saved to", out_path)
+print("Done. Best val:", best_val, "| latest saved to", out_path)

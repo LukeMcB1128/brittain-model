@@ -13,8 +13,14 @@ import tiktoken
 
 from model import Brittain, GPTConfig
 
-CKPT = "brittain_v2.pt"
-device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+import sys
+CKPT = sys.argv[1] if len(sys.argv) > 1 else "brittain_mac.pt"
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+elif torch.backends.mps.is_available():
+    device = torch.device("mps")
+else:
+    device = torch.device("cpu")
 
 enc = tiktoken.get_encoding("gpt2")
 ck = torch.load(CKPT, map_location=device)

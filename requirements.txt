@@ -1,3 +1,6 @@
 torch>=2.1
 numpy
 tiktoken
+# cloud-only (FineWeb prep):
+datasets
+tqdm
