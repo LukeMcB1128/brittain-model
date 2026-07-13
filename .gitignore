@@ -1,0 +1,22 @@
+# Model checkpoints (large binaries — keep out of git)
+*.pt
+*.ckpt
+*.safetensors
+
+# Tokenized dataset binaries
+data/*.bin
+
+# Logs
+*.log
+finetune_log.txt
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+.vscode/
