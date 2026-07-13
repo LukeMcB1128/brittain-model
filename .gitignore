@@ -3,8 +3,9 @@
 *.ckpt
 *.safetensors
 
-# Tokenized dataset binaries
+# Tokenized dataset binaries + downloaded corpora
 data/*.bin
+data/english.txt
 
 # Logs
 *.log

@@ -22,14 +22,14 @@ from model import Brittain, GPTConfig
 
 # ----------------------------- CONFIG -----------------------------
 # Size preset (see RECOMMENDATIONS.md). This is the "fast iteration" tier.
-block_size   = 512
+block_size   = 1024      # context length in BPE tokens (~4000 characters)
 n_layer      = 8
 n_head       = 8
 n_embd       = 512
 dropout      = 0.1        # some regularization helps on a small dataset
 
-batch_size        = 24    # sequences per micro-step; lower if you hit OOM
-grad_accum_steps  = 4     # effective batch = batch_size * grad_accum_steps
+batch_size        = 12    # sequences per micro-step; lower if you hit OOM
+grad_accum_steps  = 8     # effective batch = batch_size * grad_accum_steps
 max_iters         = 6000
 warmup_iters      = 200
 learning_rate     = 6e-4
