@@ -1,73 +1,61 @@
+"""
+Build the training dataset with BYTE-LEVEL BPE tokenization (tiktoken gpt2).
+
+Why this replaces the old char-level tokenizer:
+  * Char-level (vocab 187) makes every token a single character. A 256-token
+    context was only ~40 words, and the model burned most of its capacity
+    learning to spell. BPE packs ~4 characters per token, so the SAME context
+    length now holds ~4x more actual text, and the model sees whole words /
+    common code fragments as single units.
+
+Output: data/train.bin, data/val.bin (uint16 token ids) and data/meta.pkl.
+"""
 import os
 import pickle
-import numpy as np
 
-# --- Configuration ---
-# Point this to any folder on your Mac you want to train on
-TARGET_DIR = os.path.expanduser("~/Downloads/Coding")  # e.g., your code workspace
+import numpy as np
+import tiktoken
+
+TARGET_DIR = os.path.expanduser("~/Downloads/Coding")
 OUTPUT_DIR = "./data"
 ALLOWED_EXTENSIONS = {'.py', '.js', '.ts', '.tsx', '.java', '.swift', '.txt', '.md', '.json'}
 IGNORED_DIRS = {'node_modules', '.git', '__pycache__', 'dist', 'build', '.idea', '.vscode'}
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+enc = tiktoken.get_encoding("gpt2")
 
-print(f"Scanning {TARGET_DIR} for training data...")
-
-# 1. Gather all unique characters first to build a robust vocabulary
-all_text_chunks = []
-unique_chars = set()
-
+print(f"Scanning {TARGET_DIR} ...")
+chunks = []
 for root, dirs, files in os.walk(TARGET_DIR):
-    # Prune ignored directories in-place so os.walk skips descending into them
     dirs[:] = [d for d in dirs if d not in IGNORED_DIRS]
-    
     for file in files:
-        _, ext = os.path.splitext(file)
-        if ext.lower() in ALLOWED_EXTENSIONS:
-            file_path = os.path.join(root, file)
+        if os.path.splitext(file)[1].lower() in ALLOWED_EXTENSIONS:
             try:
-                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                with open(os.path.join(root, file), 'r', encoding='utf-8', errors='ignore') as f:
                     content = f.read()
-                    if content.strip():
-                        unique_chars.update(content)
-                        all_text_chunks.append(content)
+                if content.strip():
+                    chunks.append(content)
             except Exception:
-                # Safely bypass locked system files or unreadable formats
                 continue
 
-# Add a fallback unique token for rare anomalies if necessary
-chars = sorted(list(unique_chars))
-vocab_size = len(chars)
-print(f"Completed scan. Total files found: {len(all_text_chunks)}")
-print(f"Unique vocabulary characters discovered: {vocab_size}")
+print(f"Files collected: {len(chunks)}")
+all_text = "\n\n".join(chunks)
 
-# 2. Build mapping dictionaries
-stoi = { ch:i for i,ch in enumerate(chars) }
-itos = { i:ch for i,ch in enumerate(chars) }
+# Encode once; gpt2 BPE handles arbitrary text/code and all whitespace.
+ids = enc.encode_ordinary(all_text)
+print(f"Total tokens: {len(ids):,}  (chars: {len(all_text):,}, ~{len(all_text)/max(len(ids),1):.2f} chars/token)")
 
-# Save metadata so your main model script can decode outputs later
-meta = {'vocab_size': vocab_size, 'itos': itos, 'stoi': stoi}
-with open(os.path.join(OUTPUT_DIR, 'meta.pkl'), 'wb') as f:
-    pickle.dump(meta, f)
-
-# 3. Tokenize all text into integers and write directly to disk as uint16
-# Splitting dataset: 90% training, 10% validation
-all_text = "\n\n".join(all_text_chunks)
-n = len(all_text)
-train_text = all_text[:int(n*0.9)]
-val_text = all_text[int(n*0.9):]
-
-print("Encoding text into integer tokens...")
-train_ids = [stoi[c] for c in train_text]
-val_ids = [stoi[c] for c in val_text]
-
-print(f"Train set has {len(train_ids):,} tokens.")
-print(f"Val set has {len(val_ids):,} tokens.")
-
-# Convert to numpy arrays (uint16 supports vocab sizes up to 65,535)
-train_ids = np.array(train_ids, dtype=np.uint16)
-val_ids = np.array(val_ids, dtype=np.uint16)
-
+n = len(ids)
+train_ids = np.array(ids[:int(n * 0.9)], dtype=np.uint16)
+val_ids = np.array(ids[int(n * 0.9):], dtype=np.uint16)
 train_ids.tofile(os.path.join(OUTPUT_DIR, 'train.bin'))
 val_ids.tofile(os.path.join(OUTPUT_DIR, 'val.bin'))
-print("Successfully generated binary datasets inside ./data/ folder!")
+
+with open(os.path.join(OUTPUT_DIR, 'meta.pkl'), 'wb') as f:
+    pickle.dump({'vocab_size': enc.n_vocab, 'tokenizer': 'gpt2'}, f)
+
+print(f"Train tokens: {len(train_ids):,} | Val tokens: {len(val_ids):,}")
+print("Wrote data/train.bin, data/val.bin, data/meta.pkl")
+if len(ids) < 5_000_000:
+    print("\n[!] Only", f"{len(ids):,}", "tokens. This is very little data — the model will")
+    print("    overfit fast. See RECOMMENDATIONS.md 'Data' for how to grow the corpus.")
