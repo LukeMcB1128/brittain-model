@@ -15,6 +15,7 @@ Setup on the box:
 Writes data/train.bin, data/val.bin, data/meta.pkl.
 """
 import os
+import sys
 import argparse
 import multiprocessing as mp
 
@@ -99,3 +100,8 @@ if __name__ == "__main__":
         pickle.dump({"vocab_size": enc.n_vocab, "tokenizer": "gpt2"}, f)
     print(f"Done. val {n_val/1e6:.0f}M | train {n_train/1e9:.2f}B tokens. "
           f"Wrote data/*.bin + meta.pkl")
+    # Data is flushed & closed above. Hard-exit to skip Python finalizing the
+    # tangled HF-streaming / multiprocessing worker threads, which otherwise
+    # throws a harmless-but-alarming GIL error during shutdown.
+    sys.stdout.flush()
+    os._exit(0)
