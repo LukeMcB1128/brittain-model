@@ -48,6 +48,7 @@ grad_clip = 1.0
 data_dir = "./data"
 resume = True                       # continue from out_path if it exists
 compile_model = True                # torch.compile (big speedup on CUDA)
+log_interval = 50                   # heartbeat (loss / tok-s / ETA) every N iters
 # ------------------------------------------------------------------
 
 if torch.cuda.is_available():
@@ -94,8 +95,11 @@ if resume and os.path.exists(out_path):
     print(f"Resumed from {out_path} at iter {start_iter} (best_val {best_val:.4f})")
 
 if compile_model and device.type == "cuda":
-    print("Compiling model (one-time, ~1 min)...")
-    model = torch.compile(model)   # big speedup on CUDA; no-op elsewhere
+    try:
+        print("Compiling model (one-time, ~1 min)...")
+        model = torch.compile(model)   # big speedup on CUDA
+    except Exception as e:
+        print(f"torch.compile failed ({e}); continuing uncompiled.")
 
 
 def save_ckpt(path, it, val):
@@ -131,7 +135,9 @@ def estimate_loss():
 
 print(f"Training {start_iter} -> {max_iters} (effective batch "
       f"{batch_size * grad_accum_steps} seqs x {block_size} tokens)")
+tokens_per_iter = batch_size * grad_accum_steps * block_size
 t0 = time.time()
+t_log = t0
 for it in range(start_iter, max_iters + 1):
     for g in optimizer.param_groups:
         g['lr'] = lr_at(it)
@@ -145,6 +151,14 @@ for it in range(start_iter, max_iters + 1):
         loss.backward()
     torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
     optimizer.step()
+
+    if it % log_interval == 0 and it > start_iter:
+        now = time.time()
+        tps = tokens_per_iter * log_interval / (now - t_log)
+        eta_min = (max_iters - it) * (now - t_log) / log_interval / 60
+        print(f"iter {it:5d} | loss {loss.item() * grad_accum_steps:.3f} "
+              f"| {tps/1e3:.0f}k tok/s | ETA {eta_min:.0f} min", flush=True)
+        t_log = now
 
     if it % eval_interval == 0:
         stats = estimate_loss()
