@@ -40,7 +40,9 @@ PRESETS = {
     "cloud_124m": dict(
         block_size=1024, n_layer=12, n_head=12, n_embd=768, dropout=0.0,
         batch_size=16, grad_accum_steps=32,   # ~500K tokens/step; fits L4 24GB
-        max_iters=20000, warmup_iters=700, learning_rate=6e-4, min_lr=6e-5,
+        # 5000 iters x 524K tok ~= 2.6B tokens (Chinchilla-optimal for 124M),
+        # ~23h on an L4 @ 32k tok/s. Override via editing here if you want.
+        max_iters=5000, warmup_iters=200, learning_rate=6e-4, min_lr=6e-5,
         eval_interval=500, eval_iters=100, out_path="brittain_124m.pt",
     ),
 }
