@@ -39,20 +39,27 @@ def tokenize(doc):
     ids.append(EOT)
     return np.array(ids, dtype=np.uint16)
 
-def write_stream(path, target_tokens):
-    """Stream FineWeb-Edu, tokenize in parallel, append to one .bin until full."""
+def build(val_path, train_path, val_target, train_target):
+    """Stream FineWeb-Edu ONCE: first `val_target` tokens -> val (held out),
+    the next `train_target` tokens -> train. Disjoint, no leakage."""
     ds = load_dataset("HuggingFaceFW/fineweb-edu", name="sample-10BT",
                       split="train", streaming=True)
-    written = 0
-    with open(path, "wb") as f, mp.Pool(max(1, os.cpu_count() - 2)) as pool:
+    n_val = n_train = 0
+    fval = open(val_path, "wb")
+    ftrain = open(train_path, "wb")
+    with mp.Pool(max(1, os.cpu_count() - 2)) as pool:
         for arr in pool.imap(tokenize, ds, chunksize=16):
-            f.write(arr.tobytes())
-            written += len(arr)
-            if written % 5_000_000 < len(arr):
-                print(f"  {path}: {written/1e6:.1f}M tokens", flush=True)
-            if written >= target_tokens:
+            if n_val < val_target:
+                fval.write(arr.tobytes()); n_val += len(arr)
+            elif n_train < train_target:
+                ftrain.write(arr.tobytes()); n_train += len(arr)
+                if n_train % 20_000_000 < len(arr):
+                    print(f"  train: {n_train/1e6:.0f}M / {train_target/1e6:.0f}M tokens",
+                          flush=True)
+            else:
                 break
-    return written
+    fval.close(); ftrain.close()
+    return n_val, n_train
 
 def append_code(path):
     """Optionally fold your code folder in (tokenized, appended)."""
@@ -82,12 +89,13 @@ def append_code(path):
     return written
 
 if __name__ == "__main__":
-    print(f"Building val ({args.val_tokens/1e6:.0f}M tokens)...")
-    write_stream(os.path.join(OUT, "val.bin"), args.val_tokens)
-    print(f"Building train ({args.tokens/1e9:.1f}B tokens)...")
-    n = write_stream(os.path.join(OUT, "train.bin"), args.tokens)
-    n += append_code(os.path.join(OUT, "train.bin"))
+    print(f"Streaming FineWeb-Edu: {args.val_tokens/1e6:.0f}M val + "
+          f"{args.tokens/1e9:.2f}B train ...")
+    n_val, n_train = build(os.path.join(OUT, "val.bin"), os.path.join(OUT, "train.bin"),
+                           args.val_tokens, args.tokens)
+    n_train += append_code(os.path.join(OUT, "train.bin"))
     import pickle
     with open(os.path.join(OUT, "meta.pkl"), "wb") as f:
         pickle.dump({"vocab_size": enc.n_vocab, "tokenizer": "gpt2"}, f)
-    print(f"Done. train ~= {n/1e9:.2f}B tokens. Wrote data/*.bin + meta.pkl")
+    print(f"Done. val {n_val/1e6:.0f}M | train {n_train/1e9:.2f}B tokens. "
+          f"Wrote data/*.bin + meta.pkl")
