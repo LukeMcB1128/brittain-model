@@ -15,6 +15,9 @@ import time
 import math
 import pickle
 
+# reduce CUDA fragmentation OOMs (must be set before torch initializes CUDA)
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
 import numpy as np
 import torch
 
@@ -36,7 +39,7 @@ PRESETS = {
     # ~124M params (GPT-2 small scale) — the real cloud run on real data.
     "cloud_124m": dict(
         block_size=1024, n_layer=12, n_head=12, n_embd=768, dropout=0.0,
-        batch_size=32, grad_accum_steps=16,   # ~500K tokens/optimizer-step
+        batch_size=16, grad_accum_steps=32,   # ~500K tokens/step; fits L4 24GB
         max_iters=20000, warmup_iters=700, learning_rate=6e-4, min_lr=6e-5,
         eval_interval=500, eval_iters=100, out_path="brittain_124m.pt",
     ),
