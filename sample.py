@@ -7,6 +7,7 @@ No context migration hacks needed — RoPE means the model just works at its
 trained context length (and degrades gracefully a bit beyond it).
 """
 import pickle
+import codecs
 
 import torch
 import tiktoken
@@ -38,7 +39,8 @@ while True:
             continue
         ids = torch.tensor([enc.encode_ordinary(prompt)], dtype=torch.long, device=device)
         print(prompt, end="", flush=True)
-        generated, shown = [], 0
+        # incremental UTF-8 decoder buffers multi-byte chars across tokens (no ��)
+        utf8 = codecs.getincrementaldecoder("utf-8")("replace")
         with torch.no_grad(), torch.autocast(device_type=device.type, dtype=torch.bfloat16):
             for _ in range(400):
                 ids = model.generate(ids, max_new_tokens=1, temperature=0.9,
@@ -46,10 +48,7 @@ while True:
                 nxt = ids[0, -1].item()
                 if nxt == enc.eot_token:          # stop at document boundary
                     break
-                generated.append(nxt)
-                text = enc.decode(generated)      # decode whole list => byte-safe (no ��)
-                print(text[shown:], end="", flush=True)
-                shown = len(text)
+                print(utf8.decode(enc.decode_single_token_bytes(nxt)), end="", flush=True)
         print("\n" + "-" * 40)
     except KeyboardInterrupt:
         print("\nbye")
