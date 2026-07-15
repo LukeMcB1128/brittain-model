@@ -14,7 +14,7 @@ import tiktoken
 from model import Brittain, GPTConfig
 
 import sys
-CKPT = sys.argv[1] if len(sys.argv) > 1 else "brittain_mac.pt"
+CKPT = sys.argv[1] if len(sys.argv) > 1 else "brittain_124m_best.pt"
 if torch.cuda.is_available():
     device = torch.device("cuda")
 elif torch.backends.mps.is_available():
@@ -38,12 +38,18 @@ while True:
             continue
         ids = torch.tensor([enc.encode_ordinary(prompt)], dtype=torch.long, device=device)
         print(prompt, end="", flush=True)
+        generated, shown = [], 0
         with torch.no_grad(), torch.autocast(device_type=device.type, dtype=torch.bfloat16):
             for _ in range(400):
-                out = model.generate(ids, max_new_tokens=1, temperature=0.8, top_k=200)
-                nxt = out[0, -1].item()
-                ids = out
-                print(enc.decode([nxt]), end="", flush=True)
+                ids = model.generate(ids, max_new_tokens=1, temperature=0.9,
+                                     top_p=0.9, repetition_penalty=1.3)
+                nxt = ids[0, -1].item()
+                if nxt == enc.eot_token:          # stop at document boundary
+                    break
+                generated.append(nxt)
+                text = enc.decode(generated)      # decode whole list => byte-safe (no ��)
+                print(text[shown:], end="", flush=True)
+                shown = len(text)
         print("\n" + "-" * 40)
     except KeyboardInterrupt:
         print("\nbye")

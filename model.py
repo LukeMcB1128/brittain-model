@@ -160,14 +160,31 @@ class Brittain(nn.Module):
         return logits, loss
 
     @torch.no_grad()
-    def generate(self, idx, max_new_tokens, temperature=0.8, top_k=None):
+    def generate(self, idx, max_new_tokens, temperature=0.8, top_k=None,
+                 top_p=None, repetition_penalty=1.0):
         for _ in range(max_new_tokens):
             idx_cond = idx[:, -self.cfg.block_size:]
             logits, _ = self(idx_cond)
-            logits = logits[:, -1, :] / max(temperature, 1e-5)
+            logits = logits[:, -1, :]
+            # repetition penalty: down-weight tokens already generated (kills loops)
+            if repetition_penalty != 1.0:
+                for b in range(idx.size(0)):
+                    prev = torch.unique(idx[b])
+                    s = logits[b, prev]
+                    logits[b, prev] = torch.where(s < 0, s * repetition_penalty,
+                                                  s / repetition_penalty)
+            logits = logits / max(temperature, 1e-5)
             if top_k is not None:
                 v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
                 logits[logits < v[:, [-1]]] = -float("inf")
+            if top_p is not None:                       # nucleus sampling
+                sl, si = torch.sort(logits, descending=True)
+                cum = torch.cumsum(F.softmax(sl, dim=-1), dim=-1)
+                remove = cum > top_p
+                remove[..., 1:] = remove[..., :-1].clone()
+                remove[..., 0] = False
+                for b in range(logits.size(0)):
+                    logits[b, si[b, remove[b]]] = -float("inf")
             probs = F.softmax(logits, dim=-1)
             idx_next = torch.multinomial(probs, num_samples=1)
             idx = torch.cat((idx, idx_next), dim=1)
