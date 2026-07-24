@@ -11,8 +11,10 @@ learns single tokens for "\\n    ", "\\n        ", "def ", "function", "=>",
 Smaller vocab (32k vs 50257) also frees ~14M params from the embedding table
 to spend on actual transformer layers.
 
-NOTE: we use a bare ByteLevel pre-tokenizer (no splitting regex) so BPE is free
-to merge whitespace runs into single tokens. That's the whole trick for code.
+NOTE: ByteLevel's default regex already groups a RUN of whitespace into one
+piece. GPT-2 is bad at code not because of that regex but because its learned
+MERGES came from prose, where long indentation runs are rare. Retraining the
+merges on code is what turns "\n        " into a single token.
 
 Prereq (gated dataset):
     hf auth login
@@ -28,10 +30,10 @@ from tokenizers import Tokenizer, models, trainers, pre_tokenizers, decoders
 
 p = argparse.ArgumentParser()
 p.add_argument("--vocab_size", type=int, default=32000)
-p.add_argument("--sample_docs", type=int, default=200_000,
+p.add_argument("--sample_docs", type=int, default=45_000,
                help="how many code files to train the tokenizer on (it does NOT "
                     "need the whole corpus — a few hundred MB is plenty)")
-p.add_argument("--english_docs", type=int, default=20_000,
+p.add_argument("--english_docs", type=int, default=5_000,
                help="some English so prose/comments tokenize sanely too")
 p.add_argument("--dataset", type=str, default="bigcode/the-stack-dedup")
 p.add_argument("--out", type=str, default="data/code_bpe.json")
@@ -42,6 +44,7 @@ args = p.parse_args()
 os.makedirs("data", exist_ok=True)
 LANGS = [l.strip() for l in args.langs.split(",")]
 EOT = "<|endoftext|>"
+MAX_DOC_CHARS = 50_000   # cap giant/minified files; they blow up trainer memory
 
 
 def code_iter():
@@ -54,7 +57,7 @@ def code_iter():
         for ex in ds:
             text = ex.get("content") or ex.get("text") or ""
             if text.strip():
-                yield text
+                yield text[:MAX_DOC_CHARS]
                 n += 1
             if n >= per_lang:
                 break
@@ -67,7 +70,7 @@ def english_iter():
     n = 0
     for ex in ds:
         if ex["text"].strip():
-            yield ex["text"]
+            yield ex["text"][:MAX_DOC_CHARS]
             n += 1
         if n >= args.english_docs:
             break
@@ -81,7 +84,7 @@ def corpus():
 
 tok = Tokenizer(models.BPE())
 # Bare ByteLevel: no regex splitting, so runs of indentation CAN merge.
-tok.pre_tokenizer = pre_tokenizers.ByteLevel(add_prefix_space=False)
+tok.pre_tokenizer = pre_tokenizers.ByteLevel(add_prefix_space=False, use_regex=True)
 tok.decoder = decoders.ByteLevel()
 
 trainer = trainers.BpeTrainer(
