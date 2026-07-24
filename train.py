@@ -45,6 +45,17 @@ PRESETS = {
         max_iters=5000, warmup_iters=200, learning_rate=6e-4, min_lr=6e-5,
         eval_interval=500, eval_iters=100, out_path="brittain_124m.pt",
     ),
+    # ~235M params (BRITTAIN-2-coder). 32k code vocab frees ~14M params from the
+    # embedding vs gpt2's 50257, spent on layers instead.
+    # 28000 iters x 524K tok ~= 14.7B tokens (~3x Chinchilla — deliberate, we want
+    # the smallest model that's actually good). ~9 days on an L4 @ ~19k tok/s.
+    # eval_interval is small so a 9-day run checkpoints every ~1.5h.
+    "cloud_235m": dict(
+        block_size=1024, n_layer=16, n_head=16, n_embd=1024, dropout=0.0,
+        batch_size=16, grad_accum_steps=32,
+        max_iters=28000, warmup_iters=500, learning_rate=6e-4, min_lr=6e-5,
+        eval_interval=200, eval_iters=50, out_path="brittain_235m.pt",
+    ),
 }
 cfg_run = PRESETS[PRESET]
 globals().update(cfg_run)
@@ -110,6 +121,7 @@ if compile_model and device.type == "cuda":
 def save_ckpt(path, it, val):
     torch.save({'iter': it, 'model': raw_model.state_dict(),
                 'optim': optimizer.state_dict(), 'cfg': cfg.__dict__,
+                'tokenizer': meta.get('tokenizer', 'gpt2'),   # so inference picks the right one
                 'best_val': best_val, 'val': val}, path)
 
 

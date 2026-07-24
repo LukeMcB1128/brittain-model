@@ -10,9 +10,9 @@ import pickle
 import codecs
 
 import torch
-import tiktoken
 
 from model import Brittain, GPTConfig
+from tok_util import load_tokenizer
 
 import sys
 CKPT = sys.argv[1] if len(sys.argv) > 1 else "brittain_124m_best.pt"
@@ -23,12 +23,12 @@ elif torch.backends.mps.is_available():
 else:
     device = torch.device("cpu")
 
-enc = tiktoken.get_encoding("gpt2")
 ck = torch.load(CKPT, map_location=device)
 cfg = GPTConfig(**ck['cfg'])
 model = Brittain(cfg).to(device)
 model.load_state_dict(ck['model'])
 model.eval()
+enc = load_tokenizer(ck)   # gpt2 for v1 ckpts, code BPE for v2
 print(f"Loaded {CKPT} ({model.num_params():,} params) at iter {ck.get('iter', '?')}")
 print("-" * 60)
 
@@ -37,7 +37,7 @@ while True:
         prompt = input("\nPrompt: ")
         if not prompt:
             continue
-        ids = torch.tensor([enc.encode_ordinary(prompt)], dtype=torch.long, device=device)
+        ids = torch.tensor([enc.encode(prompt)], dtype=torch.long, device=device)
         print(prompt, end="", flush=True)
         # incremental UTF-8 decoder buffers multi-byte chars across tokens (no ��)
         utf8 = codecs.getincrementaldecoder("utf-8")("replace")
@@ -46,9 +46,9 @@ while True:
                 ids = model.generate(ids, max_new_tokens=1, temperature=0.9,
                                      top_p=0.9, repetition_penalty=1.3)
                 nxt = ids[0, -1].item()
-                if nxt == enc.eot_token:          # stop at document boundary
+                if nxt == enc.eot:          # stop at document boundary
                     break
-                print(utf8.decode(enc.decode_single_token_bytes(nxt)), end="", flush=True)
+                print(utf8.decode(enc.token_bytes(nxt)), end="", flush=True)
         print("\n" + "-" * 40)
     except KeyboardInterrupt:
         print("\nbye")
