@@ -15,7 +15,7 @@ NOTE: we use a bare ByteLevel pre-tokenizer (no splitting regex) so BPE is free
 to merge whitespace runs into single tokens. That's the whole trick for code.
 
 Prereq (gated dataset):
-    huggingface-cli login
+    hf auth login
 Run:
     python3 train_tokenizer.py                  # ~10-20 min on a few hundred MB
 Writes data/code_bpe.json
@@ -35,10 +35,12 @@ p.add_argument("--english_docs", type=int, default=20_000,
                help="some English so prose/comments tokenize sanely too")
 p.add_argument("--dataset", type=str, default="bigcode/the-stack-dedup")
 p.add_argument("--out", type=str, default="data/code_bpe.json")
+p.add_argument("--langs", type=str, default="python,javascript,typescript",
+               help="The Stack data_dir names; try Python,JavaScript,TypeScript if 404")
 args = p.parse_args()
 
 os.makedirs("data", exist_ok=True)
-LANGS = ["Python", "JavaScript", "TypeScript"]
+LANGS = [l.strip() for l in args.langs.split(",")]
 EOT = "<|endoftext|>"
 
 

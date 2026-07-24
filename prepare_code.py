@@ -14,7 +14,7 @@ Tokenization uses tokenizers' encode_batch, which is parallel in Rust — no
 multiprocessing, so none of the GIL-at-shutdown mess from prepare_fineweb.
 
 Prereqs:
-    huggingface-cli login          # The Stack is a gated dataset
+    hf auth login          # The Stack is a gated dataset
     python3 train_tokenizer.py     # writes data/code_bpe.json
 Run:
     python3 prepare_code.py --tokens 2e8     # small TEST corpus first!
@@ -35,11 +35,13 @@ p.add_argument("--val_tokens", type=float, default=1e7)
 p.add_argument("--english_frac", type=float, default=0.15)
 p.add_argument("--dataset", type=str, default="bigcode/the-stack-dedup")
 p.add_argument("--tokenizer", type=str, default="data/code_bpe.json")
+p.add_argument("--langs", type=str, default="python,javascript,typescript",
+               help="The Stack data_dir names; try Python,JavaScript,TypeScript if 404")
 args = p.parse_args()
 
 OUT = "./data"
 os.makedirs(OUT, exist_ok=True)
-LANGS = ["Python", "JavaScript", "TypeScript"]
+LANGS = [l.strip() for l in args.langs.split(",")]
 BATCH = 512                     # docs per encode_batch call
 
 tok = Tokenizer.from_file(args.tokenizer)

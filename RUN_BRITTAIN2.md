@@ -48,7 +48,8 @@ df -h /                                  # need ~60GB free (corpus is ~30GB)
 **HuggingFace login** (The Stack is a *gated* dataset — one-time):
 1. Accept the terms at https://huggingface.co/datasets/bigcode/the-stack-dedup
 2. Make a read token at https://huggingface.co/settings/tokens
-3. `huggingface-cli login` and paste it.
+3. `hf auth login` and paste it  (the old `huggingface-cli login` is
+   deprecated and silently does nothing). Verify with `hf auth whoami`.
 
 ## Phase 2 — train the tokenizer (~10–20 min)
 
@@ -161,7 +162,9 @@ gcloud compute instances stop brittain-train --zone=us-central1-c
 | `cloudshell: command not found` | You're on the VM — `exit` to Cloud Shell first |
 | `does not have any valid credentials` | `gcloud config set account luke.brittain@gmail.com`; if the metadata server is wedged, **⋮ → Restart** Cloud Shell |
 | `tmux: can't find session` | SSH onto the VM *first*, then `tmux attach` |
-| Gated dataset / 401 from HF | `huggingface-cli login`, and accept The Stack's terms on its page |
+| Gated dataset / 401 from HF | `hf auth login` (NOT `huggingface-cli login` — deprecated, does nothing), and accept The Stack's terms on its page |
+| `403 Forbidden` on The Stack | You're logged in but haven't accepted the dataset terms in the browser |
+| Language dir 404 / no data | Try `--langs Python,JavaScript,TypeScript` (capitalized) |
 
 ## Rough budget
 
