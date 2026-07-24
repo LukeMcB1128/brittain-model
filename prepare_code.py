@@ -25,6 +25,9 @@ import sys
 import argparse
 import pickle
 
+# xet backend has thrown SIGBUS on this box; use classic HTTP
+os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
+
 import numpy as np
 from datasets import load_dataset
 from tokenizers import Tokenizer
