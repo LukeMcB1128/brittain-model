@@ -6,6 +6,14 @@
 # Tokenized dataset binaries + downloaded corpora
 data/*.bin
 data/english.txt
+data/tok_sample.jsonl
+
+# Build artifact: rewritten by every prepare_*.py run
+data/meta.pkl
+
+# NOTE: data/code_bpe.json IS committed on purpose. Re-running
+# train_tokenizer.py samples The Stack randomly and yields a DIFFERENT
+# tokenizer, which would make every existing v2 checkpoint unreadable.
 
 # Logs
 *.log
