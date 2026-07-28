@@ -178,14 +178,14 @@ exactly the relationship ordinary PyTorch code has with C++/CUDA.
 
 | model | params | vocab | B/tok | BPB code | BPB prose | syntax valid |
 |---|---|---|---|---|---|---|
-| BRITTAIN-1 124M (general) | 123.5M | 50257 | 2.05 | 2.060 | **1.506** | 10% |
-| brittain2-xs-coder:50m-bs | 51.9M | 32000 | **3.19** | **1.046** | 1.726 | **50%** |
+| BRITTAIN-1 124M (general) | 123.5M | 50257 | 2.05 | 2.060 | **1.506** | 4% |
+| brittain2-xs-coder:50m-bs | 51.9M | 32000 | **3.19** | **1.046** | 1.726 | **46%** |
 
 Read this as *specialisation worked*, not "the new one is better":
 
 - **On code the 50M wins decisively** — 1.046 vs 2.060 bits per byte, less than half,
   despite having 2.4x fewer parameters. In compression terms it squeezes Python to
-  7.6x versus 3.9x. Syntax validity goes 10% -> 50%.
+  7.6x versus 3.9x. Syntax validity goes 4% -> 46%.
 - **On prose BRITTAIN-1 still wins** (1.506 vs 1.726), exactly as it should — it was
   trained on English and the coder only gets a 15% English mix. That the gap is
   only 0.22 bits/byte is the evidence that the mix did its job: the code model stayed
@@ -197,8 +197,15 @@ A 52M model beating a 124M model at code, while losing to it at prose, is the
 cleanest possible demonstration that the domain choice — not the parameter count —
 was what mattered.
 
-(Sample sizes are small: 30 generations per model for the syntax figure. Directional,
-not a benchmark result.)
+(50 generations per model for the syntax figure, identical sampling for both
+— temperature 0.4, top_p 0.95, repetition penalty 1.12. Directional, not a
+benchmark result.)
+
+**Sampling note.** These small models fall into repetition loops easily. A mild
+repetition penalty (~1.12) is essential; without it, low-temperature decoding
+degenerates into `x = 0, y = 0, z = 0, ...` forever. The penalty stays mild
+because code legitimately repeats — identifiers and indentation recur by design,
+so prose-style penalties (1.3+) would fight correct structure.
 
 ## Scale, honestly
 

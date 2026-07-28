@@ -66,9 +66,19 @@ class BrittainBS(nn.Module):
         return sum(p.numel() for p in self.parameters())
 
     @torch.no_grad()
-    def generate(self, idx, max_new_tokens, temperature=0.2, top_p=0.95):
+    def generate(self, idx, max_new_tokens, temperature=0.4, top_p=0.95,
+                 repetition_penalty=1.12):
+        # Code legitimately repeats (identifiers, indentation), so the penalty is
+        # mild — but 1.0 plus a low temperature makes small models loop forever.
         for _ in range(max_new_tokens):
-            logits = self(idx[:, -self.block:])[:, -1, :] / max(temperature, 1e-5)
+            logits = self(idx[:, -self.block:])[:, -1, :]
+            if repetition_penalty != 1.0:
+                for b in range(idx.size(0)):
+                    prev = torch.unique(idx[b])
+                    sc = logits[b, prev]
+                    logits[b, prev] = torch.where(sc < 0, sc * repetition_penalty,
+                                                  sc / repetition_penalty)
+            logits = logits / max(temperature, 1e-5)
             if top_p is not None:
                 sl, si = torch.sort(logits, descending=True)
                 cum = torch.cumsum(F.softmax(sl, dim=-1), dim=-1)

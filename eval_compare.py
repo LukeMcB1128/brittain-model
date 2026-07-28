@@ -124,11 +124,13 @@ def syntax_validity(model, cfg, enc, n_samples):
     for prompt in CODE_PROMPTS:
         ids = torch.tensor([enc.encode(prompt)], dtype=torch.long, device=device)
         for _ in range(n_samples):
+            # identical sampling for every model, or the comparison isn't fair
             if isinstance(model, Brittain):
-                out = model.generate(ids, max_new_tokens=80, temperature=0.2,
-                                     top_p=0.95, repetition_penalty=1.0)
+                out = model.generate(ids, max_new_tokens=80, temperature=0.4,
+                                     top_p=0.95, repetition_penalty=1.12)
             else:
-                out = model.generate(ids, 80, temperature=0.2, top_p=0.95)
+                out = model.generate(ids, 80, temperature=0.4, top_p=0.95,
+                                     repetition_penalty=1.12)
             gen = out[0, ids.size(1):].tolist()
             if enc.eot in gen:
                 gen = gen[:gen.index(enc.eot)]
