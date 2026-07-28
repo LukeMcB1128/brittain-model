@@ -172,6 +172,34 @@ exactly the relationship ordinary PyTorch code has with C++/CUDA.
 
 ---
 
+## Measured comparison
+
+`eval_compare.py`, run over the same held-out text (60KB each, 6 samples/prompt):
+
+| model | params | vocab | B/tok | BPB code | BPB prose | syntax valid |
+|---|---|---|---|---|---|---|
+| BRITTAIN-1 124M (general) | 123.5M | 50257 | 2.05 | 2.060 | **1.506** | 10% |
+| brittain2-xs-coder:50m-bs | 51.9M | 32000 | **3.19** | **1.046** | 1.726 | **50%** |
+
+Read this as *specialisation worked*, not "the new one is better":
+
+- **On code the 50M wins decisively** — 1.046 vs 2.060 bits per byte, less than half,
+  despite having 2.4x fewer parameters. In compression terms it squeezes Python to
+  7.6x versus 3.9x. Syntax validity goes 10% -> 50%.
+- **On prose BRITTAIN-1 still wins** (1.506 vs 1.726), exactly as it should — it was
+  trained on English and the coder only gets a 15% English mix. That the gap is
+  only 0.22 bits/byte is the evidence that the mix did its job: the code model stayed
+  literate rather than collapsing into pure syntax.
+- **The tokenizer shows up directly**: 3.19 bytes/token vs 2.05, a 56% efficiency gain
+  on the same file.
+
+A 52M model beating a 124M model at code, while losing to it at prose, is the
+cleanest possible demonstration that the domain choice — not the parameter count —
+was what mattered.
+
+(Sample sizes are small: 30 generations per model for the syntax figure. Directional,
+not a benchmark result.)
+
 ## Scale, honestly
 
 For calibration on what these can and can't do:

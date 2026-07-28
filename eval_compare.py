@@ -41,6 +41,7 @@ import torch
 
 from model import Brittain, GPTConfig
 from tok_util import load_tokenizer
+import model_bs
 
 p = argparse.ArgumentParser()
 p.add_argument("checkpoints", nargs="+")
@@ -65,8 +66,19 @@ CODE_PROMPTS = [
 ]
 
 
+class _BSCfg:
+    """Minimal cfg shim so BS models expose the same fields as GPTConfig."""
+    def __init__(self, m):
+        self.vocab_size, self.block_size = m.vocab, m.block
+
+
 def load(path):
     ck = torch.load(path, map_location=device)
+    # train_50m.bs checkpoints are a bare ModuleList state_dict (no 'cfg' key)
+    # and use a different architecture — route them through model_bs.
+    if not isinstance(ck, dict) or "cfg" not in ck:
+        model, enc = model_bs.load(path, device)
+        return model, _BSCfg(model), enc
     cfg = GPTConfig(**ck["cfg"])
     model = Brittain(cfg).to(device)
     model.load_state_dict(ck["model"])
@@ -95,7 +107,8 @@ def bits_per_byte(model, cfg, enc, text):
             break
         x = torch.tensor([chunk[:-1]], dtype=torch.long, device=device)
         y = torch.tensor([chunk[1:]], dtype=torch.long, device=device)
-        logits, _ = model(x, y)
+        out = model(x, y) if isinstance(model, Brittain) else model(x)
+        logits = out[0] if isinstance(out, tuple) else out
         # recompute unreduced so we can sum rather than average
         lp = torch.nn.functional.cross_entropy(
             logits.view(-1, logits.size(-1)), y.view(-1), reduction="sum")
@@ -111,8 +124,11 @@ def syntax_validity(model, cfg, enc, n_samples):
     for prompt in CODE_PROMPTS:
         ids = torch.tensor([enc.encode(prompt)], dtype=torch.long, device=device)
         for _ in range(n_samples):
-            out = model.generate(ids, max_new_tokens=80, temperature=0.2,
-                                 top_p=0.95, repetition_penalty=1.0)
+            if isinstance(model, Brittain):
+                out = model.generate(ids, max_new_tokens=80, temperature=0.2,
+                                     top_p=0.95, repetition_penalty=1.0)
+            else:
+                out = model.generate(ids, 80, temperature=0.2, top_p=0.95)
             gen = out[0, ids.size(1):].tolist()
             if enc.eot in gen:
                 gen = gen[:gen.index(enc.eot)]
