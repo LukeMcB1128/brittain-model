@@ -1,4 +1,4 @@
-# BRITTAIN-1-xs:50m — a transformer trained entirely in BrittainScript.
+# brittain2-xs-coder:50m — a transformer trained entirely in BrittainScript.
 #
 # Requires BrittainScript >= 0.3.0 (the Python bridge: pyimport, method
 # fallback, attribute access, @ matmul).
@@ -28,11 +28,16 @@ head_dim = 64          # n_embd / n_head, hardcoded: BS division returns a float
 block = 512
 batch = 4
 accum = 16             # effective batch = batch * accum
-max_iters = 20000
+max_iters = 30000      # 30520 iters x 32768 tok = one pass over the 1B corpus
 lr = 0.0006
+min_lr = 0.00006
+warmup = 200
 log_every = 20
+eval_every = 500
+eval_batches = 20
 save_every = 500
 data_path = "data/train.bin"
+val_path = "data/val.bin"
 out_path = "brittain_50m_bs.pt"
 
 # ---------------- device ----------------
@@ -85,18 +90,20 @@ mask = torch.ones(block, block).tril().bool().to(dev)
 
 # ---------------- data ----------------
 train_data = np.memmap(data_path, np.uint16, "r")
+val_data = np.memmap(val_path, np.uint16, "r")
 ntokens = len(train_data)
+nval = len(val_data)
 push("tokens:")
 push(ntokens)
 
-func get_batch():
-    ix = torch.randint(0, ntokens - block - 1, [batch])
+func get_batch_from(src, srclen):
+    ix = torch.randint(0, srclen - block - 1, [batch])
     xs = []
     ys = []
     for t in ix:
         i = t.item()
-        sink = xs.add(torch.from_numpy(train_data[i : i + block].astype(np.int64)))
-        sink = ys.add(torch.from_numpy(train_data[i + 1 : i + block + 1].astype(np.int64)))
+        sink = xs.add(torch.from_numpy(src[i : i + block].astype(np.int64)))
+        sink = ys.add(torch.from_numpy(src[i + 1 : i + block + 1].astype(np.int64)))
     end
     return [torch.stack(xs).to(dev), torch.stack(ys).to(dev)]
 end
@@ -135,17 +142,44 @@ func forward(idx):
     return mods[3 + n_layer * 6].forward(x)
 end
 
+func lr_at(step):
+    cond step < warmup:
+        return lr * (step + 1) / warmup
+    end
+    prog = (step - warmup) / (max_iters - warmup)
+    return min_lr + 0.5 * (1 + cos(180 * prog)) * (lr - min_lr)
+end
+
+func eval_val():
+    sink = torch.set_grad_enabled(false)
+    tot = 0.0
+    e = 0
+    while e < eval_batches:
+        pair = get_batch_from(val_data, nval)
+        lg = forward(pair[0])
+        l = F.cross_entropy(lg.view(batch * block, vocab), pair[1].view(batch * block))
+        tot = tot + l.item()
+        e = e + 1
+    end
+    sink = torch.set_grad_enabled(true)
+    return tot / eval_batches
+end
+
 # ---------------- train ----------------
 opt = optim.AdamW(mods.parameters(), lr)
 push("training...")
 
 it = 0
 while it < max_iters:
+    cur = lr_at(it)
+    for grp in opt.param_groups:
+        grp["lr"] = cur
+    end
     sink = opt.zero_grad()
 
     j = 0
     while j < accum:
-        pair = get_batch()
+        pair = get_batch_from(train_data, ntokens)
         logits = forward(pair[0])
         flat = logits.view(batch * block, vocab)
         loss = F.cross_entropy(flat, pair[1].view(batch * block))
@@ -159,6 +193,11 @@ while it < max_iters:
     cond it % log_every == 0:
         push(it)
         push(loss.item())
+    end
+
+    cond it % eval_every == 0:
+        push("val")
+        push(eval_val())
     end
 
     cond it % save_every == 0:
