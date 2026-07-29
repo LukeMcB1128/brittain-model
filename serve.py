@@ -48,8 +48,9 @@ from sft_prompt import format_prompt
 import model_bs
 
 ap = argparse.ArgumentParser()
-ap.add_argument("checkpoints", nargs="+",
-                help="checkpoint paths, optionally PATH=display-name")
+ap.add_argument("checkpoints", nargs="*",
+                help="checkpoint paths, optionally PATH=display-name. "
+                     "Omit to auto-discover brittain_*.pt in the current directory.")
 ap.add_argument("--raw", action="store_true", help="force raw mode for all models")
 ap.add_argument("--instruct", action="store_true", help="force template mode for all models")
 ap.add_argument("--port", type=int, default=11435)
@@ -86,11 +87,29 @@ class Loaded:
             self.raw_default = not ("sft" in low or "instruct" in low)
 
 
+def discover():
+    """brittain_*.pt in cwd, newest first. The old 604M char-level backup uses a
+    long-gone architecture and can't be loaded, so it's excluded by name."""
+    import glob
+    found = [p for p in glob.glob("brittain_*.pt") if "model_backup" not in p]
+    return sorted(found, key=os.path.getmtime, reverse=True)
+
+
+specs = args.checkpoints or discover()
+if not specs:
+    ap.error("no checkpoints given and no brittain_*.pt found in this directory")
+
 MODELS = {}
-for spec in args.checkpoints:
+for spec in specs:
     path, _, disp = spec.partition("=")
-    name = disp or os.path.basename(path)[:-3] if path.endswith(".pt") else disp or path
-    MODELS[name] = Loaded(path, name)
+    stem = os.path.basename(path)[:-3] if path.endswith(".pt") else os.path.basename(path)
+    name = disp or stem
+    try:
+        MODELS[name] = Loaded(path, name)
+    except Exception as exc:                 # incompatible/corrupt checkpoint
+        print(f"  [skip] {path}: {type(exc).__name__}: {exc}")
+if not MODELS:
+    ap.error("no checkpoints could be loaded")
 DEFAULT = next(iter(MODELS))
 
 app = FastAPI()
