@@ -61,6 +61,15 @@ class CodeTok:
         self.eot = self._tok.token_to_id("<|endoftext|>")
         self.vocab_size = self._tok.get_vocab_size()
         self._bd = _byte_decoder()
+        self.path = path
+        # present only on the FIM-extended tokenizer; None otherwise
+        self.fim_prefix = self._tok.token_to_id("<fim_prefix>")
+        self.fim_suffix = self._tok.token_to_id("<fim_suffix>")
+        self.fim_middle = self._tok.token_to_id("<fim_middle>")
+
+    @property
+    def has_fim(self):
+        return None not in (self.fim_prefix, self.fim_suffix, self.fim_middle)
 
     def encode(self, text):
         return self._tok.encode(text).ids
@@ -74,8 +83,23 @@ class CodeTok:
 
 
 def load_tokenizer(ck, code_bpe_path="data/code_bpe.json"):
-    """Pick the right tokenizer for a loaded checkpoint dict."""
+    """Pick the right tokenizer for a loaded checkpoint dict.
+
+    A FIM checkpoint records tokenizer_path pointing at code_bpe_fim.json, whose
+    vocab is 3 larger (the sentinels). Loading it with the base code_bpe.json
+    would mismatch the model's embedding, so the checkpoint's own path wins.
+    """
     name = ck.get("tokenizer")
     if name is None:                                  # v1 checkpoints predate the field
         name = "gpt2" if ck["cfg"]["vocab_size"] > 40000 else "code_bpe"
-    return GPT2Tok() if name == "gpt2" else CodeTok(code_bpe_path)
+    if name == "gpt2":
+        enc = GPT2Tok()
+    else:
+        enc = CodeTok(ck.get("tokenizer_path") or code_bpe_path)
+    want = ck.get("cfg", {}).get("vocab_size")
+    if want is not None and enc.vocab_size != want:
+        raise ValueError(
+            f"tokenizer vocab {enc.vocab_size} != model vocab {want}. "
+            f"This checkpoint needs {ck.get('tokenizer_path') or name!r}; "
+            f"a FIM model cannot use the base code_bpe.json and vice versa.")
+    return enc
