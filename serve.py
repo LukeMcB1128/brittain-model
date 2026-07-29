@@ -27,8 +27,15 @@ MODES
 MEMORY: every checkpoint listed is loaded at startup. Roughly 1.5GB for the
 52M, 2GB for the 124M, 3GB for the 235M in fp32.
 
-LIMITATION: no fill-in-the-middle in training, so these continue a prefix only —
-good at end-of-line/end-of-function, poor at editing mid-file.
+FILL-IN-THE-MIDDLE: these models were never trained with FIM, but autocomplete
+clients (Continue.dev et al.) wrap prompts in FIM sentinels anyway. The server
+detects and strips them — StarCoder, Qwen, CodeLlama, DeepSeek and Codestral
+dialects — and feeds the model just the prefix. The suffix can't be used as
+context, but its first line becomes a stop sequence so the completion doesn't
+duplicate what already follows the cursor.
+
+So it works with FIM clients, but it genuinely continues a prefix: good at
+end-of-line/end-of-function, poor at editing mid-file.
 """
 import os
 import json
@@ -118,6 +125,46 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"],
 now = lambda: time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
+# Continue.dev and most autocomplete clients assume a fill-in-the-middle model
+# and wrap the prompt in sentinel tokens. BRITTAIN never saw those tokens, so
+# they'd arrive as noise. We strip them and keep only the prefix.
+FIM_MARKERS = [
+    ("<fim_prefix>", "<fim_suffix>", "<fim_middle>"),        # StarCoder / SantaCoder
+    ("<|fim_prefix|>", "<|fim_suffix|>", "<|fim_middle|>"),  # Qwen / CodeQwen
+    ("<PRE>", "<SUF>", "<MID>"),                             # CodeLlama
+    ("<｜fim▁begin｜>", "<｜fim▁hole｜>",
+     "<｜fim▁end｜>"),                          # DeepSeek
+]
+
+
+def strip_fim(prompt):
+    """-> (prefix, suffix). suffix is None when the prompt wasn't FIM-wrapped.
+
+    We can't *use* the suffix as context (the model has no FIM training), but
+    it tells us what already follows the cursor, which makes a useful stop
+    sequence so the completion doesn't duplicate it."""
+    for pre, suf, mid in FIM_MARKERS:
+        if pre in prompt and suf in prompt:
+            body = prompt.split(pre, 1)[1]
+            prefix, rest = body.split(suf, 1)
+            suffix = rest.split(mid, 1)[0] if mid in rest else rest
+            return prefix, suffix
+    # Codestral-style: [SUFFIX]...[PREFIX]...
+    if "[SUFFIX]" in prompt and "[PREFIX]" in prompt:
+        after = prompt.split("[SUFFIX]", 1)[1]
+        suffix, prefix = after.split("[PREFIX]", 1)
+        return prefix, suffix
+    return prompt, None
+
+
+def suffix_stop(suffix):
+    """First substantial line after the cursor, used as a stop sequence."""
+    if not suffix:
+        return []
+    first = suffix.lstrip("\n").split("\n", 1)[0].strip()
+    return [first] if len(first) >= 4 else []
+
+
 def pick(body):
     """Route on the request's model field, falling back to the first loaded."""
     want = (body or {}).get("model") or DEFAULT
@@ -165,7 +212,10 @@ def stream_pieces(M, prompt, raw, opts):
                 continue
             prev_len = len(acc)
             acc += piece
-            hit = next((s for s in stops if s in acc), None)
+            # Don't let a stop fire before any real content: models often emit a
+            # leading newline, which would trip a "\n\n" stop immediately and
+            # return nothing.
+            hit = None if not acc.strip() else next((s for s in stops if s in acc), None)
             if hit:
                 cut = acc[:acc.index(hit)]
                 if len(cut) > prev_len:
@@ -204,7 +254,13 @@ async def generate(req: Request):
     opts = body.get("options") or {}
     raw = body.get("raw", M.raw_default)
     prompt = body.get("prompt", "")
-    if not raw:
+    if raw:
+        prompt, suffix = strip_fim(prompt)
+        if suffix is not None and not opts.get("stop"):
+            extra = suffix_stop(suffix)
+            if extra:
+                opts = {**opts, "stop": ["\n\n"] + extra}
+    else:
         prompt = format_prompt(prompt)
 
     def gen():
