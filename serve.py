@@ -34,7 +34,7 @@ def stream_pieces(prompt, max_new=400):
 
 @app.get("/api/tags")
 def tags():
-    return {"models": [{"name": NAME+":latest", "model": "BRITTAIN1", "modified_at": now(), "size": 0, "digest": NAME, "details": {"family": NAME, "parameter_size": "124M"}, "context": "1024"}]}
+    return {"models": [{"name": NAME, "model": "BRITTAIN1", "modified_at": now(), "size": 0, "digest": NAME, "details": {"family": NAME, "parameter_size": "124M"}, "context": "1024"}]}
 
 @app.get("/api/version")
 def version():
