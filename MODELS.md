@@ -172,40 +172,94 @@ exactly the relationship ordinary PyTorch code has with C++/CUDA.
 
 ---
 
-## Measured comparison
+### brittain2-general:254m — 254M *(planned)*
 
-`eval_compare.py`, run over the same held-out text (60KB each, 6 samples/prompt):
+| | |
+|---|---|
+| Parameters | ~253,900,000 |
+| Shape | 16 layers, 16 heads, 1024 embd, 1024 context |
+| Tokenizer | GPT-2 BPE, vocab 50257 |
+| Data | FineWeb-Edu, ~12B tokens |
+| Iterations | 23,000 x 524,288 tok |
+| Hardware | 1x NVIDIA L4, ~6.6 days, ~$113 @ $0.71/hr |
+| Projected val | **~2.75-2.90** |
 
-| model | params | vocab | B/tok | BPB code | BPB prose | syntax valid |
-|---|---|---|---|---|---|---|
-| BRITTAIN-1 124M (general) | 123.5M | 50257 | 2.05 | 2.060 | **1.506** | 4% |
-| brittain2-xs-coder:50m-bs | 51.9M | 32000 | **3.19** | **1.046** | 1.726 | **46%** |
+**The transformer is byte-identical to the 235M coder** — 16 layers, 16 heads,
+1024 embd, same RoPE/SwiGLU/tying. Only the tokenizer and corpus change. The
+parameter difference (254M vs 235M) is entirely the embedding table: 50257 rows
+instead of 32000.
 
-Read this as *specialisation worked*, not "the new one is better":
+This serves two purposes at once:
 
-- **On code the 50M wins decisively** — 1.046 vs 2.060 bits per byte, less than half,
-  despite having 2.4x fewer parameters. In compression terms it squeezes Python to
-  7.6x versus 3.9x. Syntax validity goes 4% -> 46%.
-- **On prose BRITTAIN-1 still wins** (1.506 vs 1.726), exactly as it should — it was
-  trained on English and the coder only gets a 15% English mix. That the gap is
-  only 0.22 bits/byte is the evidence that the mix did its job: the code model stayed
-  literate rather than collapsing into pure syntax.
-- **The tokenizer shows up directly**: 3.19 bytes/token vs 2.05, a 56% efficiency gain
-  on the same file.
+**1. An elevation of BRITTAIN-1.** 2x the parameters, 4.6x the tokens, and the
+*same tokenizer* — so its val loss is directly comparable to v1's 3.247 with no
+BPB conversion. BRITTAIN-1 sat at exactly Chinchilla-optimal (21 tok/param),
+which by current practice is undertrained; this run sits at 47.
 
-A 52M model beating a 124M model at code, while losing to it at prose, is the
-cleanest possible demonstration that the domain choice — not the parameter count —
-was what mattered.
+**2. The controlled experiment.** Same transformer, same order of token budget,
+only the corpus differs. That isolates *data* as the variable and lets the
+specialisation claim be made properly, rather than inferred from a comparison
+that also varies size, tokenizer, and architecture.
 
-(50 generations per model for the syntax figure, identical sampling for both
-— temperature 0.4, top_p 0.95, repetition penalty 1.12. Directional, not a
-benchmark result.)
+**Why GPT-2's tokenizer and not a custom one:** the 44% win on the code BPE came
+from indentation merges, which prose doesn't contain. GPT-2's BPE was itself
+trained on English web text, so it's already well matched — a custom English BPE
+would buy maybe 5-10%, and dropping to 32k vocab would cost a little packing
+efficiency on English. The direct comparability with BRITTAIN-1 is worth more.
 
-**Sampling note.** These small models fall into repetition loops easily. A mild
-repetition penalty (~1.12) is essential; without it, low-temperature decoding
-degenerates into `x = 0, y = 0, z = 0, ...` forever. The penalty stays mild
-because code legitimately repeats — identifiers and indentation recur by design,
-so prose-style penalties (1.3+) would fight correct structure.
+## The four models side by side
+
+Measured values are in **bold**; the rest are projections for runs that aren't
+finished. `eval_compare.py` produced the measured rows over identical held-out
+text.
+
+| | BRITTAIN-1 | 50m-bs | 235m coder | 254m general |
+|---|---|---|---|---|
+| status | done | done | finishing | planned |
+| params | 124M | 52M | 235M | 254M |
+| shape | 12L/12H/768 | 6L/8H/512 | 16L/16H/1024 | 16L/16H/1024 |
+| context | 1024 | 512 | 1024 | 1024 |
+| tokenizer | gpt2 50257 | code 32k | code 32k | gpt2 50257 |
+| corpus | FineWeb-Edu | Stack + 15% Eng | Stack + 15% Eng | FineWeb-Edu |
+| tokens | 2.6B | 1B | 14.7B | ~12B |
+| tok/param | 21 (1x Chinchilla) | 19 (1x) | 63 (3.1x) | 47 (2.4x) |
+| val loss | **3.247** | — | ~1.45 | ~2.75-2.90 |
+| bytes/token (code) | **2.05** | **3.19** | 3.19 | 2.05 |
+| BPB code | **2.060** | **1.046** | ~0.70-0.80 | ~1.85-2.00 |
+| BPB prose | **1.506** | **1.726** | ~1.40-1.55 | ~1.25-1.35 |
+| syntax valid | **4%** | **46%** | ~75-85% | ~5-10% |
+| hardware | L4, 20h | M3 Max, 14h | L4, 7.4d | L4, 6.6d |
+| cost | $17 | $0 | ~$135 | ~$113 |
+
+**Val loss is only comparable within a tokenizer.** BRITTAIN-1 and the 254M share
+gpt2 BPE, so 3.247 vs ~2.85 is a real comparison. The two coders share the 32k
+code BPE and are comparable to each other. Across those two groups, use BPB.
+
+### What the numbers say
+
+**The 52M beats the 124M at code by 2x** (BPB 1.046 vs 2.060) while being less
+than half its size — and loses to it on prose (1.726 vs 1.506). That is the
+whole specialisation thesis in one row pair: the domain choice mattered far more
+than the parameter count.
+
+**The 235M coder should roughly halve the 52M's code BPB again**, from 4.5x the
+parameters and 14.7x the tokens. Its prose may land close to BRITTAIN-1's despite
+being a code model, because 15% of 14.7B is ~2.2B English tokens — comparable to
+what v1 saw in total, in a model with twice the capacity.
+
+**The 254M general should be the best prose model of the four** and the worst at
+code, which is exactly the mirror image of the coder. If both land as projected,
+the pair forms a clean controlled result: identical transformer, matched budget,
+opposite specialisations.
+
+### The honest caveats
+
+- Syntax-validity figures come from 50 generations per model. Directional.
+- The 235M's val flattened hard after iter ~12,000 (1.532 -> 1.512 across 2.6B
+  tokens). It is near its capacity ceiling, so treat the projections as
+  optimistic ends of a range.
+- The 254M's 12B vs the coder's 14.7B is an 18% token gap — enough to caveat when
+  making the specialisation claim, not enough to invalidate it.
 
 ## Scale, honestly
 
