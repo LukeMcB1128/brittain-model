@@ -30,12 +30,24 @@ Three measurements:
 Note: each model is evaluated at its own block_size, so a shorter-context model
 eats more chunk boundaries. That's a real limitation of the model, not a bug in
 the measurement, but it's worth knowing when reading the table.
+
+THE CODE SAMPLE IS FROZEN. `data/eval_code.py` is a committed snapshot of model.py
+taken 2026-07-31. It must never be edited. The default used to be the live
+model.py, which meant BPB silently changed whenever the architecture was touched —
+adding the KV cache moved the 235M's code BPB from 0.693 to 0.751 with no change to
+the model at all. A benchmark that moves under you measures nothing. Prose uses
+data/english.txt, which is already static.
 """
 import os
 import sys
 import ast
 import math
+import warnings
 import argparse
+
+# Generated code frequently contains things like "\d" outside a raw string.
+# ast.parse warns, we count it as valid Python (it is), and the warning is noise.
+warnings.filterwarnings("ignore", category=SyntaxWarning)
 
 import torch
 
@@ -45,8 +57,8 @@ import model_bs
 
 p = argparse.ArgumentParser()
 p.add_argument("checkpoints", nargs="+")
-p.add_argument("--code_text", default=None,
-               help="raw code file for BPB (default: this repo's model.py)")
+p.add_argument("--code_text", default="data/eval_code.py",
+               help="raw code file for BPB. Default is a FROZEN snapshot — see below")
 p.add_argument("--prose_text", default="data/english.txt",
                help="raw English file for BPB")
 p.add_argument("--max_bytes", type=int, default=200_000)
@@ -147,8 +159,7 @@ def syntax_validity(model, cfg, enc, n_samples):
     return ok / max(1, total)
 
 
-code_text = args.code_text or __file__.replace("eval_compare.py", "model.py")
-code_sample = read_text(code_text, args.max_bytes)
+code_sample = read_text(args.code_text, args.max_bytes)
 prose_sample = read_text(args.prose_text, args.max_bytes) \
     if os.path.exists(args.prose_text) else None
 

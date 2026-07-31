@@ -278,10 +278,10 @@ text.
 | tokens | 2.6B | 1B | 14.7B | ~12B |
 | tok/param | 21 (1x Chinchilla) | 19 (1x) | 63 (3.1x) | 47 (2.4x) |
 | val loss | **3.247** | — | **1.4177** | ~2.75-2.90 |
-| bytes/token (code) | **2.05** | **3.19** | 3.19 | 2.05 |
-| BPB code | **2.090** | **1.046** | **0.693** | ~1.85-2.00 |
+| bytes/token (code) | **2.12** | **3.36** | **3.36** | 2.12 |
+| BPB code | **2.031** | **1.080** | **0.751** | ~1.85-2.00 |
 | BPB prose | **1.354** | **1.702** | **1.259** | ~1.25-1.35 |
-| syntax valid | **0%** | **48%** | **60%** | ~5-10% |
+| syntax valid | **0%** | **46%** | **60%** | ~5-10% |
 | hardware | L4, 20h | M3 Max, 14h | L4, 7.4d | L4, 6.6d |
 | cost | $17 | $0 | ~$135 | ~$113 |
 
@@ -291,13 +291,13 @@ code BPE and are comparable to each other. Across those two groups, use BPB.
 
 ### What the numbers say
 
-**The 52M beats the 124M at code by 2x** (BPB 1.046 vs 2.090) while being less
+**The 52M beats the 124M at code by ~2x** (BPB 1.080 vs 2.031) while being less
 than half its size — and loses to it on prose (1.702 vs 1.354). That is the
 whole specialisation thesis in one row pair: the domain choice mattered far more
 than the parameter count.
 
-**The 235M coder wins on BOTH axes — including prose.** Code BPB 0.693 against the
-52M's 1.046 is a 34% improvement (the projection said "roughly halve"; it didn't
+**The 235M coder wins on BOTH axes — including prose.** Code BPB 0.751 against the
+52M's 1.080 is a 30% improvement (the projection said "roughly halve"; it didn't
 quite, consistent with the run being data-limited). The surprise is prose:
 **1.259 beats BRITTAIN-1's 1.354**, even though the coder saw only 15% English and
 BRITTAIN-1 saw nothing else. 2.2B English tokens in a 235M model beat 2.6B English
@@ -316,7 +316,13 @@ opposite specialisations.
 
 ### The honest caveats
 
-- Syntax-validity figures come from 50 generations per model. Directional.
+- Syntax-validity figures come from **750 generations per model** (150 samples x 5
+  prompts), at identical sampling for every model.
+- **The code BPB sample is frozen** at `data/eval_code.py`, a snapshot of model.py
+  taken 2026-07-31. It used to default to the *live* model.py, so BPB moved
+  whenever the architecture was edited — adding the KV cache shifted the 235M from
+  0.693 to 0.751 with no change to the model. Figures before that fix are not
+  comparable to these.
 - The 235M's val flattened hard after iter ~12,000 (1.532 -> 1.512 across 2.6B
   tokens) and bottomed out at **1.4177 (iter 23,200)**, never improving across the
   final 4,800 iterations. Treat its BPB and syntax projections as the optimistic
