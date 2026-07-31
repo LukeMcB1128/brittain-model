@@ -24,10 +24,18 @@ files/sec verified.
 
 SAFETY
 Verification EXECUTES code from The Stack, which is scraped from public GitHub.
-The safety boundary is py2bs's frontend, which rejects unsafe imports before
-anything runs — no os, subprocess, socket, or file I/O survives validation, and
-each run has a timeout. That is a meaningful boundary, not a sandbox. Run this on
-a machine you would not mind reinstalling, or in a container.
+Two boundaries, and the second was learned the hard way:
+
+  1. py2bs's frontend rejects unsafe imports before anything runs — no os,
+     subprocess, socket or file I/O survives validation — and each run has a
+     timeout.
+  2. Workers chdir into an empty temp directory. The working directory is on
+     sys.path, so without this a candidate file containing `import sample`
+     imported and RAN this repo's sample.py. `import train` would have started a
+     training run.
+
+That is a meaningful boundary, not a sandbox. Run it on a machine you would not
+mind reinstalling, or in a container.
 
 RESUMING
 The output is appended to, and already-seen files are skipped by content hash, so
@@ -38,6 +46,8 @@ import sys
 import json
 import time
 import hashlib
+import shutil
+import tempfile
 import argparse
 import collections
 import multiprocessing as mp
@@ -69,12 +79,51 @@ args = p.parse_args()
 PY2BS = os.path.abspath(os.path.expanduser(args.py2bs_path))
 
 
-def init_worker(py2bs_path):
-    """Each worker imports py2bs once, from the checkout rather than PyPI."""
+# Modules a candidate file may import. Pure computation only — nothing that can
+# touch the filesystem, the network, the process table, or the display.
+#
+# This is an ALLOWLIST because py2bs's own UNSAFE_IMPORTS is a denylist of 34
+# names, and a denylist cannot bound arbitrary code from GitHub. `turtle` was not
+# on it, so verification executed Stack files that opened Tk windows on the
+# screen; `pty`, `runpy`, `code`, `pdb`, `curses` and `site` are all still absent
+# from it. Anything not named here is rejected as an unresolvable import.
+SAFE_MODULES = {
+    "math", "cmath", "random", "string", "re", "json", "datetime", "time",
+    "itertools", "functools", "operator", "collections", "heapq", "bisect",
+    "array", "statistics", "decimal", "fractions", "numbers", "copy", "enum",
+    "dataclasses", "typing", "abc", "textwrap", "unicodedata", "struct",
+    "binascii", "base64", "hashlib", "hmac", "uuid", "calendar", "zlib",
+}
+
+
+def init_worker(py2bs_path, sandbox):
+    """Each worker imports py2bs once, then moves somewhere harmless.
+
+    THE CHDIR IS A SAFETY FIX, NOT TIDINESS. Verification executes the candidate
+    Python, and the working directory is on sys.path — so a file from The Stack
+    containing `import sample` imported THIS repo's sample.py and ran it. Any of
+    `import train`, `import serve`, `import prepare_code` would have started a
+    training run, bound a port, or begun downloading a corpus.
+
+    It also corrupted the measurement: the validator's module_is_available() uses
+    find_spec, so local .py files counted as resolvable imports and files were
+    accepted that should have been rejected.
+
+    Workers run in an empty directory instead. py2bs_path is absolute, so the
+    import above still works from anywhere.
+    """
     if py2bs_path not in sys.path:
         sys.path.insert(0, py2bs_path)
     global translate
     from py2bs import translate
+    import py2bs.frontend as frontend
+
+    # Replace the denylist with the allowlist above. find_spec is also why local
+    # .py files counted as importable, so this closes that too.
+    frontend.module_is_available = lambda name: name.split(".")[0] in SAFE_MODULES
+
+    sys.path[:] = [p for p in sys.path if p not in ("", ".", os.getcwd())]
+    os.chdir(sandbox)
 
 
 def attempt(source):
@@ -128,10 +177,13 @@ def main():
             yield h, text
 
     rejections = collections.Counter()
-    n_scanned = 0
+    # n_written/n_tokens carry the resumed totals so the target is right; acceptance
+    # must be measured on THIS session only or a resume reports over 100%.
+    n_scanned = n_written_session = 0
     t0 = t_log = time.time()
-    out = open(args.out, "a")
-    pool = mp.Pool(args.workers, initializer=init_worker, initargs=(PY2BS,))
+    out = open(os.path.abspath(args.out), "a")
+    sandbox = tempfile.mkdtemp(prefix="prepare_bs_")
+    pool = mp.Pool(args.workers, initializer=init_worker, initargs=(PY2BS, sandbox))
     try:
         pending = {}
         for h, text in candidates():
@@ -152,12 +204,13 @@ def main():
                 out.write(json.dumps({"hash": h, "tokens": n,
                                       "py": text, "bs": bs}) + "\n")
                 n_written += 1
+                n_written_session += 1
                 n_tokens += n
 
             if time.time() - t_log > 30:
                 out.flush()
                 rate = n_scanned / max(1e-9, time.time() - t0)
-                pct = 100 * n_written / max(1, n_scanned)
+                pct = 100 * n_written_session / max(1, n_scanned)
                 print(f"  {n_tokens/1e6:6.2f}M / {args.tokens/1e6:.1f}M tokens | "
                       f"{n_written:,} written / {n_scanned:,} scanned ({pct:.1f}%) | "
                       f"{rate:.1f} files/s", flush=True)
@@ -171,9 +224,10 @@ def main():
         pool.terminate()
         pool.join()
         out.close()
+        shutil.rmtree(sandbox, ignore_errors=True)
 
     print(f"\nDone. {n_written:,} files, {n_tokens:,} tokens -> {args.out}")
-    print(f"acceptance {100*n_written/max(1,n_scanned):.1f}% "
+    print(f"acceptance {100*n_written_session/max(1,n_scanned):.1f}% "
           f"({'UNVERIFIED' if args.no_verify else 'every line verified by execution'})")
     if rejections:
         print("\nWhy files were rejected — the top row is the BrittainScript feature")
