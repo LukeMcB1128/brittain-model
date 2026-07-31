@@ -1,21 +1,55 @@
 """
-Interactive inference for BRITTAIN v2. Streams completions token-by-token.
+Inference for BRITTAIN. Streams completions token-by-token.
 
-    python3 sample.py
+    python3 sample.py                                  # newest checkpoint, interactive
+    python3 sample.py brittain_235m_weights.pt         # pick a checkpoint
+    python3 sample.py -p "def quicksort(arr):"         # one-shot
+    python3 sample.py -f mymodule.py                   # continue a real file
+    python3 sample.py -t 0.8                           # hotter
 
-No context migration hacks needed — RoPE means the model just works at its
-trained context length (and degrades gracefully a bit beyond it).
+Defaults are temperature 0.4 / top_p 0.95 / repetition_penalty 1.12, which is what
+eval_compare.py uses and what these models actually behave well at. The old
+hardcoded 0.9/0.9/1.3 made them look far worse than they are — code has much lower
+entropy than prose, so it wants a colder sampler.
+
+Interactive mode takes MULTI-LINE input: paste or type as many lines as you like,
+then a blank line to generate. Ctrl-C to quit.
+
+No context migration hacks needed — RoPE means the model just works at its trained
+context length (and degrades gracefully a bit beyond it).
 """
-import pickle
+import os
+import sys
+import glob
 import codecs
+import argparse
 
 import torch
 
 from model import Brittain, GPTConfig
 from tok_util import load_tokenizer
 
-import sys
-CKPT = sys.argv[1] if len(sys.argv) > 1 else "brittain_124m_best.pt"
+
+def newest_checkpoint():
+    """Default to whatever was trained most recently, so `python3 sample.py` just works."""
+    found = sorted(glob.glob("brittain_*.pt"), key=os.path.getmtime, reverse=True)
+    return found[0] if found else "brittain_124m_best.pt"
+
+
+ap = argparse.ArgumentParser()
+ap.add_argument("checkpoint", nargs="?", default=None)
+ap.add_argument("-p", "--prompt", help="generate once from this text and exit")
+ap.add_argument("-f", "--file", help="generate once continuing this file's contents")
+ap.add_argument("-n", "--max_tokens", type=int, default=400)
+ap.add_argument("-t", "--temperature", type=float, default=0.4)
+ap.add_argument("--top_p", type=float, default=0.95)
+ap.add_argument("--top_k", type=int, default=None)
+ap.add_argument("-r", "--repetition_penalty", type=float, default=1.12)
+ap.add_argument("--stop_blank", action="store_true",
+                help="stop at the first blank line (how autocomplete behaves)")
+args = ap.parse_args()
+
+ckpt = args.checkpoint or newest_checkpoint()
 if torch.cuda.is_available():
     device = torch.device("cuda")
 elif torch.backends.mps.is_available():
@@ -23,33 +57,72 @@ elif torch.backends.mps.is_available():
 else:
     device = torch.device("cpu")
 
-ck = torch.load(CKPT, map_location=device)
-cfg = GPTConfig(**ck['cfg'])
+ck = torch.load(ckpt, map_location=device)
+cfg = GPTConfig(**ck["cfg"])
 model = Brittain(cfg).to(device)
-model.load_state_dict(ck['model'])
+model.load_state_dict(ck["model"])
 model.eval()
 enc = load_tokenizer(ck)   # gpt2 for v1 ckpts, code BPE for v2
-print(f"Loaded {CKPT} ({model.num_params():,} params) at iter {ck.get('iter', '?')}")
-print("-" * 60)
 
+val = ck.get("val")
+print(f"Loaded {ckpt} ({model.num_params():,} params) at iter {ck.get('iter', '?')}"
+      + (f", val {val:.4f}" if isinstance(val, float) else ""))
+print(f"{enc.name} vocab {enc.vocab_size} | ctx {cfg.block_size} | {device.type} | "
+      f"temp {args.temperature} top_p {args.top_p} rep {args.repetition_penalty}")
+print("-" * 70)
+
+
+def generate(prompt):
+    """Stream a completion for one prompt. Keeps the last block_size tokens only."""
+    ids = torch.tensor([enc.encode(prompt)], dtype=torch.long, device=device)
+    if ids.size(1) >= cfg.block_size:
+        print(f"[prompt is {ids.size(1)} tokens, keeping the last {cfg.block_size - 1}]")
+        ids = ids[:, -(cfg.block_size - 1):]
+    print(prompt, end="", flush=True)
+    # incremental UTF-8 decoder buffers multi-byte chars across tokens (no <?>)
+    utf8 = codecs.getincrementaldecoder("utf-8")("replace")
+    emitted = ""
+    with torch.no_grad(), torch.autocast(device_type=device.type, dtype=torch.bfloat16):
+        for _ in range(args.max_tokens):
+            ids = model.generate(ids[:, -cfg.block_size:], max_new_tokens=1,
+                                 temperature=args.temperature, top_k=args.top_k,
+                                 top_p=args.top_p,
+                                 repetition_penalty=args.repetition_penalty)
+            nxt = ids[0, -1].item()
+            if nxt == enc.eot:                       # document boundary
+                break
+            piece = utf8.decode(enc.token_bytes(nxt))
+            emitted += piece
+            print(piece, end="", flush=True)
+            # only after real output — models often open with a newline
+            if args.stop_blank and emitted.strip() and "\n\n" in emitted:
+                break
+    print()
+
+
+if args.file:
+    with open(args.file) as f:
+        generate(f.read())
+    sys.exit(0)
+
+if args.prompt:
+    generate(args.prompt)
+    sys.exit(0)
+
+print("Multi-line input — blank line to generate, Ctrl-C to quit.")
 while True:
     try:
-        prompt = input("\nPrompt: ")
-        if not prompt:
+        lines = []
+        while True:
+            line = input("... " if lines else ">>> ")
+            if not line:
+                break
+            lines.append(line)
+        if not lines:
             continue
-        ids = torch.tensor([enc.encode(prompt)], dtype=torch.long, device=device)
-        print(prompt, end="", flush=True)
-        # incremental UTF-8 decoder buffers multi-byte chars across tokens (no ��)
-        utf8 = codecs.getincrementaldecoder("utf-8")("replace")
-        with torch.no_grad(), torch.autocast(device_type=device.type, dtype=torch.bfloat16):
-            for _ in range(400):
-                ids = model.generate(ids, max_new_tokens=1, temperature=0.9,
-                                     top_p=0.9, repetition_penalty=1.3)
-                nxt = ids[0, -1].item()
-                if nxt == enc.eot:          # stop at document boundary
-                    break
-                print(utf8.decode(enc.token_bytes(nxt)), end="", flush=True)
-        print("\n" + "-" * 40)
-    except KeyboardInterrupt:
+        print()
+        generate("\n".join(lines) + "\n")
+        print("-" * 70)
+    except (KeyboardInterrupt, EOFError):
         print("\nbye")
         break
