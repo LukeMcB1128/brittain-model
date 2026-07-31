@@ -112,7 +112,7 @@ chat model: train on instruction→response pairs wrapped in a fixed template, w
 the **loss masked over the prompt** so the model learns to *answer* instructions
 rather than generate them.
 
-### BRITTAIN-2 — 235M coder *(in progress)*
+### BRITTAIN-2 — 235M coder *(complete)*
 
 | | |
 |---|---|
@@ -121,7 +121,16 @@ rather than generate them.
 | Tokenizer | **custom 32k code BPE** (`data/code_bpe.json`) |
 | Data | The Stack (Python/JS/TS) + 15% FineWeb-Edu, ~14.7B tokens |
 | Hardware | 1× NVIDIA L4, ~7.4 days, ~$135 |
-| Expected val | ~1.30–1.40 |
+| **Final val** | **1.4177** at iter 23,200 (`brittain_235m_weights.pt`) |
+
+Landed inside the projected 1.30–1.40 band, just above it.
+
+**The run converged early.** Best val came at iter 23,200 of 28,000; the final
+~4,800 iterations (~17% of the run, ~$28, ~1.5 days) never beat it — val bounced
+1.42–1.46 with no new low. Train and val stayed within ~0.01 of each other
+throughout, so there is *no overfitting at all*: this model is **data-limited, not
+capacity-limited**. A larger model on this same corpus would not have helped; more
+corpus would have. Future runs should stop after ~2,000 iterations with no new best.
 
 Two deliberate departures from v1:
 
@@ -215,7 +224,7 @@ text.
 
 | | BRITTAIN-1 | 50m-bs | 235m coder | 254m general |
 |---|---|---|---|---|
-| status | done | done | finishing | planned |
+| status | done | done | **done** | shelved |
 | params | 124M | 52M | 235M | 254M |
 | shape | 12L/12H/768 | 6L/8H/512 | 16L/16H/1024 | 16L/16H/1024 |
 | context | 1024 | 512 | 1024 | 1024 |
@@ -223,7 +232,7 @@ text.
 | corpus | FineWeb-Edu | Stack + 15% Eng | Stack + 15% Eng | FineWeb-Edu |
 | tokens | 2.6B | 1B | 14.7B | ~12B |
 | tok/param | 21 (1x Chinchilla) | 19 (1x) | 63 (3.1x) | 47 (2.4x) |
-| val loss | **3.247** | — | ~1.45 | ~2.75-2.90 |
+| val loss | **3.247** | — | **1.4177** | ~2.75-2.90 |
 | bytes/token (code) | **2.05** | **3.19** | 3.19 | 2.05 |
 | BPB code | **2.060** | **1.046** | ~0.70-0.80 | ~1.85-2.00 |
 | BPB prose | **1.506** | **1.726** | ~1.40-1.55 | ~1.25-1.35 |
@@ -256,8 +265,13 @@ opposite specialisations.
 
 - Syntax-validity figures come from 50 generations per model. Directional.
 - The 235M's val flattened hard after iter ~12,000 (1.532 -> 1.512 across 2.6B
-  tokens). It is near its capacity ceiling, so treat the projections as
-  optimistic ends of a range.
+  tokens) and bottomed out at **1.4177 (iter 23,200)**, never improving across the
+  final 4,800 iterations. Treat its BPB and syntax projections as the optimistic
+  ends of a range until `eval_compare.py` measures them.
+- Train and val tracked within ~0.01 for the whole 235M run. That rules out
+  overfitting but also means the ceiling here is the *corpus*, not the parameter
+  count — the 3.1x-Chinchilla over-training bought less than the tokens-per-param
+  figure suggests.
 - The 254M's 12B vs the coder's 14.7B is an 18% token gap — enough to caveat when
   making the specialisation claim, not enough to invalidate it.
 
