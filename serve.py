@@ -195,16 +195,23 @@ def stream_pieces(M, prompt, raw, opts):
     ids = ids[:, -M.block:]
     utf8 = codecs.getincrementaldecoder("utf-8")("replace")
     acc = ""
-    with torch.no_grad():
+    def token_stream():
+        """One token at a time. Brittain models keep a KV cache across the whole
+        completion; the BS model has no stream() and falls back to the old
+        one-token-at-a-time loop."""
+        if M.is_brittain:
+            yield from M.model.stream(ids, max_new, temperature=temperature,
+                                      top_p=top_p, repetition_penalty=rep)
+            return
+        cur = ids
         for _ in range(max_new):
-            if M.is_brittain:
-                ids = M.model.generate(ids[:, -M.block:], max_new_tokens=1,
-                                       temperature=temperature, top_p=top_p,
-                                       repetition_penalty=rep)
-            else:
-                ids = M.model.generate(ids[:, -M.block:], 1, temperature=temperature,
-                                       top_p=top_p, repetition_penalty=rep)
-            nxt = ids[0, -1].item()
+            cur = M.model.generate(cur[:, -M.block:], 1, temperature=temperature,
+                                   top_p=top_p, repetition_penalty=rep)
+            yield cur[:, -1:]
+
+    with torch.no_grad():
+        for tok in token_stream():
+            nxt = tok[0, -1].item()
             if nxt == M.enc.eot:
                 break
             piece = utf8.decode(M.enc.token_bytes(nxt))

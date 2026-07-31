@@ -93,12 +93,13 @@ def generate(prompt):
     utf8 = codecs.getincrementaldecoder("utf-8")("replace")
     emitted = ""
     with torch.no_grad(), torch.autocast(device_type=device.type, dtype=torch.bfloat16):
-        for _ in range(args.max_tokens):
-            ids = model.generate(ids[:, -cfg.block_size:], max_new_tokens=1,
-                                 temperature=args.temperature, top_k=args.top_k,
-                                 top_p=args.top_p,
-                                 repetition_penalty=args.repetition_penalty)
-            nxt = ids[0, -1].item()
+        # stream() keeps the KV cache alive across tokens; looping over
+        # generate(max_new_tokens=1) would rebuild it every token instead.
+        for tok in model.stream(ids, args.max_tokens,
+                                temperature=args.temperature, top_k=args.top_k,
+                                top_p=args.top_p,
+                                repetition_penalty=args.repetition_penalty):
+            nxt = tok[0, -1].item()
             if nxt == enc.eot:                       # document boundary
                 break
             piece = utf8.decode(enc.token_bytes(nxt))

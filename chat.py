@@ -41,10 +41,10 @@ while True:
         utf8 = codecs.getincrementaldecoder("utf-8")("replace")
         print("Response: ", end="", flush=True)
         with torch.no_grad(), torch.autocast(device_type=device.type, dtype=torch.bfloat16):
-            for _ in range(400):
-                ids = model.generate(ids, max_new_tokens=1, temperature=0.7,
-                                     top_p=0.9, repetition_penalty=1.3)
-                nxt = ids[0, -1].item()
+            # stream() holds the KV cache open for the whole response
+            for tok in model.stream(ids, 400, temperature=0.7, top_p=0.9,
+                                    repetition_penalty=1.3):
+                nxt = tok[0, -1].item()
                 if nxt == enc.eot:
                     break
                 print(utf8.decode(enc.token_bytes(nxt)), end="", flush=True)

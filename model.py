@@ -45,11 +45,17 @@ def build_rope_cache(seq_len: int, head_dim: int, device, base: float = 10000.0)
     return emb.cos(), emb.sin()
 
 
-def apply_rope(x, cos, sin):
-    # x: (B, n_head, T, head_dim)
+def apply_rope(x, cos, sin, offset=0):
+    """x: (B, n_head, T, head_dim).
+
+    `offset` is the absolute position of x[..., 0, :]. It is 0 for training and
+    for the prefill pass, and equal to the number of cached tokens during
+    incremental decoding — without it a cached token would be rotated as if it
+    sat at position 0 and the geometry would be wrong.
+    """
     T = x.size(-2)
-    cos = cos[:T].view(1, 1, T, -1)
-    sin = sin[:T].view(1, 1, T, -1)
+    cos = cos[offset:offset + T].view(1, 1, T, -1)
+    sin = sin[offset:offset + T].view(1, 1, T, -1)
     x1, x2 = x.chunk(2, dim=-1)
     rotated = torch.cat((-x2, x1), dim=-1)
     return x * cos + rotated * sin
@@ -65,18 +71,39 @@ class CausalSelfAttention(nn.Module):
         self.proj = nn.Linear(cfg.n_embd, cfg.n_embd, bias=cfg.bias)
         self.dropout = cfg.dropout
 
-    def forward(self, x, cos, sin):
+    def forward(self, x, cos, sin, cache=None, offset=0):
+        """`cache` is a dict; when given, this layer's k/v are appended to it and
+        the whole history is attended over. Training passes cache=None and takes
+        exactly the path it always did."""
         B, T, C = x.shape
         q, k, v = self.qkv(x).split(C, dim=2)
         q = q.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
         k = k.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
         v = v.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
-        q = apply_rope(q, cos, sin)
-        k = apply_rope(k, cos, sin)
-        y = F.scaled_dot_product_attention(
-            q, k, v, is_causal=True,
-            dropout_p=self.dropout if self.training else 0.0,
-        )
+        q = apply_rope(q, cos, sin, offset)
+        k = apply_rope(k, cos, sin, offset)
+
+        if cache is not None:
+            if "k" in cache:
+                k = torch.cat((cache["k"], k), dim=2)
+                v = torch.cat((cache["v"], v), dim=2)
+            cache["k"], cache["v"] = k, v
+
+        # is_causal assumes a square, aligned q/k. That holds while training and
+        # on the prefill pass, but not once the cache makes keys longer than
+        # queries — there the new queries may attend to EVERY cached key.
+        if q.size(2) == k.size(2):
+            y = F.scaled_dot_product_attention(
+                q, k, v, is_causal=True,
+                dropout_p=self.dropout if self.training else 0.0,
+            )
+        elif q.size(2) == 1:                       # incremental decode: sees all
+            y = F.scaled_dot_product_attention(q, k, v, dropout_p=0.0)
+        else:                                      # partial prefill onto a cache
+            mask = torch.ones(q.size(2), k.size(2), dtype=torch.bool,
+                              device=q.device).tril(k.size(2) - q.size(2))
+            y = F.scaled_dot_product_attention(q, k, v, attn_mask=mask, dropout_p=0.0)
+
         y = y.transpose(1, 2).contiguous().view(B, T, C)
         return self.proj(y)
 
@@ -103,8 +130,8 @@ class Block(nn.Module):
         self.ln2 = nn.LayerNorm(cfg.n_embd, bias=cfg.bias)
         self.mlp = SwiGLU(cfg)
 
-    def forward(self, x, cos, sin):
-        x = x + self.attn(self.ln1(x), cos, sin)
+    def forward(self, x, cos, sin, cache=None, offset=0):
+        x = x + self.attn(self.ln1(x), cos, sin, cache, offset)
         x = x + self.mlp(self.ln2(x))
         return x
 
@@ -145,12 +172,12 @@ class Brittain(nn.Module):
         # tok_emb is tied to lm_head, so the vocab matrix is only counted once.
         return sum(p.numel() for p in self.parameters())
 
-    def forward(self, idx, targets=None):
+    def forward(self, idx, targets=None, caches=None, offset=0):
         B, T = idx.shape
-        cos, sin = self._rope(max(T, self.cfg.block_size), idx.device)
+        cos, sin = self._rope(max(offset + T, self.cfg.block_size), idx.device)
         x = self.drop(self.tok_emb(idx))
-        for block in self.blocks:
-            x = block(x, cos, sin)
+        for i, block in enumerate(self.blocks):
+            x = block(x, cos, sin, None if caches is None else caches[i], offset)
         x = self.ln_f(x)
         if targets is None:
             logits = self.lm_head(x[:, [-1], :])   # only last position at inference
@@ -159,33 +186,81 @@ class Brittain(nn.Module):
         loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
         return logits, loss
 
+    def _sample(self, logits, idx, temperature, top_k, top_p, repetition_penalty):
+        """Turn last-position logits into one sampled token id."""
+        logits = logits[:, -1, :].clone()
+        # repetition penalty: down-weight tokens already generated (kills loops)
+        if repetition_penalty != 1.0:
+            for b in range(idx.size(0)):
+                prev = torch.unique(idx[b])
+                s = logits[b, prev]
+                logits[b, prev] = torch.where(s < 0, s * repetition_penalty,
+                                              s / repetition_penalty)
+        logits = logits / max(temperature, 1e-5)
+        if top_k is not None:
+            v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
+            logits[logits < v[:, [-1]]] = -float("inf")
+        if top_p is not None:                       # nucleus sampling
+            sl, si = torch.sort(logits, descending=True)
+            cum = torch.cumsum(F.softmax(sl, dim=-1), dim=-1)
+            remove = cum > top_p
+            remove[..., 1:] = remove[..., :-1].clone()
+            remove[..., 0] = False
+            for b in range(logits.size(0)):
+                logits[b, si[b, remove[b]]] = -float("inf")
+        probs = F.softmax(logits, dim=-1)
+        return torch.multinomial(probs, num_samples=1)
+
     @torch.no_grad()
     def generate(self, idx, max_new_tokens, temperature=0.8, top_k=None,
-                 top_p=None, repetition_penalty=1.0):
-        for _ in range(max_new_tokens):
-            idx_cond = idx[:, -self.cfg.block_size:]
-            logits, _ = self(idx_cond)
-            logits = logits[:, -1, :]
-            # repetition penalty: down-weight tokens already generated (kills loops)
-            if repetition_penalty != 1.0:
-                for b in range(idx.size(0)):
-                    prev = torch.unique(idx[b])
-                    s = logits[b, prev]
-                    logits[b, prev] = torch.where(s < 0, s * repetition_penalty,
-                                                  s / repetition_penalty)
-            logits = logits / max(temperature, 1e-5)
-            if top_k is not None:
-                v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
-                logits[logits < v[:, [-1]]] = -float("inf")
-            if top_p is not None:                       # nucleus sampling
-                sl, si = torch.sort(logits, descending=True)
-                cum = torch.cumsum(F.softmax(sl, dim=-1), dim=-1)
-                remove = cum > top_p
-                remove[..., 1:] = remove[..., :-1].clone()
-                remove[..., 0] = False
-                for b in range(logits.size(0)):
-                    logits[b, si[b, remove[b]]] = -float("inf")
-            probs = F.softmax(logits, dim=-1)
-            idx_next = torch.multinomial(probs, num_samples=1)
-            idx = torch.cat((idx, idx_next), dim=1)
+                 top_p=None, repetition_penalty=1.0, use_cache=True):
+        """Sample continuations of idx.
+
+        With use_cache, the prompt is run ONCE and each subsequent token attends
+        to stored keys/values instead of recomputing the whole prefix — the cost
+        per token stops growing with the prefix length. Sampling is unchanged, so
+        with a fixed seed this produces the same tokens as the uncached path.
+        """
+        for nxt in self.stream(idx, max_new_tokens, temperature, top_k, top_p,
+                               repetition_penalty, use_cache):
+            idx = torch.cat((idx, nxt), dim=1)
         return idx
+
+    @torch.no_grad()
+    def stream(self, idx, max_new_tokens, temperature=0.8, top_k=None,
+               top_p=None, repetition_penalty=1.0, use_cache=True):
+        """Yield sampled tokens one at a time, KEEPING the cache between them.
+
+        Callers that want to print as they go must use this rather than looping
+        over generate(max_new_tokens=1) — that rebuilds and discards the cache on
+        every token, which is slower than not caching at all.
+        """
+        if not use_cache:
+            for _ in range(max_new_tokens):
+                logits, _ = self(idx[:, -self.cfg.block_size:])
+                nxt = self._sample(logits, idx, temperature, top_k, top_p,
+                                   repetition_penalty)
+                idx = torch.cat((idx, nxt), dim=1)
+                yield nxt
+            return
+
+        caches = [{} for _ in range(len(self.blocks))]
+        cond = idx[:, -self.cfg.block_size:]
+        logits, _ = self(cond, caches=caches, offset=0)
+        cached = cond.size(1)
+
+        for _ in range(max_new_tokens):
+            nxt = self._sample(logits, idx, temperature, top_k, top_p,
+                               repetition_penalty)
+            idx = torch.cat((idx, nxt), dim=1)
+            yield nxt
+            if cached >= self.cfg.block_size:
+                # window is full: drop the cache and re-prefill the last
+                # block_size-1 tokens, matching the uncached sliding behaviour.
+                caches = [{} for _ in range(len(self.blocks))]
+                cond = idx[:, -(self.cfg.block_size - 1):]
+                logits, _ = self(cond, caches=caches, offset=0)
+                cached = cond.size(1)
+            else:
+                logits, _ = self(nxt, caches=caches, offset=cached)
+                cached += 1
