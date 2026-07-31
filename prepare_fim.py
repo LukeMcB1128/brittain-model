@@ -65,6 +65,25 @@ BATCH = 256
 MAX_DOC_CHARS = 60_000
 rng = random.Random(args.seed)
 
+# A FIM sequence is only useful if the whole prefix/suffix/middle triple lands
+# inside ONE training window — get_batch() takes a random block_size slice of the
+# flat .bin, so a longer sequence is seen as fragments with orphaned sentinels,
+# and the model learns the sentinels are noise rather than structure.
+#
+# The window is measured in TOKENS, not characters. Bytes-per-token varies hugely
+# with content (~3.2 on average prose-ish code, but near 1.0 on dense punctuation
+# and indentation), so a character cap that is right on average overshoots badly
+# on the worst documents. Capping tokens bounds it directly.
+#
+# Budget against the 1024 context: 900 window + 4 sentinels, leaving ~120 for the
+# re-tokenization overhead of splitting one span into three (each cut can land
+# mid-token and cost a few extra).
+#
+# Long files still contribute — as random windows, not as one oversized sequence.
+# Plain causal documents are deliberately NOT capped: crossing chunk boundaries is
+# exactly what left-to-right training should learn from.
+FIM_MAX_TOKENS = 900
+
 FIM_PREFIX, FIM_SUFFIX, FIM_MIDDLE = "<fim_prefix>", "<fim_suffix>", "<fim_middle>"
 
 # ---- extend the tokenizer with the three sentinels ----
@@ -102,7 +121,19 @@ def english_stream():
 
 
 def to_fim(text):
-    """Split at two character offsets and emit a PSM or SPM token sequence."""
+    """Split at two character offsets and emit a PSM or SPM token sequence.
+
+    Oversized documents are windowed in token space first (see FIM_MAX_TOKENS) so
+    the emitted triple fits in one training context. The window is decoded back to
+    text before splitting, keeping the three cuts at CHARACTER level — a cut must
+    never land inside a token.
+    """
+    if len(text) < 40:
+        return None
+    ids = tok.encode(text, add_special_tokens=False).ids
+    if len(ids) > FIM_MAX_TOKENS:
+        start = rng.randrange(0, len(ids) - FIM_MAX_TOKENS + 1)
+        text = tok.decode(ids[start:start + FIM_MAX_TOKENS])
     n = len(text)
     if n < 40:
         return None
@@ -134,6 +165,7 @@ def build(val_path, train_path, val_target, train_target):
     fval, ftrain = open(val_path, "wb"), open(train_path, "wb")
     n_val = n_train = 0
     n_code_tok = n_eng_tok = n_fim_tok = 0
+    fim_max = 0          # longest FIM sequence emitted; must stay under block_size
     rr = 0
     exhausted = False
 
@@ -161,6 +193,7 @@ def build(val_path, train_path, val_target, train_target):
                 n_code_tok += len(arr)
                 if was_fim:
                     n_fim_tok += len(arr)
+                    fim_max = max(fim_max, len(arr))
             else:
                 n_eng_tok += len(arr)
             if n_val < val_target:
@@ -176,12 +209,12 @@ def build(val_path, train_path, val_target, train_target):
                 break
 
     fval.close(); ftrain.close()
-    return n_val, n_train, n_code_tok, n_eng_tok, n_fim_tok
+    return n_val, n_train, n_code_tok, n_eng_tok, n_fim_tok, fim_max
 
 
 if __name__ == "__main__":
     print(f"Building {args.tokens/1e9:.2f}B FIM train + {args.val_tokens/1e6:.0f}M val ...")
-    n_val, n_train, n_code, n_eng, n_fim = build(
+    n_val, n_train, n_code, n_eng, n_fim, fim_max = build(
         os.path.join(OUT, "fim_val.bin"), os.path.join(OUT, "fim_train.bin"),
         args.val_tokens, args.tokens)
     with open(os.path.join(OUT, "fim_meta.pkl"), "wb") as f:
@@ -193,5 +226,15 @@ if __name__ == "__main__":
           f"({100*n_fim/max(1,n_code):.0f}% of code tokens are FIM, "
           f"{100*n_eng/max(1,n_code+n_eng):.0f}% english)")
     print("Wrote data/fim_train.bin, data/fim_val.bin, data/fim_meta.pkl")
+
+    # GATE: every FIM triple must fit in one training window, or the model sees
+    # orphaned sentinels and learns nothing from them.
+    print(f"longest FIM sequence: {fim_max} tokens (FIM_MAX_TOKENS={FIM_MAX_TOKENS})")
+    if fim_max >= 1024:
+        print(f"  WARNING: {fim_max} >= the 1024-token context. FIM triples will be "
+              f"split across windows and the sentinels will not teach structure. "
+              f"Lower FIM_MAX_TOKENS and rebuild before training.")
+    else:
+        print("  OK — every FIM triple fits inside a 1024-token context.")
     sys.stdout.flush()
     os._exit(0)
