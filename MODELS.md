@@ -279,9 +279,9 @@ text.
 | tok/param | 21 (1x Chinchilla) | 19 (1x) | 63 (3.1x) | 47 (2.4x) |
 | val loss | **3.247** | — | **1.4177** | ~2.75-2.90 |
 | bytes/token (code) | **2.05** | **3.19** | 3.19 | 2.05 |
-| BPB code | **2.060** | **1.046** | ~0.70-0.80 | ~1.85-2.00 |
-| BPB prose | **1.506** | **1.726** | ~1.40-1.55 | ~1.25-1.35 |
-| syntax valid | **4%** | **46%** | ~75-85% | ~5-10% |
+| BPB code | **2.090** | **1.046** | **0.693** | ~1.85-2.00 |
+| BPB prose | **1.354** | **1.702** | **1.259** | ~1.25-1.35 |
+| syntax valid | **0%** | **48%** | **60%** | ~5-10% |
 | hardware | L4, 20h | M3 Max, 14h | L4, 7.4d | L4, 6.6d |
 | cost | $17 | $0 | ~$135 | ~$113 |
 
@@ -291,15 +291,23 @@ code BPE and are comparable to each other. Across those two groups, use BPB.
 
 ### What the numbers say
 
-**The 52M beats the 124M at code by 2x** (BPB 1.046 vs 2.060) while being less
-than half its size — and loses to it on prose (1.726 vs 1.506). That is the
+**The 52M beats the 124M at code by 2x** (BPB 1.046 vs 2.090) while being less
+than half its size — and loses to it on prose (1.702 vs 1.354). That is the
 whole specialisation thesis in one row pair: the domain choice mattered far more
 than the parameter count.
 
-**The 235M coder should roughly halve the 52M's code BPB again**, from 4.5x the
-parameters and 14.7x the tokens. Its prose may land close to BRITTAIN-1's despite
-being a code model, because 15% of 14.7B is ~2.2B English tokens — comparable to
-what v1 saw in total, in a model with twice the capacity.
+**The 235M coder wins on BOTH axes — including prose.** Code BPB 0.693 against the
+52M's 1.046 is a 34% improvement (the projection said "roughly halve"; it didn't
+quite, consistent with the run being data-limited). The surprise is prose:
+**1.259 beats BRITTAIN-1's 1.354**, even though the coder saw only 15% English and
+BRITTAIN-1 saw nothing else. 2.2B English tokens in a 235M model beat 2.6B English
+tokens in a 124M one — capacity won, and code training appears to *transfer* to
+prose rather than interfere with it.
+
+**Syntax validity is the honest miss.** 60% against a projected 75-85%. The model
+writes code that looks right and often doesn't parse — consistent with what it
+does by hand, where it produces plausible-but-wrong statements in the correct local
+idiom. This is the clearest single number showing the 235M/14.7B ceiling.
 
 **The 254M general should be the best prose model of the four** and the worst at
 code, which is exactly the mirror image of the coder. If both land as projected,
