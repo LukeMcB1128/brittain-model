@@ -7,6 +7,10 @@
 data/*.bin
 data/english.txt
 data/tok_sample.jsonl
+# Corpora are large. prepare_bs.py defaults outside this repo for that reason,
+# but --out can point back in here, and a 130MB blob commits fine then fails at
+# push (GitHub rejects >100MB).
+data/*.jsonl
 
 # Build artifact: rewritten by every prepare_*.py run
 data/meta.pkl

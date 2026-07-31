@@ -4,7 +4,10 @@ Build a BrittainScript corpus by translating The Stack through py2bs.
     python3 prepare_bs.py --tokens 10e6
     python3 prepare_bs.py --tokens 10e6 --workers 10 --no_verify   # ~20x faster
 
-Writes data/bs_corpus.jsonl, one {"py": ..., "bs": ...} per accepted file. Keeping
+Writes ../bs-corpus/bs_corpus.jsonl by default — alongside py2bs's own output, and
+deliberately OUTSIDE both git repos: at 10M tokens the file is ~130MB, which git
+will happily commit and then GitHub will reject at push. One
+{"py": ..., "bs": ...} row per accepted file. Keeping
 the Python alongside costs nothing and leaves the door open to a translation-pair
 SFT later ("write this in BrittainScript"), which the .bs alone would not support.
 
@@ -41,9 +44,15 @@ import multiprocessing as mp
 
 os.environ.setdefault("HF_HUB_DISABLE_XET", "1")   # xet backend has thrown SIGBUS here
 
+HERE = os.path.dirname(os.path.abspath(__file__))
+# Default into the sibling bs-corpus/ — that folder is the corpus, it already holds
+# py2bs's own output, and it is NOT a git repo, so a 100MB+ jsonl cannot be
+# committed by accident. Resolved from this file's location, not the cwd.
+DEFAULT_OUT = os.path.normpath(os.path.join(HERE, "..", "bs-corpus", "bs_corpus.jsonl"))
+
 p = argparse.ArgumentParser()
 p.add_argument("--tokens", type=float, default=10e6, help="stop at this many BS tokens")
-p.add_argument("--out", default="data/bs_corpus.jsonl")
+p.add_argument("--out", default=DEFAULT_OUT)
 p.add_argument("--py2bs_path", default="../BrittainScript",
                help="checkout containing the py2bs package (it is not on PyPI)")
 p.add_argument("--dataset", default="bigcode/the-stack-dedup")
