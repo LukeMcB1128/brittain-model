@@ -72,13 +72,23 @@ print(f"{enc.name} vocab {enc.vocab_size} | ctx {cfg.block_size} | {device.type}
 print("-" * 70)
 
 
+DIM, RESET = ("\033[2m", "\033[0m") if sys.stdout.isatty() else ("", "")
+
+
 def generate(prompt):
-    """Stream a completion for one prompt. Keeps the last block_size tokens only."""
+    """Stream a completion for one prompt. Keeps the last block_size tokens only.
+
+    The prompt is echoed DIM and the model's own output bright, so it is always
+    obvious which text the model actually produced. Only the part of the prompt
+    that fits in the context is echoed — anything older was never seen.
+    """
     ids = torch.tensor([enc.encode(prompt)], dtype=torch.long, device=device)
     if ids.size(1) >= cfg.block_size:
-        print(f"[prompt is {ids.size(1)} tokens, keeping the last {cfg.block_size - 1}]")
-        ids = ids[:, -(cfg.block_size - 1):]
-    print(prompt, end="", flush=True)
+        kept = cfg.block_size - 1
+        print(f"[prompt is {ids.size(1)} tokens; the model sees only the last {kept}]")
+        ids = ids[:, -kept:]
+        prompt = enc.decode(ids[0].tolist())   # echo only what it actually sees
+    print(DIM + prompt + RESET, end="", flush=True)
     # incremental UTF-8 decoder buffers multi-byte chars across tokens (no <?>)
     utf8 = codecs.getincrementaldecoder("utf-8")("replace")
     emitted = ""
@@ -98,6 +108,10 @@ def generate(prompt):
             if args.stop_blank and emitted.strip() and "\n\n" in emitted:
                 break
     print()
+    if not emitted.strip():
+        print("[no output — the model hit end-of-document immediately. This usually "
+              "means the prompt is a COMPLETE file; truncate it mid-function to get "
+              "a real completion.]")
 
 
 if args.file:
