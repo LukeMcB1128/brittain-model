@@ -1,0 +1,333 @@
+"""
+Ollama-compatible HTTP server for BRITTAIN checkpoints. Serves several at once
+so clients can switch between them.
+
+    pip install fastapi uvicorn
+
+    # serve everything you have; mode is inferred per model
+    python3 scripts/inference/serve.py checkpoints/brittain_50m_bs.pt \
+        checkpoints/brittain_235m_weights.pt checkpoints/brittain_124m_sft.pt
+
+    # rename for nicer client-side labels
+    python3 scripts/inference/serve.py \
+        checkpoints/brittain_50m_bs.pt=brittain2-xs-coder:50m
+
+Serves on http://localhost:11435 (11434 is real Ollama, so both can coexist).
+Point Continue.dev / Brittain Code at it as an Ollama provider; the models show
+up in /api/tags and requests route on the "model" field.
+
+MODES
+  raw       — prompt goes to the model untouched, short generation, stops at a
+              blank line. Correct for BASE models (the coders): completion is
+              what they natively do.
+  instruct  — wraps input in the Alpaca template. Only correct for SFT'd
+              checkpoints; templating a base model produces garbage.
+
+  Inferred per model from the filename ("sft"/"instruct" -> instruct, else raw).
+  Override globally with --raw / --instruct, or per request with "raw": true.
+
+MEMORY: every checkpoint listed is loaded at startup. Roughly 1.5GB for the
+52M, 2GB for the 124M, 3GB for the 235M in fp32.
+
+FILL-IN-THE-MIDDLE: these models were never trained with FIM, but autocomplete
+clients (Continue.dev et al.) wrap prompts in FIM sentinels anyway. The server
+detects and strips them — StarCoder, Qwen, CodeLlama, DeepSeek and Codestral
+dialects — and feeds the model just the prefix. The suffix can't be used as
+context, but its first line becomes a stop sequence so the completion doesn't
+duplicate what already follows the cursor.
+
+So it works with FIM clients, but it genuinely continues a prefix: good at
+end-of-line/end-of-function, poor at editing mid-file.
+"""
+import os
+import json
+import time
+import codecs
+import argparse
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
+
+import torch
+import uvicorn
+from fastapi import FastAPI, Request
+from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+
+from brittain.model import Brittain, GPTConfig
+from brittain import model_bs
+from brittain.paths import CHECKPOINT_DIR
+from brittain.prompts import format_prompt
+from brittain.tokenizer import load_tokenizer
+
+ap = argparse.ArgumentParser()
+ap.add_argument("checkpoints", nargs="*",
+                help="checkpoint paths, optionally PATH=display-name. "
+                     "Omit to auto-discover brittain_*.pt in the current directory.")
+ap.add_argument("--raw", action="store_true", help="force raw mode for all models")
+ap.add_argument("--instruct", action="store_true", help="force template mode for all models")
+ap.add_argument("--port", type=int, default=11435)
+args = ap.parse_args()
+
+device = (torch.device("cuda") if torch.cuda.is_available()
+          else torch.device("mps") if torch.backends.mps.is_available()
+          else torch.device("cpu"))
+
+
+class Loaded:
+    def __init__(self, path, name):
+        ck = torch.load(path, map_location=device)
+        # BS checkpoints are a bare ModuleList state_dict with no 'cfg' key
+        if not isinstance(ck, dict) or "cfg" not in ck:
+            self.model, self.enc = model_bs.load(path, device)
+            self.block = self.model.block
+        else:
+            cfg = GPTConfig(**ck["cfg"])
+            self.model = Brittain(cfg).to(device)
+            self.model.load_state_dict(ck["model"])
+            self.model.eval()
+            self.enc = load_tokenizer(ck)
+            self.block = cfg.block_size
+        self.name = name
+        self.params = self.model.num_params()
+        self.is_brittain = isinstance(self.model, Brittain)
+        low = os.path.basename(path).lower()
+        if args.raw:
+            self.raw_default = True
+        elif args.instruct:
+            self.raw_default = False
+        else:
+            self.raw_default = not ("sft" in low or "instruct" in low)
+
+
+def discover():
+    """brittain_*.pt, newest first. Filed checkpoints live in checkpoints/, but
+    training may still write to the repository root, so both are searched — a run is
+    findable before it has been filed away. The old 604M char-level backup uses a
+    long-gone architecture and can't be loaded, so it's excluded by name."""
+    import glob
+    found = [p for p in (glob.glob(str(CHECKPOINT_DIR / "brittain_*.pt"))
+                         + glob.glob(str(PROJECT_ROOT / "brittain_*.pt")))
+             if "model_backup" not in p]
+    return sorted(found, key=os.path.getmtime, reverse=True)
+
+
+specs = args.checkpoints or discover()
+if not specs:
+    ap.error("no checkpoints given and no brittain_*.pt found in this directory")
+
+MODELS = {}
+for spec in specs:
+    path, _, disp = spec.partition("=")
+    stem = os.path.basename(path)[:-3] if path.endswith(".pt") else os.path.basename(path)
+    name = disp or stem
+    try:
+        MODELS[name] = Loaded(path, name)
+    except Exception as exc:                 # incompatible/corrupt checkpoint
+        print(f"  [skip] {path}: {type(exc).__name__}: {exc}")
+if not MODELS:
+    ap.error("no checkpoints could be loaded")
+DEFAULT = next(iter(MODELS))
+
+app = FastAPI()
+app.add_middleware(CORSMiddleware, allow_origins=["*"],
+                   allow_methods=["*"], allow_headers=["*"])
+now = lambda: time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+# Continue.dev and most autocomplete clients assume a fill-in-the-middle model
+# and wrap the prompt in sentinel tokens. BRITTAIN never saw those tokens, so
+# they'd arrive as noise. We strip them and keep only the prefix.
+FIM_MARKERS = [
+    ("<fim_prefix>", "<fim_suffix>", "<fim_middle>"),        # StarCoder / SantaCoder
+    ("<|fim_prefix|>", "<|fim_suffix|>", "<|fim_middle|>"),  # Qwen / CodeQwen
+    ("<PRE>", "<SUF>", "<MID>"),                             # CodeLlama
+    ("<｜fim▁begin｜>", "<｜fim▁hole｜>",
+     "<｜fim▁end｜>"),                          # DeepSeek
+]
+
+
+def strip_fim(prompt):
+    """-> (prefix, suffix). suffix is None when the prompt wasn't FIM-wrapped.
+
+    We can't *use* the suffix as context (the model has no FIM training), but
+    it tells us what already follows the cursor, which makes a useful stop
+    sequence so the completion doesn't duplicate it."""
+    for pre, suf, mid in FIM_MARKERS:
+        if pre in prompt and suf in prompt:
+            body = prompt.split(pre, 1)[1]
+            prefix, rest = body.split(suf, 1)
+            suffix = rest.split(mid, 1)[0] if mid in rest else rest
+            return prefix, suffix
+    # Codestral-style: [SUFFIX]...[PREFIX]...
+    if "[SUFFIX]" in prompt and "[PREFIX]" in prompt:
+        after = prompt.split("[SUFFIX]", 1)[1]
+        suffix, prefix = after.split("[PREFIX]", 1)
+        return prefix, suffix
+    return prompt, None
+
+
+def suffix_stop(suffix):
+    """First substantial line after the cursor, used as a stop sequence."""
+    if not suffix:
+        return []
+    first = suffix.lstrip("\n").split("\n", 1)[0].strip()
+    return [first] if len(first) >= 4 else []
+
+
+def pick(body):
+    """Route on the request's model field, falling back to the first loaded."""
+    want = (body or {}).get("model") or DEFAULT
+    if want in MODELS:
+        return MODELS[want]
+    # tolerate ollama-style "name:tag" and bare-stem mismatches
+    base = want.split(":")[0]
+    for k, v in MODELS.items():
+        if k == base or k.split(":")[0] == base:
+            return v
+    return MODELS[DEFAULT]
+
+
+def stream_pieces(M, prompt, raw, opts):
+    if raw:
+        temperature = opts.get("temperature", 0.2)
+        max_new = opts.get("num_predict", 48)
+        stops = opts.get("stop") or ["\n\n"]
+        rep = opts.get("repeat_penalty", 1.05)
+    else:
+        temperature = opts.get("temperature", 0.5)
+        max_new = opts.get("num_predict", 400)
+        stops = opts.get("stop") or []
+        rep = opts.get("repeat_penalty", 1.12)
+    top_p = opts.get("top_p", 0.95)
+
+    ids = torch.tensor([M.enc.encode(prompt)], dtype=torch.long, device=device)
+    ids = ids[:, -M.block:]
+    utf8 = codecs.getincrementaldecoder("utf-8")("replace")
+    acc = ""
+    def token_stream():
+        """One token at a time. Brittain models keep a KV cache across the whole
+        completion; the BS model has no stream() and falls back to the old
+        one-token-at-a-time loop."""
+        if M.is_brittain:
+            yield from M.model.stream(ids, max_new, temperature=temperature,
+                                      top_p=top_p, repetition_penalty=rep)
+            return
+        cur = ids
+        for _ in range(max_new):
+            cur = M.model.generate(cur[:, -M.block:], 1, temperature=temperature,
+                                   top_p=top_p, repetition_penalty=rep)
+            yield cur[:, -1:]
+
+    with torch.no_grad():
+        for tok in token_stream():
+            nxt = tok[0, -1].item()
+            if nxt == M.enc.eot:
+                break
+            piece = utf8.decode(M.enc.token_bytes(nxt))
+            if not piece:
+                continue
+            prev_len = len(acc)
+            acc += piece
+            # Don't let a stop fire before any real content: models often emit a
+            # leading newline, which would trip a "\n\n" stop immediately and
+            # return nothing.
+            hit = None if not acc.strip() else next((s for s in stops if s in acc), None)
+            if hit:
+                cut = acc[:acc.index(hit)]
+                if len(cut) > prev_len:
+                    yield cut[prev_len:]
+                return
+            yield piece
+
+
+@app.get("/api/tags")
+def tags():
+    return {"models": [
+        {"name": m.name, "model": m.name, "modified_at": now(), "size": 0,
+         "digest": m.name, "context": str(m.block),
+         "details": {"family": "brittain",
+                     "parameter_size": f"{m.params/1e6:.0f}M"}}
+        for m in MODELS.values()]}
+
+
+@app.get("/api/version")
+def version():
+    return {"version": "brittain-0.3"}
+
+
+@app.post("/api/show")
+async def show(req: Request):
+    M = pick(await req.json())
+    return {"details": {"family": "brittain",
+                        "parameter_size": f"{M.params/1e6:.0f}M"},
+            "capabilities": ["completion"], "context_length": M.block}
+
+
+@app.post("/api/generate")
+async def generate(req: Request):
+    body = await req.json()
+    M = pick(body)
+    opts = body.get("options") or {}
+    raw = body.get("raw", M.raw_default)
+    prompt = body.get("prompt", "")
+    if raw:
+        prompt, suffix = strip_fim(prompt)
+        if suffix is not None and not opts.get("stop"):
+            extra = suffix_stop(suffix)
+            if extra:
+                opts = {**opts, "stop": ["\n\n"] + extra}
+    else:
+        prompt = format_prompt(prompt)
+
+    def gen():
+        for p in stream_pieces(M, prompt, raw, opts):
+            yield json.dumps({"model": M.name, "created_at": now(),
+                              "response": p, "done": False}) + "\n"
+        yield json.dumps({"model": M.name, "created_at": now(), "response": "",
+                          "done": True, "done_reason": "stop"}) + "\n"
+
+    if body.get("stream", True):
+        return StreamingResponse(gen(), media_type="application/x-ndjson")
+    return JSONResponse({"model": M.name, "created_at": now(),
+                         "response": "".join(stream_pieces(M, prompt, raw, opts)),
+                         "done": True})
+
+
+@app.post("/api/chat")
+async def chat(req: Request):
+    body = await req.json()
+    M = pick(body)
+    opts = body.get("options") or {}
+    msgs = body.get("messages", [])
+    user = next((m["content"] for m in reversed(msgs) if m.get("role") == "user"), "")
+    # single-turn: these models never saw multi-turn conversations in training
+    raw = body.get("raw", M.raw_default)
+    prompt = user if raw else format_prompt(user)
+
+    def gen():
+        for p in stream_pieces(M, prompt, raw, opts):
+            yield json.dumps({"model": M.name, "created_at": now(),
+                              "message": {"role": "assistant", "content": p},
+                              "done": False}) + "\n"
+        yield json.dumps({"model": M.name, "created_at": now(),
+                          "message": {"role": "assistant", "content": ""},
+                          "done": True, "done_reason": "stop"}) + "\n"
+
+    if body.get("stream", True):
+        return StreamingResponse(gen(), media_type="application/x-ndjson")
+    return JSONResponse({"model": M.name, "created_at": now(),
+                         "message": {"role": "assistant",
+                                     "content": "".join(stream_pieces(M, prompt, raw, opts))},
+                         "done": True})
+
+
+if __name__ == "__main__":
+    print(f"BRITTAIN serving {len(MODELS)} model(s) on http://localhost:{args.port}"
+          f"  [device {device}]")
+    for m in MODELS.values():
+        print(f"  {m.name:<30} {m.params/1e6:6.0f}M  ctx {m.block:<5} "
+              f"{m.enc.name:<9} {'raw' if m.raw_default else 'instruct'}")
+    uvicorn.run(app, host="127.0.0.1", port=args.port)

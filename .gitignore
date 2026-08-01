@@ -4,26 +4,25 @@
 *.safetensors
 
 # Tokenized dataset binaries + downloaded corpora
-data/*.bin
-data_bs_native/
-data_bs_mixed/
-data/english.txt
-data/tok_sample.jsonl
+data/raw/
+data/processed/
+benchmarks/prompts/prose.txt
 # Corpora are large. prepare_bs.py defaults outside this repo for that reason,
 # but --out can point back in here, and a 130MB blob commits fine then fails at
 # push (GitHub rejects >100MB).
-data/*.jsonl
+data/**/*.jsonl
 
 # Build artifact: rewritten by every prepare_*.py run
-data/meta.pkl
+data/**/meta.pkl
 
-# NOTE: data/code_bpe.json IS committed on purpose. Re-running
-# train_tokenizer.py samples The Stack randomly and yields a DIFFERENT
+# NOTE: tokenizers/brittain2-code-32k/tokenizer.json IS committed on purpose.
+# Re-running scripts/prepare/train_tokenizer.py samples The Stack randomly and yields a DIFFERENT
 # tokenizer, which would make every existing v2 checkpoint unreadable.
 
 # Logs
 *.log
 finetune_log.txt
+runs/
 
 # Python
 __pycache__/
@@ -35,7 +34,3 @@ venv/
 # OS / editor
 .DS_Store
 .vscode/
-
-# Tokenized BrittainScript training sets (prepare_bs_train.py, ~4MB each).
-# Regenerated from the corpus in seconds; the corpus itself lives outside the repo.
-data_bs_*/
