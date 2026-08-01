@@ -117,9 +117,10 @@ p.add_argument("--max_chars", type=int, default=20_000,
 p.add_argument("--no_verify", action="store_true",
                help="skip differential execution. Barely faster, and ~38%% of the "
                     "extra rows compute the wrong thing. See the module docstring.")
-args = p.parse_args()
+args, _ = p.parse_known_args()   # children re-import under spawn; be forgiving
 
 PY2BS = os.path.abspath(os.path.expanduser(args.py2bs_path))
+STUCK_AFTER = 300      # no single candidate can legitimately take this long
 
 
 # Modules a candidate file may import. Pure computation only — nothing that can
@@ -139,7 +140,7 @@ SAFE_MODULES = {
 }
 
 
-def init_worker(py2bs_path, sandbox):
+def init_worker(py2bs_path, sandbox, verify, timeout):
     """Each worker imports py2bs once, then moves somewhere harmless.
 
     THE CHDIR IS A SAFETY FIX, NOT TIDINESS. Verification executes the candidate
@@ -164,6 +165,9 @@ def init_worker(py2bs_path, sandbox):
     # Replace the denylist with the allowlist above. find_spec is also why local
     # .py files counted as importable, so this closes that too.
     frontend.module_is_available = lambda name: name.split(".")[0] in SAFE_MODULES
+
+    global VERIFY, TIMEOUT
+    VERIFY, TIMEOUT = verify, timeout
 
     sys.path[:] = [p for p in sys.path if p not in ("", ".", os.getcwd())]
     os.chdir(sandbox)
@@ -221,7 +225,7 @@ def self_test():
 def attempt(source):
     """Translate one file. Returns (bs_or_None, rejection_reason_or_None)."""
     try:
-        r = translate(source, verify=not args.no_verify, timeout=args.timeout)
+        r = translate(source, verify=VERIFY, timeout=TIMEOUT)
     except Exception as exc:                       # a crash is a rejection, not a stop
         return None, f"crash: {type(exc).__name__}"
     if not r.ok:
@@ -276,7 +280,18 @@ def main():
     t0 = t_log = time.time()
     out = open(os.path.abspath(args.out), "a")
     sandbox = tempfile.mkdtemp(prefix="prepare_bs_")
-    pool = mp.Pool(args.workers, initializer=init_worker, initargs=(PY2BS, sandbox))
+    # SPAWN, NOT FORK. A pool worker that dies — the cgroup OOM killer takes one
+    # whenever a candidate allocates past the container limit — makes Pool fork a
+    # replacement. Forking a process whose helper threads hold internal locks
+    # leaves the child with a mutex nobody will ever release, and the whole pool
+    # wedges in futex_wait with every process at 0% CPU. Observed after 50 minutes
+    # and 2.4M tokens. spawn starts children clean and cannot inherit a held lock.
+    try:
+        mp.set_start_method("spawn", force=True)
+    except RuntimeError:
+        pass
+    pool = mp.Pool(args.workers, initializer=init_worker,
+                   initargs=(PY2BS, sandbox, not args.no_verify, args.timeout))
     try:
         pending = {}
         for h, text in candidates():
@@ -289,7 +304,14 @@ def main():
             for res in done:
                 h, text = pending.pop(res)
                 n_scanned += 1
-                bs, why = res.get()
+                # Backstop: never block forever. If the pool wedges anyway, this
+                # surfaces it as an error instead of a silent 0%-CPU hang.
+                try:
+                    bs, why = res.get(timeout=STUCK_AFTER)
+                except mp.TimeoutError:
+                    sys.exit(f"\nA task made no progress for {STUCK_AFTER}s — the "
+                             f"worker pool is wedged.\nOutput so far is valid; "
+                             f"re-run to resume from it.")
                 if why is not None:
                     rejections[why] += 1
                     continue
