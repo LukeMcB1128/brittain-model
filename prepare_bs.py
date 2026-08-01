@@ -2,7 +2,7 @@
 Build a BrittainScript corpus by translating The Stack through py2bs.
 
     python3 prepare_bs.py --tokens 10e6
-    python3 prepare_bs.py --tokens 10e6 --workers 10 --no_verify   # ~20x faster
+    python3 prepare_bs.py --tokens 10e6 --workers 10
 
 Writes ../bs-corpus/bs_corpus.jsonl by default — alongside py2bs's own output, and
 deliberately OUTSIDE both git repos: at 10M tokens the file is ~130MB, which git
@@ -84,7 +84,8 @@ p.add_argument("--timeout", type=int, default=10, help="seconds per verified pro
 p.add_argument("--max_chars", type=int, default=20_000,
                help="skip larger files; they rarely translate and cost the most")
 p.add_argument("--no_verify", action="store_true",
-               help="skip differential execution — MUCH faster, UNVERIFIED output")
+               help="skip differential execution. Barely faster, and ~38%% of the "
+                    "extra rows compute the wrong thing. See the module docstring.")
 args = p.parse_args()
 
 PY2BS = os.path.abspath(os.path.expanduser(args.py2bs_path))
