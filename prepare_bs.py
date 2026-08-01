@@ -45,8 +45,19 @@ Two boundaries, and the second was learned the hard way:
      imported and RAN this repo's sample.py. `import train` would have started a
      training run.
 
-That is a meaningful boundary, not a sandbox. Run it on a machine you would not
-mind reinstalling, or in a container.
+WHAT IS STILL NOT BOUNDED: MEMORY. `[0] * 10**10` is pure computation, passes the
+allowlist, and will drive a laptop into swap. There is no fix available here on
+macOS — Darwin does not implement RLIMIT_AS or RLIMIT_DATA (setrlimit raises even
+with an infinite hard limit), and RLIMIT_CPU is cumulative per process, so setting
+it in a worker kills the worker rather than the candidate. The only real bound is
+--timeout, plus running fewer workers so concurrent blowups stay survivable.
+
+If you want actual limits, run this in Docker, where memory is a cgroup setting:
+
+    docker run --rm -m 4g -v "$PWD":/w -w /w python:3.12 \
+        sh -c "pip install -q tokenizers datasets && python prepare_bs.py --tokens 10e6"
+
+That is a meaningful boundary, not a sandbox.
 
 RESUMING
 The output is appended to, and already-seen files are skipped by content hash, so
