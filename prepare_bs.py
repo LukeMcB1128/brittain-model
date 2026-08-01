@@ -52,10 +52,23 @@ with an infinite hard limit), and RLIMIT_CPU is cumulative per process, so setti
 it in a worker kills the worker rather than the candidate. The only real bound is
 --timeout, plus running fewer workers so concurrent blowups stay survivable.
 
-If you want actual limits, run this in Docker, where memory is a cgroup setting:
+If you want actual limits, run this in Docker, where memory is a cgroup setting.
+Mount the PARENT of this repo — py2bs lives in ../BrittainScript and the corpus is
+written to ../bs-corpus, so mounting only this directory fails immediately. Match
+the image to your own Python: py2bs rejects candidates with ast.parse, and a
+different version parses a different language, so the container would not
+reproduce the local yield.
 
-    docker run --rm -m 4g -v "$PWD":/w -w /w python:3.12 \
-        sh -c "pip install -q tokenizers datasets && python prepare_bs.py --tokens 10e6"
+    cd ~/Downloads/Coding
+    docker run --rm -m 4g \
+        -v "$PWD":/w \
+        -v ~/.cache/huggingface:/root/.cache/huggingface \
+        -w "/w/BRITTAIN MODEL" python:3.13 \
+        sh -c "pip install -q tokenizers datasets && \
+               python prepare_bs.py --tokens 10e6"
+
+The huggingface cache mount carries your login — The Stack is gated — and avoids
+re-fetching what you already have.
 
 That is a meaningful boundary, not a sandbox.
 
