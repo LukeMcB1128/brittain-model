@@ -35,6 +35,10 @@ from model import Brittain, GPTConfig
 ap = argparse.ArgumentParser()
 ap.add_argument("--base", default="brittain_235m_best.pt")
 ap.add_argument("--out", default="brittain_235m_fim.pt")
+ap.add_argument("--resume", default=None,
+                help="continue a run from a checkpoint THIS script wrote (not --base). "
+                     "Restores weights, optimizer state, iteration and best_val, so "
+                     "the cosine picks up where it left off instead of restarting.")
 ap.add_argument("--data_dir", default="./data")
 ap.add_argument("--iters", type=int, default=5700,
                 help="5700 x 524288 tok ~= 3B tokens")
@@ -65,41 +69,74 @@ print(f"FIM data: vocab {new_vocab} (base {meta['base_vocab']}), "
 train_data = np.memmap(os.path.join(args.data_dir, "fim_train.bin"), dtype=np.uint16, mode="r")
 val_data = np.memmap(os.path.join(args.data_dir, "fim_val.bin"), dtype=np.uint16, mode="r")
 
-# ---------------- load base and grow the vocabulary ----------------
-ck = torch.load(args.base, map_location="cpu")
-old_cfg = dict(ck["cfg"])
-old_vocab = old_cfg["vocab_size"]
-block_size = old_cfg["block_size"]
-if new_vocab < old_vocab:
-    raise SystemExit(f"FIM vocab {new_vocab} smaller than base {old_vocab}")
+start_iter = 0
+resumed_best = float("inf")
 
-cfg = GPTConfig(**{**old_cfg, "vocab_size": new_vocab})
-model = Brittain(cfg)
+if args.resume:
+    # ---------------- continue an interrupted FIM run ----------------
+    # The vocabulary was already grown when the run started, so there is nothing
+    # to resize. What matters is that the optimizer state, the iteration counter
+    # and best_val all come back: AdamW's moments took thousands of steps to
+    # build, and lr_at(it) reads the iteration, so a resume that restarted the
+    # counter would jump the cosine back to peak and undo the annealing.
+    ck = torch.load(args.resume, map_location="cpu")
+    cfg = GPTConfig(**ck["cfg"])
+    if cfg.vocab_size != new_vocab:
+        raise SystemExit(f"resume vocab {cfg.vocab_size} != FIM data vocab {new_vocab}")
+    block_size = cfg.block_size
+    model = Brittain(cfg)
+    model.load_state_dict(ck["model"])
+    model = model.to(device)
+    raw_model = model
+    start_iter = int(ck.get("iter", 0)) + 1
+    resumed_best = float(ck.get("best_val", float("inf")))
+    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr,
+                                  betas=(0.9, 0.95), weight_decay=args.weight_decay)
+    if "optim" in ck:
+        optimizer.load_state_dict(ck["optim"])
+        print("restored optimizer state")
+    else:
+        print("WARNING: no optimizer state in the checkpoint — the first few hundred "
+              "steps will be rough while AdamW's moments rebuild")
+    print(f"Resumed {args.resume}: {model.num_params():,} params, "
+          f"iter {start_iter - 1} -> {args.iters}, best_val {resumed_best:.4f}, "
+          f"lr will be {args.lr:.2e} -> resuming mid-cosine")
+else:
+    # ---------------- load base and grow the vocabulary ----------------
+    ck = torch.load(args.base, map_location="cpu")
+    old_cfg = dict(ck["cfg"])
+    old_vocab = old_cfg["vocab_size"]
+    block_size = old_cfg["block_size"]
+    if new_vocab < old_vocab:
+        raise SystemExit(f"FIM vocab {new_vocab} smaller than base {old_vocab}")
 
-sd = ck["model"]
-# tok_emb and lm_head are the same tensor (tied). Copy trained rows into the new,
-# larger table; rows for the sentinels keep their fresh small init.
-emb_key = "tok_emb.weight" if "tok_emb.weight" in sd else "lm_head.weight"
-old_emb = sd[emb_key]
-if old_emb.shape[0] != old_vocab:
-    raise SystemExit(f"embedding rows {old_emb.shape[0]} != cfg vocab {old_vocab}")
-with torch.no_grad():
-    model.tok_emb.weight[:old_vocab].copy_(old_emb)
-grown = model.tok_emb.weight.detach().clone()
-sd["tok_emb.weight"] = grown
-sd["lm_head.weight"] = grown
-missing, unexpected = model.load_state_dict(sd, strict=False)
-if missing or unexpected:
-    print(f"  state_dict: {len(missing)} missing, {len(unexpected)} unexpected")
-model = model.to(device)
-raw_model = model
-print(f"Loaded {args.base}: {model.num_params():,} params, "
-      f"vocab {old_vocab} -> {new_vocab} (+{new_vocab - old_vocab} rows)")
+    cfg = GPTConfig(**{**old_cfg, "vocab_size": new_vocab})
+    model = Brittain(cfg)
 
-optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr,
-                              betas=(0.9, 0.95), weight_decay=args.weight_decay)
-# deliberately NOT restoring ck['optim'] — momentum from the base run belongs to
-# the old objective and the old (smaller) parameter shapes.
+    sd = ck["model"]
+    # tok_emb and lm_head are the same tensor (tied). Copy trained rows into the new,
+    # larger table; rows for the sentinels keep their fresh small init.
+    emb_key = "tok_emb.weight" if "tok_emb.weight" in sd else "lm_head.weight"
+    old_emb = sd[emb_key]
+    if old_emb.shape[0] != old_vocab:
+        raise SystemExit(f"embedding rows {old_emb.shape[0]} != cfg vocab {old_vocab}")
+    with torch.no_grad():
+        model.tok_emb.weight[:old_vocab].copy_(old_emb)
+    grown = model.tok_emb.weight.detach().clone()
+    sd["tok_emb.weight"] = grown
+    sd["lm_head.weight"] = grown
+    missing, unexpected = model.load_state_dict(sd, strict=False)
+    if missing or unexpected:
+        print(f"  state_dict: {len(missing)} missing, {len(unexpected)} unexpected")
+    model = model.to(device)
+    raw_model = model
+    print(f"Loaded {args.base}: {model.num_params():,} params, "
+          f"vocab {old_vocab} -> {new_vocab} (+{new_vocab - old_vocab} rows)")
+
+    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr,
+                                  betas=(0.9, 0.95), weight_decay=args.weight_decay)
+    # deliberately NOT restoring ck['optim'] — momentum from the base run belongs to
+    # the old objective and the old (smaller) parameter shapes.
 
 if args.compile and device.type == "cuda":
     try:
@@ -153,12 +190,14 @@ def save(path, it, val, best):
 
 
 tokens_per_iter = args.batch_size * args.grad_accum * block_size
-print(f"{args.iters} iters x {tokens_per_iter:,} tok = "
-      f"{args.iters * tokens_per_iter / 1e9:.2f}B tokens | peak lr {args.lr:g}")
-best_val = float("inf")
+remaining = args.iters - start_iter + 1
+print(f"{remaining} iters x {tokens_per_iter:,} tok = "
+      f"{remaining * tokens_per_iter / 1e9:.2f}B tokens | peak lr {args.lr:g}"
+      + (f" | resuming at {start_iter}" if start_iter else ""))
+best_val = resumed_best
 t0 = t_log = time.time()
 model.train()
-for it in range(args.iters + 1):
+for it in range(start_iter, args.iters + 1):
     for g in optimizer.param_groups:
         g["lr"] = lr_at(it)
     optimizer.zero_grad(set_to_none=True)
