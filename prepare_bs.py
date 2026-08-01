@@ -11,16 +11,27 @@ will happily commit and then GitHub will reject at push. One
 the Python alongside costs nothing and leaves the door open to a translation-pair
 SFT later ("write this in BrittainScript"), which the .bs alone would not support.
 
-WHY THIS IS SLOW, AND WHY IT IS PARALLEL
-Verification runs BOTH programs and compares stdout — two interpreter startups per
-candidate file. That, not translation, is the entire cost, and it is what makes a
-translation trustworthy rather than merely plausible. It is also embarrassingly
-parallel, so it runs in a process pool. On a 12-core machine expect roughly 20
-files/sec verified.
+DO NOT USE --no_verify FOR A REAL CORPUS
+Verification runs both programs and compares stdout. Measured on The Stack:
 
-    --no_verify is ~20x faster and produces UNVERIFIED data. The whole argument for
-    this corpus is that every line is known-correct, so only use it to estimate
-    yield before committing to a real run.
+    verified     1.6% acceptance
+    unverified   2.6% acceptance
+
+So roughly 38% of everything the emitter produces computes something DIFFERENT
+from the Python it came from. Skipping verification does not add 1.6x more data;
+it adds 1.6x more data of which a third is wrong.
+
+That matters more here than a bad-data fraction normally would, because transpiler
+errors are SYSTEMATIC. A human corpus full of bugs is noisy in random directions
+and largely averages out. A mistranslated construct is wrong the same way every
+single time, so the model sees it consistently and learns it as correct
+BrittainScript — and this model's whole purpose is to emit BrittainScript.
+
+It is not even a speed argument. Only the ~2% of files that pass validation are
+ever executed; the other 98% are rejected by parsing alone. Throughput is bound by
+streaming The Stack over the network, not by verification. Keep it on.
+
+Verification is embarrassingly parallel, so it runs in a process pool.
 
 SAFETY
 Verification EXECUTES code from The Stack, which is scraped from public GitHub.
