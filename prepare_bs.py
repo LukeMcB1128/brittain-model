@@ -63,8 +63,14 @@ reproduce the local yield.
     docker run --rm -m 4g \
         -e HF_TOKEN="$(cat ~/.cache/huggingface/token)" \
         -v "$PWD":/w -w "/w/BRITTAIN MODEL" python:3.13 \
-        sh -c "pip install -q tokenizers datasets && \
+        sh -c "pip install -q ply tokenizers datasets && \
                python prepare_bs.py --tokens 10e6"
+
+ply IS REQUIRED and is easy to miss: it is BrittainScript's only runtime
+dependency, nothing in this repo needs it, and without it the interpreter cannot
+start — so every verification fails and every file is rejected. A container that
+installed only tokenizers and datasets rejected 990,000 files at 0% acceptance.
+self_test() now catches that before the scan begins.
 
 The Stack is gated, and the container has no login of its own, so HF_TOKEN has to
 be passed in. Prefer the env var over mounting ~/.cache/huggingface: that
@@ -163,6 +169,55 @@ def init_worker(py2bs_path, sandbox):
     os.chdir(sandbox)
 
 
+# A program that MUST translate and verify. If this fails, the environment is
+# broken and every real candidate would be rejected too — silently, since a broken
+# interpreter is indistinguishable from an untranslatable file. That is not
+# hypothetical: a Docker run installed tokenizers and datasets but not ply,
+# BrittainScript's only runtime dependency, and rejected 990,000 files at 0%
+# acceptance before anyone noticed.
+CANARY = """def double(n):
+    return n * 2
+
+print(double(21))
+"""
+
+
+def self_test():
+    """Prove the toolchain works before scanning a million files.
+
+    Runs in the MAIN process, before the pool exists. It cannot run inside the
+    pool: if a Pool initializer raises — which is exactly what a missing ply or a
+    wrong --py2bs_path does — multiprocessing respawns the worker forever and any
+    apply() hangs instead of failing. The failure modes worth catching here are
+    process-independent anyway.
+    """
+    def die(reason, detail=""):
+        sys.exit(
+            f"\nSelf-test failed: {reason}\n{detail}\n"
+            f"Every candidate would fail the same way, so this stops now rather\n"
+            f"than reporting a million rejections.\n\n"
+            f"Most likely causes:\n"
+            f"  * ply is not installed — BrittainScript's interpreter needs it,\n"
+            f"    nothing in this repo does, so it is easy to miss:  pip install ply\n"
+            f"  * --py2bs_path is not a BrittainScript checkout\n"
+            f"      currently: {PY2BS}\n")
+
+    if not os.path.isdir(os.path.join(PY2BS, "py2bs")):
+        die("no py2bs package found.", f"  looked in: {PY2BS}")
+    sys.path.insert(0, PY2BS)
+    try:
+        from py2bs import translate as _translate
+    except Exception as exc:
+        die("py2bs could not be imported.", f"  {type(exc).__name__}: {exc}")
+    try:
+        r = _translate(CANARY, verify=not args.no_verify, timeout=args.timeout)
+    except Exception as exc:
+        die("translating a trivial program raised.", f"  {type(exc).__name__}: {exc}")
+    if not r.ok:
+        die("a trivial program did not translate.",
+            f"  {r.error or (r.rejected_features or ['unknown'])[0]}")
+
+
 def attempt(source):
     """Translate one file. Returns (bs_or_None, rejection_reason_or_None)."""
     try:
@@ -178,6 +233,7 @@ def attempt(source):
 
 
 def main():
+    self_test()          # before the network, the pool, or anything expensive
     from tokenizers import Tokenizer
     from datasets import load_dataset
 
