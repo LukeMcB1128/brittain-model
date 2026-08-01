@@ -106,37 +106,68 @@ def load_corpus():
     return exact, grams
 
 
+def load_model(device):
+    """Load either checkpoint format this repo produces.
+
+    train.py / train_bs.py write a dict carrying 'cfg' and 'model', for the
+    architecture in model.py. train_50m.bs and specialize_50m.bs write a bare
+    nn.ModuleList.state_dict() with numeric keys, for a DIFFERENT architecture —
+    BrittainScript could not express RoPE, SwiGLU or weight tying, so that model
+    has learned position embeddings, a GELU MLP and an untied head. The two are
+    not interconvertible, and model_bs.py exists to rebuild the second one.
+    """
+    import torch
+
+    ck = torch.load(args.checkpoint, map_location=device)
+    if isinstance(ck, dict) and "cfg" in ck:
+        from model import Brittain, GPTConfig
+        from tok_util import load_tokenizer
+        model = Brittain(GPTConfig(**ck["cfg"])).to(device)
+        model.load_state_dict(ck["model"])
+        model.eval()
+        print(f"loaded {args.checkpoint} ({model.num_params():,} params, "
+              f"iter {ck.get('iter', '?')}) on {device.type}")
+        return model, load_tokenizer(ck), True
+
+    from model_bs import load as load_bs
+    model, enc = load_bs(args.checkpoint, device)
+    print(f"loaded {args.checkpoint} ({model.num_params():,} params, "
+          f"BrittainScript-trained architecture) on {device.type}")
+    if args.top_k is not None:
+        print("  note: --top_k is ignored for this architecture; it samples "
+              "with temperature/top_p/repetition_penalty only")
+    return model, enc, False
+
+
 def generate(n):
     """Unconditional samples: start from end-of-text and let it open a document."""
     import torch
-    from model import Brittain, GPTConfig
-    from tok_util import load_tokenizer
 
     torch.manual_seed(args.seed)
     random.seed(args.seed)
     device = (torch.device("cuda") if torch.cuda.is_available()
               else torch.device("mps") if torch.backends.mps.is_available()
               else torch.device("cpu"))
-    ck = torch.load(args.checkpoint, map_location=device)
-    cfg = GPTConfig(**ck["cfg"])
-    model = Brittain(cfg).to(device)
-    model.load_state_dict(ck["model"])
-    model.eval()
-    enc = load_tokenizer(ck)
-    print(f"loaded {args.checkpoint} ({model.num_params():,} params, "
-          f"iter {ck.get('iter', '?')}) on {device.type}")
+    model, enc, is_brittain = load_model(device)
 
     out = []
     t0 = time.time()
     while len(out) < n:
         b = min(args.batch, n - len(out))
         idx = torch.full((b, 1), enc.eot, dtype=torch.long, device=device)
-        with torch.no_grad(), torch.autocast(device_type=device.type,
-                                             dtype=torch.bfloat16):
-            done = model.generate(idx, args.max_tokens,
-                                  temperature=args.temperature,
-                                  top_k=args.top_k, top_p=args.top_p,
-                                  repetition_penalty=args.repetition_penalty)
+        with torch.no_grad():
+            if is_brittain:
+                with torch.autocast(device_type=device.type, dtype=torch.bfloat16):
+                    done = model.generate(idx, args.max_tokens,
+                                          temperature=args.temperature,
+                                          top_k=args.top_k, top_p=args.top_p,
+                                          repetition_penalty=args.repetition_penalty)
+            else:
+                # trained in fp32 and has no top_k; run it as it was trained
+                done = model.generate(idx, args.max_tokens,
+                                      temperature=args.temperature,
+                                      top_p=args.top_p,
+                                      repetition_penalty=args.repetition_penalty)
         for row in done.tolist():
             body = row[1:]                       # drop the priming end-of-text
             if enc.eot in body:                  # stop at the document boundary

@@ -1,0 +1,276 @@
+# brittain2-xs-coder:50m-bs-specialist — specializing the 50M on BrittainScript,
+# in BrittainScript. Same architecture and the same constraints as train_50m.bs;
+# what changes is that the weights are LOADED rather than random, the learning
+# rate is two orders of magnitude lower, and the run is a few epochs instead of
+# one pass over a billion tokens.
+#
+#   bs specialize_50m.bs data_bs_native weights/xs_bs_native.pt
+#   bs specialize_50m.bs data_bs_mixed  weights/xs_bs_mixed.pt
+#
+# THE TWO RUNS MUST DIFFER IN BOTH ARGUMENTS. Running this twice unchanged gives
+# two models that differ only by random seed, which answers nothing. The whole
+# experiment is native-only against native+translation at an equal token budget,
+# so it is the DATA DIRECTORY that has to change, and the output path with it or
+# the second run silently overwrites the first.
+#
+# Everything else must stay identical between the two runs. Change the learning
+# rate or the epochs for one of them and the comparison is worthless.
+#
+# Judge the result with eval_bs.py, which runs what the model writes through the
+# interpreter. Validation loss cannot tell a model that learned BrittainScript
+# from one that memorised 19,705 programs; RUNS AND IS NOVEL can.
+
+torch = pyimport("torch")
+nn = pyimport("torch.nn")
+F = pyimport("torch.nn.functional")
+optim = pyimport("torch.optim")
+np = pyimport("numpy")
+sys = pyimport("sys")
+
+# ---------------- arguments ----------------
+data_dir = "data_bs_native"
+out_path = "weights/xs_bs_native.pt"
+base_path = "weights/brittain_50m_bs.pt"
+
+cond len(sys.argv) > 2:
+    data_dir = sys.argv[2]
+end
+cond len(sys.argv) > 3:
+    out_path = sys.argv[3]
+end
+cond len(sys.argv) > 4:
+    base_path = sys.argv[4]
+end
+
+data_path = data_dir + "/train.bin"
+val_path = data_dir + "/val.bin"
+
+# ---------------- config ----------------
+# Architecture is fixed by the checkpoint being loaded — it must match
+# train_50m.bs exactly or load_state_dict fails.
+vocab = 32000
+n_layer = 6
+n_head = 8
+n_embd = 512
+head_dim = 64          # n_embd / n_head, hardcoded: BS division returns a float
+block = 512
+
+batch = 4
+accum = 8              # effective batch 32 seqs = 16,384 tokens per step
+epochs = 3
+
+# Two orders of magnitude below pretraining. The point is to move the model onto
+# BrittainScript, not to overwrite what it knows about code.
+lr = 0.00003
+min_lr = 0.000003
+warmup_frac = 0.05
+
+log_every = 10
+eval_every = 25
+eval_batches = 12
+
+# ---------------- device ----------------
+dev = "cpu"
+cond torch.backends.mps.is_available():
+    dev = "mps"
+end
+cond torch.cuda.is_available():
+    dev = "cuda"
+end
+push("device:")
+push(dev)
+
+# ---------------- model ----------------
+# Layout must match train_50m.bs exactly:
+#   0                      token embedding
+#   1                      position embedding
+#   2 + b*6 + 0..5         block b: ln1, qkv, proj, ln2, fc, fcproj
+#   2 + n_layer*6          final layernorm
+#   3 + n_layer*6          lm head
+mods = nn.ModuleList()
+sink = mods.append(nn.Embedding(vocab, n_embd))
+sink = mods.append(nn.Embedding(block, n_embd))
+
+b = 0
+while b < n_layer:
+    sink = mods.append(nn.LayerNorm(n_embd))
+    sink = mods.append(nn.Linear(n_embd, 3 * n_embd, false))
+    sink = mods.append(nn.Linear(n_embd, n_embd, false))
+    sink = mods.append(nn.LayerNorm(n_embd))
+    sink = mods.append(nn.Linear(n_embd, 4 * n_embd, false))
+    sink = mods.append(nn.Linear(4 * n_embd, n_embd, false))
+    b = b + 1
+end
+
+sink = mods.append(nn.LayerNorm(n_embd))
+sink = mods.append(nn.Linear(n_embd, vocab, false))
+
+# THE WHOLE DIFFERENCE FROM train_50m.bs IS THIS. Without it the run is
+# pretraining from scratch on 1.7M tokens, which would produce noise.
+push("loading base:")
+push(base_path)
+state = torch.load(base_path)
+report = mods.load_state_dict(state)
+push(report)
+moved = mods.to(dev)
+
+total = 0
+for prm in mods.parameters():
+    total = total + prm.numel()
+end
+push("parameters:")
+push(total)
+
+mask = torch.ones(block, block).tril().bool().to(dev)
+
+# ---------------- data ----------------
+train_data = np.memmap(data_path, np.uint16, "r")
+val_data = np.memmap(val_path, np.uint16, "r")
+ntokens = len(train_data)
+nval = len(val_data)
+push("train tokens:")
+push(ntokens)
+
+tokens_per_iter = batch * accum * block
+max_iters = floor(epochs * ntokens / tokens_per_iter)
+warmup = floor(warmup_frac * max_iters)
+cond warmup < 1:
+    warmup = 1
+end
+push("iters:")
+push(max_iters)
+
+func get_batch_from(src, srclen):
+    ix = torch.randint(0, srclen - block - 1, [batch])
+    xs = []
+    ys = []
+    for t in ix:
+        i = t.item()
+        sink = xs.add(torch.from_numpy(src[i : i + block].astype(np.int64)))
+        sink = ys.add(torch.from_numpy(src[i + 1 : i + block + 1].astype(np.int64)))
+    end
+    return [torch.stack(xs).to(dev), torch.stack(ys).to(dev)]
+end
+
+# ---------------- forward ----------------
+func forward(idx):
+    T = idx.shape[1]
+    tok = mods[0].forward(idx)
+    pos = mods[1].forward(torch.arange(T).to(dev))
+    x = tok + pos
+
+    lb = 0
+    while lb < n_layer:
+        base = 2 + lb * 6
+
+        h = mods[base].forward(x)
+        qkv = mods[base + 1].forward(h)
+        parts = qkv.chunk(3, 2)
+        q = parts[0].view(batch, T, n_head, head_dim).transpose(1, 2)
+        k = parts[1].view(batch, T, n_head, head_dim).transpose(1, 2)
+        v = parts[2].view(batch, T, n_head, head_dim).transpose(1, 2)
+        att = F.scaled_dot_product_attention(q, k, v, mask)
+        att = att.transpose(1, 2).contiguous().view(batch, T, n_embd)
+        x = x + mods[base + 2].forward(att)
+
+        h2 = mods[base + 3].forward(x)
+        h3 = F.gelu(mods[base + 4].forward(h2))
+        x = x + mods[base + 5].forward(h3)
+
+        lb = lb + 1
+    end
+
+    x = mods[2 + n_layer * 6].forward(x)
+    return mods[3 + n_layer * 6].forward(x)
+end
+
+func lr_at(step):
+    cond step < warmup:
+        return lr * (step + 1) / warmup
+    end
+    prog = (step - warmup) / (max_iters - warmup)
+    return min_lr + 0.5 * (1 + cos(180 * prog)) * (lr - min_lr)
+end
+
+func eval_val():
+    sink = torch.set_grad_enabled(false)
+    tot = 0.0
+    e = 0
+    while e < eval_batches:
+        pair = get_batch_from(val_data, nval)
+        lg = forward(pair[0])
+        l = F.cross_entropy(lg.view(batch * block, vocab), pair[1].view(batch * block))
+        tot = tot + l.item()
+        e = e + 1
+    end
+    sink = torch.set_grad_enabled(true)
+    return tot / eval_batches
+end
+
+# ---------------- train ----------------
+opt = optim.AdamW(mods.parameters(), lr)
+
+# The base model has never seen BrittainScript, so this number is the baseline
+# every later eval is improving on. If it does not fall, nothing is being learned.
+start_val = eval_val()
+push("val before any update:")
+push(start_val)
+
+best = start_val
+push("specializing...")
+
+it = 0
+while it < max_iters:
+    cur = lr_at(it)
+    for grp in opt.param_groups:
+        grp["lr"] = cur
+    end
+    sink = opt.zero_grad()
+
+    j = 0
+    while j < accum:
+        pair = get_batch_from(train_data, ntokens)
+        logits = forward(pair[0])
+        flat = logits.view(batch * block, vocab)
+        loss = F.cross_entropy(flat, pair[1].view(batch * block))
+        scaled = loss / accum
+        sink = scaled.backward()
+        j = j + 1
+    end
+
+    sink = opt.step()
+
+    cond it % log_every == 0:
+        push(it)
+        push(loss.item())
+    end
+
+    cond it % eval_every == 0:
+        v = eval_val()
+        push("val")
+        push(v)
+        # Keep the best checkpoint, not the last: with a corpus this small the
+        # run can start overfitting well before the schedule ends, and the last
+        # iterate would be the memorised one.
+        cond v < best:
+            best = v
+            sink = torch.save(mods.state_dict(), out_path)
+            push("saved")
+        end
+    end
+
+    it = it + 1
+end
+
+final = eval_val()
+cond final < best:
+    best = final
+    sink = torch.save(mods.state_dict(), out_path)
+end
+
+push("done. best val:")
+push(best)
+push("wrote:")
+push(out_path)
+push("now score it by execution, not by that number:")
+push("python3 eval_bs.py " + out_path + " --n 200 --seed 1337")
