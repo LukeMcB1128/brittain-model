@@ -31,9 +31,14 @@ from tok_util import load_tokenizer
 
 
 def newest_checkpoint():
-    """Default to whatever was trained most recently, so `python3 sample.py` just works."""
-    found = sorted(glob.glob("brittain_*.pt"), key=os.path.getmtime, reverse=True)
-    return found[0] if found else "brittain_124m_best.pt"
+    """Default to whatever was trained most recently, so `python3 sample.py` just works.
+
+    Checkpoints live in weights/, but the training scripts write to the cwd, so
+    both are searched — a run in progress is findable before it has been filed away.
+    """
+    found = glob.glob("weights/brittain_*.pt") + glob.glob("brittain_*.pt")
+    found = sorted(found, key=os.path.getmtime, reverse=True)
+    return found[0] if found else "weights/brittain_124m_best.pt"
 
 
 ap = argparse.ArgumentParser()

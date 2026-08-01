@@ -95,10 +95,13 @@ class Loaded:
 
 
 def discover():
-    """brittain_*.pt in cwd, newest first. The old 604M char-level backup uses a
+    """brittain_*.pt, newest first. Checkpoints live in weights/, but the training
+    scripts still write to the cwd, so both are searched — a run in progress is
+    findable before it has been filed away. The old 604M char-level backup uses a
     long-gone architecture and can't be loaded, so it's excluded by name."""
     import glob
-    found = [p for p in glob.glob("brittain_*.pt") if "model_backup" not in p]
+    found = [p for p in glob.glob("weights/brittain_*.pt") + glob.glob("brittain_*.pt")
+             if "model_backup" not in p]
     return sorted(found, key=os.path.getmtime, reverse=True)
 
 
