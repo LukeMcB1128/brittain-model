@@ -61,14 +61,15 @@ reproduce the local yield.
 
     cd ~/Downloads/Coding
     docker run --rm -m 4g \
-        -v "$PWD":/w \
-        -v ~/.cache/huggingface:/root/.cache/huggingface \
-        -w "/w/BRITTAIN MODEL" python:3.13 \
+        -e HF_TOKEN="$(cat ~/.cache/huggingface/token)" \
+        -v "$PWD":/w -w "/w/BRITTAIN MODEL" python:3.13 \
         sh -c "pip install -q tokenizers datasets && \
                python prepare_bs.py --tokens 10e6"
 
-The huggingface cache mount carries your login — The Stack is gated — and avoids
-re-fetching what you already have.
+The Stack is gated, and the container has no login of its own, so HF_TOKEN has to
+be passed in. Prefer the env var over mounting ~/.cache/huggingface: that
+directory also holds stored_tokens, and there is no reason to expose more
+credentials than the one download needs. Streaming means the cache buys nothing.
 
 That is a meaningful boundary, not a sandbox.
 
