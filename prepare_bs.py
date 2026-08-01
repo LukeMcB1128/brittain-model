@@ -91,6 +91,7 @@ import hashlib
 import shutil
 import tempfile
 import argparse
+import itertools
 import collections
 import multiprocessing as mp
 
@@ -244,7 +245,20 @@ def main():
     tok = Tokenizer.from_file(args.tokenizer)
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
 
-    # resume: remember what we already translated, and how far we got
+    # Resume needs the STREAM POSITION, not just the accepted hashes. `seen` only
+    # records files that were accepted, so without a position a resume re-streams
+    # The Stack from the start and re-translates every previously REJECTED file
+    # purely to reject it again — at 1.6% acceptance that is 98% of the work,
+    # observed as ~400,000 files scanned for 1 new row.
+    progress_path = os.path.abspath(args.out) + ".progress.json"
+    n_raw_done = 0
+    if os.path.exists(progress_path):
+        try:
+            with open(progress_path) as f:
+                n_raw_done = json.load(f).get("raw_examples", 0)
+        except (ValueError, OSError):
+            n_raw_done = 0
+
     seen = set()
     n_tokens = n_written = 0
     if os.path.exists(args.out):
@@ -262,8 +276,16 @@ def main():
     ds = load_dataset(args.dataset, data_dir=f"data/{args.lang}",
                       split="train", streaming=True)
 
+    if n_raw_done:
+        print(f"skipping {n_raw_done:,} dataset examples already scanned")
+
+    n_raw = n_raw_done
+
     def candidates():
-        for ex in ds:
+        nonlocal n_raw
+        # islice consumes without translating — vastly cheaper than re-rejecting
+        for ex in itertools.islice(ds, n_raw_done, None):
+            n_raw += 1
             text = ex.get("content") or ex.get("text") or ""
             if not text.strip() or len(text) > args.max_chars:
                 continue
@@ -324,6 +346,9 @@ def main():
 
             if time.time() - t_log > 30:
                 out.flush()
+                with open(progress_path, "w") as pf:
+                    json.dump({"raw_examples": n_raw, "written": n_written,
+                               "tokens": n_tokens}, pf)
                 rate = n_scanned / max(1e-9, time.time() - t0)
                 pct = 100 * n_written_session / max(1, n_scanned)
                 print(f"  {n_tokens/1e6:6.2f}M / {args.tokens/1e6:.1f}M tokens | "
@@ -339,6 +364,9 @@ def main():
         pool.terminate()
         pool.join()
         out.close()
+        with open(progress_path, "w") as pf:
+            json.dump({"raw_examples": n_raw, "written": n_written,
+                       "tokens": n_tokens}, pf)
         shutil.rmtree(sandbox, ignore_errors=True)
 
     print(f"\nDone. {n_written:,} files, {n_tokens:,} tokens -> {args.out}")
