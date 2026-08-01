@@ -5,6 +5,8 @@
 
 # Tokenized dataset binaries + downloaded corpora
 data/*.bin
+data_bs_native/
+data_bs_mixed/
 data/english.txt
 data/tok_sample.jsonl
 # Corpora are large. prepare_bs.py defaults outside this repo for that reason,
@@ -33,3 +35,7 @@ venv/
 # OS / editor
 .DS_Store
 .vscode/
+
+# Tokenized BrittainScript training sets (prepare_bs_train.py, ~4MB each).
+# Regenerated from the corpus in seconds; the corpus itself lives outside the repo.
+data_bs_*/
