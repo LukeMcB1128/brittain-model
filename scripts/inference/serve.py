@@ -29,20 +29,16 @@ MODES
 MEMORY: every checkpoint listed is loaded at startup. Roughly 1.5GB for the
 52M, 2GB for the 124M, 3GB for the 235M in fp32.
 
-FILL-IN-THE-MIDDLE: these models were never trained with FIM, but autocomplete
-clients (Continue.dev et al.) wrap prompts in FIM sentinels anyway. The server
-detects and strips them — StarCoder, Qwen, CodeLlama, DeepSeek and Codestral
-dialects — and feeds the model just the prefix. The suffix can't be used as
-context, but its first line becomes a stop sequence so the completion doesn't
-duplicate what already follows the cursor.
-
-So it works with FIM clients, but it genuinely continues a prefix: good at
-end-of-line/end-of-function, poor at editing mid-file.
+FILL-IN-THE-MIDDLE: for a real BRITTAIN FIM checkpoint, client marker dialects
+are translated to BRITTAIN's three sentinel tokens and the suffix is preserved.
+For older causal checkpoints, the markers are stripped and only the prefix is
+used, preserving the legacy autocomplete fallback.
 """
 import os
 import json
 import time
 import codecs
+import threading
 import argparse
 import sys
 from pathlib import Path
@@ -65,7 +61,7 @@ from brittain.tokenizer import load_tokenizer
 ap = argparse.ArgumentParser()
 ap.add_argument("checkpoints", nargs="*",
                 help="checkpoint paths, optionally PATH=display-name. "
-                     "Omit to auto-discover brittain_*.pt in the current directory.")
+                     "Omit to auto-discover all .pt files under checkpoints/.")
 ap.add_argument("--raw", action="store_true", help="force raw mode for all models")
 ap.add_argument("--instruct", action="store_true", help="force template mode for all models")
 ap.add_argument("--port", type=int, default=11435)
@@ -93,6 +89,7 @@ class Loaded:
         self.name = name
         self.params = self.model.num_params()
         self.is_brittain = isinstance(self.model, Brittain)
+        self.supports_fim = bool(getattr(self.enc, "has_fim", False))
         low = os.path.basename(path).lower()
         if args.raw:
             self.raw_default = True
@@ -103,20 +100,16 @@ class Loaded:
 
 
 def discover():
-    """brittain_*.pt, newest first. Filed checkpoints live in checkpoints/, but
-    training may still write to the repository root, so both are searched — a run is
-    findable before it has been filed away. The old 604M char-level backup uses a
-    long-gone architecture and can't be loaded, so it's excluded by name."""
-    import glob
-    found = [p for p in (glob.glob(str(CHECKPOINT_DIR / "brittain_*.pt"))
-                         + glob.glob(str(PROJECT_ROOT / "brittain_*.pt")))
-             if "model_backup" not in p]
-    return sorted(found, key=os.path.getmtime, reverse=True)
+    """Find every filed checkpoint plus any active checkpoint in the repo root."""
+    found = list(CHECKPOINT_DIR.glob("*.pt")) + list(PROJECT_ROOT.glob("*.pt"))
+    found = {p.resolve() for p in found if "model_backup" not in p.name}
+    return [str(p) for p in sorted(found, key=lambda p: p.stat().st_mtime,
+                                   reverse=True)]
 
 
 specs = args.checkpoints or discover()
 if not specs:
-    ap.error("no checkpoints given and no brittain_*.pt found in this directory")
+    ap.error(f"no checkpoints given and no .pt files found under {CHECKPOINT_DIR}")
 
 MODELS = {}
 for spec in specs:
@@ -169,6 +162,25 @@ def strip_fim(prompt):
     return prompt, None
 
 
+def normalize_fim(prompt):
+    """Translate common client FIM dialects into BRITTAIN's PSM format."""
+    for pre, suf, mid in FIM_MARKERS:
+        if pre in prompt and suf in prompt:
+            body = prompt.split(pre, 1)[1]
+            prefix, rest = body.split(suf, 1)
+            suffix = rest.split(mid, 1)[0] if mid in rest else rest
+            canonical = (f"<fim_prefix>{prefix}<fim_suffix>{suffix}"
+                         f"<fim_middle>")
+            return canonical, suffix
+    if "[SUFFIX]" in prompt and "[PREFIX]" in prompt:
+        after = prompt.split("[SUFFIX]", 1)[1]
+        suffix, prefix = after.split("[PREFIX]", 1)
+        canonical = (f"<fim_prefix>{prefix}<fim_suffix>{suffix}"
+                     f"<fim_middle>")
+        return canonical, suffix
+    return prompt, None
+
+
 def suffix_stop(suffix):
     """First substantial line after the cursor, used as a stop sequence."""
     if not suffix:
@@ -188,6 +200,10 @@ def pick(body):
         if k == base or k.split(":")[0] == base:
             return v
     return MODELS[DEFAULT]
+
+
+# Serialises all generation — see the comment at its use below.
+GPU_LOCK = threading.Lock()
 
 
 def stream_pieces(M, prompt, raw, opts):
@@ -221,7 +237,17 @@ def stream_pieces(M, prompt, raw, opts):
                                    top_p=top_p, repetition_penalty=rep)
             yield cur[:, -1:]
 
-    with torch.no_grad():
+    # ONE REQUEST AT A TIME. StreamingResponse runs a sync generator in Starlette's
+    # threadpool, so overlapping requests put two threads inside the same model.
+    # The MPS backend is not thread-safe and the process segfaults — which it did,
+    # after the second /api/generate, because Continue.dev cancels and re-fires
+    # autocomplete on nearly every keystroke. There is one GPU; serialising costs
+    # nothing real and turns a crash into a short wait.
+    #
+    # The lock is held across yields deliberately: a half-finished generation still
+    # owns the model. Starlette closes abandoned generators on client disconnect,
+    # which runs this __exit__.
+    with GPU_LOCK, torch.no_grad():
         for tok in token_stream():
             nxt = tok[0, -1].item()
             if nxt == M.enc.eot:
@@ -263,7 +289,14 @@ async def show(req: Request):
     M = pick(await req.json())
     return {"details": {"family": "brittain",
                         "parameter_size": f"{M.params/1e6:.0f}M"},
-            "capabilities": ["completion"], "context_length": M.block}
+            "capabilities": ["completion"], 
+            "parameters": f"num_ctx {M.block}",
+            "model_info": {
+                "general.architecture": "brittain",
+                "general.parameter_count": M.params,
+                "brittain.context_length": M.block,
+            },
+            "context_length": M.block}
 
 
 @app.post("/api/generate")
@@ -274,7 +307,8 @@ async def generate(req: Request):
     raw = body.get("raw", M.raw_default)
     prompt = body.get("prompt", "")
     if raw:
-        prompt, suffix = strip_fim(prompt)
+        prompt, suffix = (normalize_fim(prompt) if M.supports_fim
+                          else strip_fim(prompt))
         if suffix is not None and not opts.get("stop"):
             extra = suffix_stop(suffix)
             if extra:
@@ -305,7 +339,10 @@ async def chat(req: Request):
     user = next((m["content"] for m in reversed(msgs) if m.get("role") == "user"), "")
     # single-turn: these models never saw multi-turn conversations in training
     raw = body.get("raw", M.raw_default)
-    prompt = user if raw else format_prompt(user)
+    if raw:
+        prompt, _ = (normalize_fim(user) if M.supports_fim else strip_fim(user))
+    else:
+        prompt = format_prompt(user)
 
     def gen():
         for p in stream_pieces(M, prompt, raw, opts):
@@ -329,5 +366,6 @@ if __name__ == "__main__":
           f"  [device {device}]")
     for m in MODELS.values():
         print(f"  {m.name:<30} {m.params/1e6:6.0f}M  ctx {m.block:<5} "
-              f"{m.enc.name:<9} {'raw' if m.raw_default else 'instruct'}")
+              f"{m.enc.name:<9} {'raw' if m.raw_default else 'instruct'}"
+              f"{'  FIM' if m.supports_fim else ''}")
     uvicorn.run(app, host="127.0.0.1", port=args.port)
