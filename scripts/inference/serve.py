@@ -38,6 +38,7 @@ import os
 import json
 import time
 import codecs
+import asyncio
 import threading
 import argparse
 import sys
@@ -244,11 +245,40 @@ def stream_pieces(M, prompt, raw, opts):
     # autocomplete on nearly every keystroke. There is one GPU; serialising costs
     # nothing real and turns a crash into a short wait.
     #
-    # The lock is held across yields deliberately: a half-finished generation still
-    # owns the model. Starlette closes abandoned generators on client disconnect,
-    # which runs this __exit__.
-    with GPU_LOCK, torch.no_grad():
-        for tok in token_stream():
+    # BOUNDED acquisition, not a plain `with`. The lock is held across yields, so a
+    # generator abandoned mid-stream — Continue.dev cancels constantly — can leave
+    # it held. An unbounded wait then blocks every later request forever, which is
+    # indistinguishable from a dead server. Waiting a bounded time and refusing is
+    # recoverable; hanging is not.
+    def locked_tokens():
+        """Serialise GPU work per TOKEN, not per request.
+
+        Holding one lock for a whole completion deadlocks: a generator abandoned
+        mid-stream — Continue.dev cancels on nearly every keystroke — is left
+        SUSPENDED at a yield, so nothing runs its finally and the lock is never
+        released. Every later request then waits forever, which is what wedged
+        this server.
+
+        Locking each token instead means an abandoned generator holds nothing: it
+        is suspended between tokens, with the lock already released. Concurrent
+        requests interleave rather than queue, which is fine — each has its own KV
+        cache and the weights are read-only. The only thing that must not happen
+        concurrently is two threads inside the model at once, and that is exactly
+        what this prevents.
+        """
+        it = token_stream()
+        while True:
+            GPU_LOCK.acquire()
+            try:
+                tok = next(it)
+            except StopIteration:
+                return
+            finally:
+                GPU_LOCK.release()
+            yield tok
+
+    with torch.no_grad():
+        for tok in locked_tokens():
             nxt = tok[0, -1].item()
             if nxt == M.enc.eot:
                 break
@@ -325,9 +355,14 @@ async def generate(req: Request):
 
     if body.get("stream", True):
         return StreamingResponse(gen(), media_type="application/x-ndjson")
+    # to_thread, NOT a direct call. This endpoint is async, so joining the
+    # generator inline blocks uvicorn's event loop for the whole generation and
+    # the server stops answering EVERYTHING — /api/version included. That looks
+    # exactly like a dead server to a client that is still logging connections.
+    text = await asyncio.to_thread(
+        lambda: "".join(stream_pieces(M, prompt, raw, opts)))
     return JSONResponse({"model": M.name, "created_at": now(),
-                         "response": "".join(stream_pieces(M, prompt, raw, opts)),
-                         "done": True})
+                         "response": text, "done": True})
 
 
 @app.post("/api/chat")
