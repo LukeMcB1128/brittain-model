@@ -190,6 +190,9 @@ def suffix_stop(suffix):
     return [first] if len(first) >= 4 else []
 
 
+_warned_names = set()
+
+
 def pick(body):
     """Route on the request's model field, falling back to the first loaded."""
     want = (body or {}).get("model") or DEFAULT
@@ -200,6 +203,12 @@ def pick(body):
     for k, v in MODELS.items():
         if k == base or k.split(":")[0] == base:
             return v
+    # SAY SO. A silent fallback means a client asking for the 235M FIM model gets
+    # a 52M BrittainScript model and no indication why the completions are wrong.
+    if want not in _warned_names:
+        _warned_names.add(want)
+        print(f"  [warn] no model named {want!r}; serving {DEFAULT!r} instead. "
+              f"Loaded: {', '.join(MODELS)}", flush=True)
     return MODELS[DEFAULT]
 
 
@@ -220,7 +229,15 @@ def stream_pieces(M, prompt, raw, opts):
         rep = opts.get("repeat_penalty", 1.12)
     top_p = opts.get("top_p", 0.95)
 
-    ids = torch.tensor([M.enc.encode(prompt)], dtype=torch.long, device=device)
+    token_ids = M.enc.encode(prompt)
+    # An EMPTY prompt is normal, not a client error: the cursor sits at the top of
+    # a file, so the FIM prefix is "". Feeding a zero-length tensor to the model
+    # crashes on [:, -1, :] ("index -1 is out of bounds for dimension 1 with size
+    # 0"). Seed with end-of-text instead, which is exactly the start-of-document
+    # state these models saw between every training document.
+    if not token_ids:
+        token_ids = [M.enc.eot]
+    ids = torch.tensor([token_ids], dtype=torch.long, device=device)
     ids = ids[:, -M.block:]
     utf8 = codecs.getincrementaldecoder("utf-8")("replace")
     acc = ""
