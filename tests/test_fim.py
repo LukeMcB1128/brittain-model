@@ -35,6 +35,13 @@ ap = argparse.ArgumentParser()
 ap.add_argument("checkpoint", nargs="?",
                 default=str(CHECKPOINT_DIR / "brittain_235m_fim_best.pt"))
 ap.add_argument("-n", "--max_tokens", type=int, default=40)
+ap.add_argument("--trials", type=int, default=8,
+                help="generations per prompt. One sample per prompt cannot tell a "
+                     "real difference between checkpoints from a lucky draw — six "
+                     "trials gave 6/6 and 3/6 for two checkpoints whose val differed "
+                     "by 3%%, which is well inside sampling noise.")
+ap.add_argument("--quiet", action="store_true",
+                help="summary only — the completions flood a truncating console")
 ap.add_argument("-t", "--temperature", type=float, default=0.2)
 ap.add_argument("--top_p", type=float, default=0.95)
 ap.add_argument("-r", "--repetition_penalty", type=float, default=1.12)
@@ -91,33 +98,46 @@ CASES = [
                                        ("    return square\n", "square")]),
 ]
 
-used = ignored = 0
+used = trials_run = ignored = pairs = runaway = 0
 for prefix, variants in CASES:
-    print(f"\nPREFIX:\n{prefix.rstrip()}")
-    middles = []
-    for suffix, want in variants:
-        mid = infill(prefix, suffix)
-        middles.append(mid)
-        hit = want in mid
-        used += hit
-        print(f"\n  suffix wants `{want}`:")
-        print("    " + "\n    ".join(mid.strip().splitlines() or ["(nothing)"]))
-        print(f"    -> mentions '{want}': {'YES' if hit else 'no'}")
-    if middles[0].strip() == middles[1].strip():
-        ignored += 1
-        print("\n  ** IDENTICAL output for different suffixes — suffix was ignored **")
-    print("-" * 72)
+    if not args.quiet:
+        print(f"\nPREFIX:\n{prefix.rstrip()}")
+    for trial in range(args.trials):
+        middles = []
+        for suffix, want in variants:
+            mid = infill(prefix, suffix)
+            middles.append(mid)
+            hit = want in mid
+            used += hit
+            trials_run += 1
+            # Termination: the middle should stop where the suffix begins. Starting
+            # a fresh def means it ran past the hole it was asked to fill.
+            if "\ndef " in mid or mid.strip().startswith("def "):
+                runaway += 1
+            if not args.quiet and trial == 0:
+                print(f"\n  suffix wants `{want}`:")
+                print("    " + "\n    ".join(mid.strip().splitlines() or ["(nothing)"]))
+                print(f"    -> mentions '{want}': {'YES' if hit else 'no'}")
+        pairs += 1
+        if middles[0].strip() == middles[1].strip():
+            ignored += 1
+    if not args.quiet:
+        print("-" * 72)
 
 print(f"""
 {'=' * 72}
-Middles naming the variable the suffix returns : {used} / {2 * len(CASES)}
-Cases where both suffixes gave identical text  : {ignored} / {len(CASES)}
+{args.checkpoint}   iter {ck.get('iter', '?')}   val {ck.get('val', float('nan')):.4f}
+{args.trials} trials x {len(CASES)} prefixes x 2 suffixes = {trials_run} generations
+
+  names the variable the suffix returns : {used:3d}/{trials_run}  ({100*used/max(1,trials_run):.0f}%)
+  identical text for both suffixes      : {ignored:3d}/{pairs}  ({100*ignored/max(1,pairs):.0f}%)
+  ran past the hole into a new def      : {runaway:3d}/{trials_run}  ({100*runaway/max(1,trials_run):.0f}%)
 
 Reading this:
-  * Different text per suffix, often naming the right variable -> the model IS
-    conditioning on what comes after the cursor. FIM works.
-  * Identical text regardless of suffix -> it learned the token pattern and not
-    the capability. More of the same training is unlikely to fix that.
-  * Different but unrelated text -> partial. It sees the suffix but cannot use it
-    yet; more annealing may help, and this is the case worth spending on.
+  * High naming rate, low identical rate -> the model IS conditioning on what
+    comes after the cursor. FIM works.
+  * High identical rate -> it learned the token pattern, not the capability.
+  * "ran past the hole" is the termination defect: knowing WHERE the middle ends
+    is a separate skill from knowing what goes in it. Lower is better, and this is
+    the number extra training was meant to improve.
 """)
