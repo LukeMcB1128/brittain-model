@@ -40,6 +40,14 @@ def _byte_decoder():
 class GPT2Tok:
     name = "gpt2"
 
+    # Part of the tokenizer interface, not a CodeTok extra. BRITTAIN-1 predates
+    # fill-in-the-middle and will never have sentinels, but callers still have to
+    # ask — sample.py's `if enc.has_fim` raised AttributeError on every gpt2
+    # checkpoint, and serve.py only survived by reaching for
+    # getattr(enc, "has_fim", False). Declaring it here means neither has to.
+    has_fim = False
+    fim_prefix = fim_suffix = fim_middle = None
+
     def __init__(self):
         import tiktoken
         self._enc = tiktoken.get_encoding("gpt2")
