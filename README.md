@@ -92,7 +92,9 @@ python3 scripts/inference/serve.py \
 The server runs at `http://localhost:11435`. It exposes `/api/tags`, `/api/show`,
 `/api/generate`, and `/api/chat`. `/api/show` reports the real maximum context for
 the selected checkpoint. The FIM model also translates the common StarCoder,
-CodeLlama, Qwen, and DeepSeek marker formats into BRITTAIN's sentinel format.
+CodeLlama, Qwen, and DeepSeek marker formats into BRITTAIN's sentinel format. It
+also accepts Ollama-style autocomplete requests with separate `prompt` and
+`suffix` fields, as sent by Continue.
 
 ## Repository map
 

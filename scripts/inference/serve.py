@@ -42,6 +42,7 @@ import asyncio
 import threading
 import argparse
 import sys
+import itertools
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -182,6 +183,20 @@ def normalize_fim(prompt):
     return prompt, None
 
 
+def prepare_raw_completion(prompt, request_suffix, supports_fim):
+    """Normalize wrapped FIM or Ollama's separate prompt/suffix form."""
+    transform = normalize_fim if supports_fim else strip_fim
+    prepared, embedded_suffix = transform(prompt)
+    if embedded_suffix is not None:
+        return prepared, embedded_suffix
+    if request_suffix is None:
+        return prepared, None
+    if supports_fim:
+        return (f"<fim_prefix>{prepared}<fim_suffix>{request_suffix}"
+                f"<fim_middle>"), request_suffix
+    return prepared, request_suffix
+
+
 def suffix_stop(suffix):
     """First substantial line after the cursor, used as a stop sequence."""
     if not suffix:
@@ -195,7 +210,8 @@ _warned_names = set()
 
 def pick(body):
     """Route on the request's model field, falling back to the first loaded."""
-    want = (body or {}).get("model") or DEFAULT
+    # Ollama uses `model` for generation but `name` for /api/show.
+    want = ((body or {}).get("model") or (body or {}).get("name") or DEFAULT)
     if want in MODELS:
         return MODELS[want]
     # tolerate ollama-style "name:tag" and bare-stem mismatches
@@ -214,6 +230,7 @@ def pick(body):
 
 # Serialises all generation — see the comment at its use below.
 GPU_LOCK = threading.Lock()
+REQUEST_IDS = itertools.count(1)
 
 
 def stream_pieces(M, prompt, raw, opts):
@@ -340,16 +357,23 @@ def version():
 @app.post("/api/show")
 async def show(req: Request):
     M = pick(await req.json())
-    return {"details": {"family": "brittain",
-                        "parameter_size": f"{M.params/1e6:.0f}M"},
-            "capabilities": ["completion"], 
-            "parameters": f"num_ctx {M.block}",
-            "model_info": {
-                "general.architecture": "brittain",
-                "general.parameter_count": M.params,
-                "brittain.context_length": M.block,
-            },
-            "context_length": M.block}
+    result = {"details": {"family": "brittain",
+                          "parameter_size": f"{M.params/1e6:.0f}M"},
+              "capabilities": ["completion"],
+              "parameters": f"num_ctx {M.block}",
+              "model_info": {
+                  "general.architecture": "brittain",
+                  "general.parameter_count": M.params,
+                  "brittain.context_length": M.block,
+              },
+              "context_length": M.block}
+    if M.supports_fim:
+        # Continue's Ollama provider detects native FIM support by looking for
+        # `.Suffix` in /api/show's template. Without this it silently chooses
+        # streamComplete(prompt) instead of streamFim(prefix, suffix), even when
+        # the selected model has an autocomplete role.
+        result["template"] = "{{ .Prompt }}{{ .Suffix }}"
+    return result
 
 
 @app.post("/api/generate")
@@ -358,12 +382,21 @@ async def generate(req: Request):
     M = pick(body)
     opts = body.get("options") or {}
     raw = body.get("raw", M.raw_default)
-    prompt = body.get("prompt", "")
-    print(raw)
-    print(prompt)
+    prompt = body.get("prompt") or ""
+    request_suffix = body.get("suffix")
+    stream = body.get("stream", True)
+    request_id = next(REQUEST_IDS)
+    print(f"[generate {request_id}] model={M.name!r} raw={raw} stream={stream} "
+          f"prompt_chars={len(prompt)} "
+          f"suffix_chars={len(request_suffix) if isinstance(request_suffix, str) else 0}",
+          flush=True)
+
+    # Continue sends empty probe/replacement requests during autocomplete. Reply
+    # successfully without spending a generation on an empty document.
+    empty_request = prompt == "" and request_suffix is None
     if raw:
-        prompt, suffix = (normalize_fim(prompt) if M.supports_fim
-                          else strip_fim(prompt))
+        prompt, suffix = prepare_raw_completion(
+            prompt, request_suffix, M.supports_fim)
         if suffix is not None and not opts.get("stop"):
             extra = suffix_stop(suffix)
             if extra:
@@ -372,20 +405,37 @@ async def generate(req: Request):
         prompt = format_prompt(prompt)
 
     def gen():
-        for p in stream_pieces(M, prompt, raw, opts):
-            yield json.dumps({"model": M.name, "created_at": now(),
-                              "response": p, "done": False}) + "\n"
-        yield json.dumps({"model": M.name, "created_at": now(), "response": "",
-                          "done": True, "done_reason": "stop"}) + "\n"
+        chars = 0
+        chunks = 0
+        preview = ""
+        completed = False
+        try:
+            if not empty_request:
+                for p in stream_pieces(M, prompt, raw, opts):
+                    chars += len(p)
+                    chunks += 1
+                    if len(preview) < 80:
+                        preview += p[:80 - len(preview)]
+                    yield json.dumps({"model": M.name, "created_at": now(),
+                                      "response": p, "done": False}) + "\n"
+            yield json.dumps({"model": M.name, "created_at": now(), "response": "",
+                              "done": True, "done_reason": "stop"}) + "\n"
+            completed = True
+        finally:
+            state = "complete" if completed else "cancelled"
+            print(f"[generate {request_id}] {state} chunks={chunks} chars={chars} "
+                  f"preview={preview!r}", flush=True)
 
-    if body.get("stream", True):
+    if stream:
         return StreamingResponse(gen(), media_type="application/x-ndjson")
     # to_thread, NOT a direct call. This endpoint is async, so joining the
     # generator inline blocks uvicorn's event loop for the whole generation and
     # the server stops answering EVERYTHING — /api/version included. That looks
     # exactly like a dead server to a client that is still logging connections.
-    text = await asyncio.to_thread(
+    text = "" if empty_request else await asyncio.to_thread(
         lambda: "".join(stream_pieces(M, prompt, raw, opts)))
+    print(f"[generate {request_id}] complete chars={len(text)} "
+          f"preview={text[:80]!r}", flush=True)
     return JSONResponse({"model": M.name, "created_at": now(),
                          "response": text, "done": True})
 
