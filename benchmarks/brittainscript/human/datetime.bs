@@ -1,0 +1,50 @@
+# datetime.bs -- date and time functions for BrittainScript
+# usage: add datetime, then t = datetime.now() ... datetime.year(t)
+
+func now():
+    return datetime("now")
+end
+
+func format(date, pattern):
+    return datetime("format", date, pattern)
+end
+
+func parse(text, pattern):
+    return datetime("parse", text, pattern)
+end
+
+func year(date):
+    return datetime("year", date)
+end
+
+func month(date):
+    return datetime("month", date)
+end
+
+func day(date):
+    return datetime("day", date)
+end
+
+func hour(date):
+    return datetime("hour", date)
+end
+
+func minute(date):
+    return datetime("minute", date)
+end
+
+func second(date):
+    return datetime("second", date)
+end
+
+func weekday(date):
+    return datetime("weekday", date)
+end
+
+func isLeapYear(yearNum):
+    return datetime("isLeapYear", yearNum)
+end
+
+func daysInMonth(yearNum, monthNum):
+    return datetime("daysInMonth", yearNum, monthNum)
+end

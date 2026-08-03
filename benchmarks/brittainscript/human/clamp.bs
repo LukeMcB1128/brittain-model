@@ -1,0 +1,12 @@
+func clamp(value, low, high):
+    cond (value < low):
+        return low
+    end
+    cond (value > high):
+        return high
+    end
+    return value
+end
+push(clamp(15, 0, 10))
+push(clamp((0 - 4), 0, 10))
+push(clamp(5, 0, 10))

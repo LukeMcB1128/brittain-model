@@ -1,0 +1,12 @@
+total = 100
+value = 7
+func accumulate(items):
+    accumulate_total = 0
+    for accumulate_value in items:
+        accumulate_total = (accumulate_total + accumulate_value)
+    end
+    return accumulate_total
+end
+push(accumulate([1, 2, 3]))
+push(total)
+push(value)

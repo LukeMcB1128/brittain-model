@@ -22,6 +22,7 @@ Training, evaluation, and inference code for the BRITTAIN model family.
 ```bash
 python3 scripts/inference/sample.py checkpoints/brittain_235m_weights.pt -p "def fibonacci(n):\n"
 python3 scripts/evaluate/compare.py checkpoints/brittain_124m_best.pt checkpoints/brittain_235m_weights.pt
+python3 scripts/evaluate/bs_capabilities.py checkpoints/xs_bs_native.pt --samples 5
 python3 scripts/prepare/filter_bs.py --stats
 python3 scripts/train/fim.py --help
 ```
@@ -30,3 +31,5 @@ Commands can be launched from any working directory; repository-owned default
 paths are resolved from the source tree rather than the shell's current directory.
 
 See [`docs/MODELS.md`](docs/MODELS.md) for model lineage and benchmark history.
+See [`benchmarks/brittainscript/README.md`](benchmarks/brittainscript/README.md)
+for the executable BrittainScript capability suite.

@@ -1,0 +1,57 @@
+# distance conversions
+func inchesToCentimeters(a):
+    return a * 2.54
+end
+
+func centimetersToInches(a):
+    return a / 2.54
+end
+
+# temperature conversions
+func celToFahrenheit(a):
+    f = (a*(9/5))+32
+    return f
+end
+
+func fahrenheitToCel(a):
+    c = (a-32)*(5/9)
+    return c
+end
+
+func celToKelvin(a):
+    k = a + 273.15
+    return k
+end
+
+# energy conversions
+func calToJoule(a):
+    j = a * 4.184
+    return j
+end
+
+func jouleToCal(a):
+    c = a / 4.184
+    return c
+end
+
+func atmToPa(a):
+    p = a * 101325
+    return p
+end
+
+# mass and weight
+func kgToLbs(a):
+    return a * 2.2046226218
+end
+
+func lbsToKg(a):
+    return a / 2.2046226218
+end
+
+func ozToGrams(a):
+    return a * 28.35
+end
+
+func gramsToOz(a):
+    return a / 28.35
+end

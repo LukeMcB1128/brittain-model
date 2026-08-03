@@ -1,0 +1,76 @@
+# Simple BrittainScript Demonstration
+# This shows the core features of BrittainScript
+
+# Basic math operations
+push("=== Math Operations ===")
+a = 10
+b = 3
+push("a = " + tostr(a))
+push("b = " + tostr(b))
+push("Add: " + tostr(a + b))
+push("Sub: " + tostr(a - b))
+push("Mul: " + tostr(a * b))
+push("Div: " + tostr(a / b))
+push("Mod: " + tostr(a % b))
+push("Power: " + tostr(a ^ b))
+
+# Constants
+push("\n=== Constants ===")
+push("Pi: " + tostr(pi))
+
+# Trigonometric functions
+push("\n=== Trigonometry ===")
+push("sin(30) = " + tostr(sin(30)))
+push("cos(60) = " + tostr(cos(60)))
+push("tan(45) = " + tostr(tan(45)))
+
+# Built-in functions
+push("\n=== Built-in Functions ===")
+push("round(3.7) = " + tostr(round(3.7)))
+push("abs(-5) = " + tostr(absolute(0-5)))
+
+# Variables
+push("\n=== Variables ===")
+name = "Brittain"
+age = 25
+push("Name: " + name)
+push("Age: " + tostr(age))
+
+# Strings
+push("\n=== Strings ===")
+str1 = "Hello"
+str2 = "World"
+push("Concat: " + str1 + " " + str2)
+push("Length: " + tostr(len(str1)))
+push("Upper: " + str1.upper())
+push("Lower: " + str1.lower())
+
+# Lists
+push("\n=== Lists ===")
+my_list = [1, 2, 3, "hello"]
+push("List: " + tostr(my_list))
+push("Length: " + tostr(len(my_list)))
+push("First: " + tostr(my_list[0]))
+
+# Functions
+push("\n=== Functions ===")
+func greet(name)
+    return "Hello " + name
+end
+
+push(greet("Brittain"))
+
+# Control flow
+push("\n=== Control Flow ===")
+x = 10
+cond (x > 5)
+    push("x is greater than 5")
+end
+
+# Loops
+push("\n=== Loops ===")
+for i in space(1, 3)
+    push("i = " + tostr(i))
+end
+
+push("\n=== System Complete ===")

@@ -1,0 +1,25 @@
+func primes_below(limit):
+    flags = []
+    for index in space(limit):
+        flags.append(true)
+    end
+    number = 2
+    while ((number * number) < limit):
+        cond flags[number]:
+            multiple = (number * number)
+            while (multiple < limit):
+                flags[multiple] = false
+                multiple = (multiple + number)
+            end
+        end
+        number = (number + 1)
+    end
+    found = []
+    for candidate in space(2, limit):
+        cond flags[candidate]:
+            found.append(candidate)
+        end
+    end
+    return found
+end
+push(primes_below(50))

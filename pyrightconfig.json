@@ -1,0 +1,16 @@
+{
+  "include": [
+    "src",
+    "scripts",
+    "tests"
+  ],
+  "exclude": [
+    "checkpoints",
+    "data",
+    "runs"
+  ],
+  "extraPaths": [
+    "src"
+  ],
+  "typeCheckingMode": "basic"
+}

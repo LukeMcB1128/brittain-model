@@ -1,0 +1,15 @@
+func bubble_sort(values):
+    count = len(values)
+    for outer in space(count):
+        for inner in space(((count - outer) - 1)):
+            cond (values[inner] > values[(inner + 1)]):
+                held = values[inner]
+                values[inner] = values[(inner + 1)]
+                values[(inner + 1)] = held
+            end
+        end
+    end
+    return values
+end
+push(bubble_sort([5, 2, 9, 1, 5, 6]))
+push(bubble_sort([]))

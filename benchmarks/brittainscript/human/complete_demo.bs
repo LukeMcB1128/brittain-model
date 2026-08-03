@@ -1,0 +1,247 @@
+# BrittainScript Complete Demonstration
+# This file demonstrates all features of BrittainScript according to the documentation
+
+# Variables
+push("=== Variables ===")
+name = "BrittainScript"
+count = 42
+push("Name: " + name)
+push("Count: " + tostr(count))
+
+# Math Operations
+push("\n=== Math Operations ===")
+result = 3 + 4           # 7
+push("3 + 4 = " + tostr(result))
+result = 10 - 3          # 7
+push("10 - 3 = " + tostr(result))
+result = 3 * 2           # 6
+push("3 * 2 = " + tostr(result))
+result = 8 / 2           # 4
+push("8 / 2 = " + tostr(result))
+result = 10 % 3          # 1
+push("10 % 3 = " + tostr(result))
+result = 2 ^ 3           # 8
+push("2 ^ 3 = " + tostr(result))
+result = sqrroot(16)     # 4.0
+push("sqrroot(16) = " + tostr(result))
+
+# Trigonometry (degrees)
+push("\n=== Trigonometry ===")
+result = sin(90)         # 1.0
+push("sin(90) = " + tostr(result))
+result = cos(0)          # 1.0
+push("cos(0) = " + tostr(result))
+result = tan(45)         # 1.0
+push("tan(45) = " + tostr(result))
+result = pi              # 3.14159...
+push("pi = " + tostr(result))
+
+# Strings
+push("\n=== Strings ===")
+text = "hello" + " world"
+push("text = " + text)
+length = len(text)
+push("Length: " + tostr(length))
+char = text[0]           # "h"
+push("First char: " + char)
+slice = text[0:5]        # "hello"
+push("Slice [0:5]: " + slice)
+
+upper = text.upper()     # "HELLO WORLD"
+push("Upper: " + upper)
+lower = text.lower()     # "hello world"
+push("Lower: " + lower)
+trimmed = "  text  ".trim()  # "text"
+push("Trimmed: '" + trimmed + "'")
+
+has_substring = text.contains("world")    # true
+push("Contains 'world': " + tostr(has_substring))
+index = text.locate("world")              # 6
+push("Index of 'world': " + tostr(index))
+
+# Type Conversion
+push("\n=== Type Conversion ===")
+num = tonum("42")        # 42
+push("tonum('42'): " + tostr(num))
+str = tostr(42)          # "42"
+push("tostr(42): " + str)
+t = type(42)             # <class 'int'>
+push("type(42): " + t)
+
+# Lists
+push("\n=== Lists ===")
+nums = [1, 2, 3, 4]
+push("nums = " + tostr(nums))
+first = nums[0]          # 1
+push("First element: " + tostr(first))
+length = len(nums)       # 4
+push("Length: " + tostr(length))
+
+nums.add(5)              # [1, 2, 3, 4, 5]
+push("After add(5): " + tostr(nums))
+nums.remove(3)           # [1, 2, 4, 5]
+push("After remove(3): " + tostr(nums))
+nums.pop()               # [1, 2, 4]
+push("After pop(): " + tostr(nums))
+has_element = nums.has(2)  # true
+push("Has element 2: " + tostr(has_element))
+
+slice = nums[0:2]        # [1, 2]
+push("Slice [0:2]: " + tostr(slice))
+
+# Boolean Logic
+push("\n=== Boolean Logic ===")
+result = true and false       # false
+push("true and false = " + tostr(result))
+result = true or false        # true
+push("true or false = " + tostr(result))
+result = not true             # false
+push("not true = " + tostr(result))
+
+# Comparisons
+push("\n=== Comparisons ===")
+result = 5 == 5          # true
+push("5 == 5 = " + tostr(result))
+result = 5 != 3          # true
+push("5 != 3 = " + tostr(result))
+result = 5 > 3           # true
+push("5 > 3 = " + tostr(result))
+result = 3 < 5           # true
+push("3 < 5 = " + tostr(result))
+result = 5 >= 5          # true
+push("5 >= 5 = " + tostr(result))
+result = 3 <= 5          # true
+push("3 <= 5 = " + tostr(result))
+
+# Conditionals
+push("\n=== Conditionals ===")
+cond (count > 1):
+    push("count is greater than one")
+end
+
+# Loops
+push("\n=== Loops ===")
+
+# While loop
+push("While loop:")
+x = 0
+while x < 3:
+    x = x + 1
+    push("x = " + tostr(x))
+end
+
+# For loop with range
+push("For loop with range:")
+for i in space(1, 4):
+    push("i = " + tostr(i))
+end
+
+# Range with step
+push("For loop with step:")
+for i in space(0, 10, 2):
+    push("i = " + tostr(i))  # 0, 2, 4, 6, 8
+end
+
+# Functions
+push("\n=== Functions ===")
+func double(x):
+    return x * 2
+end
+
+func greet(name):
+    push("Hello, " + name)
+    return "Greeted"
+end
+
+result = double(5)       # 10
+push("double(5) = " + tostr(result))
+msg = greet("Luke")      # prints "Hello, Luke"
+push("greet result: " + msg)
+
+# Input/Output
+push("\n=== Input/Output ===")
+push("Hello, World!")
+
+# Comments
+push("\n=== Comments ===")
+# This is a full-line comment
+push(5)  # This is an inline comment
+
+# Grouping
+push("\n=== Grouping ===")
+result = (2 + 3) * 4    # 20
+push("(2 + 3) * 4 = " + tostr(result))
+
+# Modules - Math Module
+push("\n=== Math Module ===")
+add math
+
+a = math.max(10, 50)     # 50
+push("math.max(10, 50) = " + tostr(a))
+b = math.min(10, 50)     # 10
+push("math.min(10, 50) = " + tostr(b))
+c = math.abs(-5)         # 5
+push("math.abs(-5) = " + tostr(c))
+d = math.clamp(15, 0, 10)  # 10
+push("math.clamp(15, 0, 10) = " + tostr(d))
+e = math.factorial(5)    # 120
+push("math.factorial(5) = " + tostr(e))
+f = math.pow(2, 8)       # 256
+push("math.pow(2, 8) = " + tostr(f))
+
+# Modules - Convert Module
+push("\n=== Convert Module ===")
+add convert
+
+fahrenheit = convert.celToFahrenheit(0)       # 32
+push("convert.celToFahrenheit(0) = " + tostr(fahrenheit))
+celsius = convert.fahrenheitToCel(32)         # 0.0
+push("convert.fahrenheitToCel(32) = " + tostr(celsius))
+
+# Modules - IO Module
+push("\n=== IO Module ===")
+add io
+
+# Note: These would work in a real environment:
+# io.write("notes.txt", "hello")            # overwrites the file, returns true
+# io.append("notes.txt", " world")          # appends to the file, returns true
+# text = io.read("notes.txt")               # "hello world"
+# lines = io.readLines("notes.txt")         # each line as a list entry, no "\n"
+# exists = io.exists("notes.txt")           # true
+# io.delete("notes.txt")                    # deletes the file, returns true
+
+io.print("Hello from IO module!")                        # same as push()
+# name = io.read_input("Name: ")            # same as input()
+
+# Modules - Datetime Module
+push("\n=== Datetime Module ===")
+add datetime
+
+t = datetime.now()
+push("Current datetime: " + datetime.format(t, "%Y-%m-%d %H:%M:%S"))
+
+push("Year: " + tostr(datetime.year(t)))
+push("Month: " + tostr(datetime.month(t)))
+push("Day: " + tostr(datetime.day(t)))
+push("Hour: " + tostr(datetime.hour(t)))
+push("Minute: " + tostr(datetime.minute(t)))
+push("Second: " + tostr(datetime.second(t)))
+push("Weekday: " + tostr(datetime.weekday(t)))
+
+birthday = datetime.parse("2024-02-29", "%Y-%m-%d")
+push("Parsed birthday year: " + tostr(datetime.year(birthday)))
+
+push("Is 2024 leap year: " + tostr(datetime.isLeapYear(2024)))
+push("Days in Feb 2024: " + tostr(datetime.daysInMonth(2024, 2)))
+
+# Importing Multiple Modules
+push("\n=== Multiple Module Import ===")
+add math
+add convert
+
+value = math.max(10, 20)
+push("math.max(10, 20) = " + tostr(value))
+temp = convert.celToFahrenheit(value)
+push("convert.celToFahrenheit(20) = " + tostr(temp))
+
+push("\n=== Complete System Demo ===")
