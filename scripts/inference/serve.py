@@ -304,12 +304,18 @@ def stream_pieces(M, prompt, raw, opts):
                 continue
             prev_len = len(acc)
             acc += piece
-            # Don't let a stop fire before any real content: models often emit a
-            # leading newline, which would trip a "\n\n" stop immediately and
-            # return nothing.
-            hit = None if not acc.strip() else next((s for s in stops if s in acc), None)
+            # Search for stops only AFTER the leading whitespace. A middle usually
+            # opens on a fresh line, so acc starts "\n\n..."; searching the whole
+            # string matches the default "\n\n" stop at index 0 the moment real
+            # content arrives, cuts to "" and yields NOTHING. Deferring the check
+            # until acc.strip() was non-empty only delayed that — the stop still
+            # fired retroactively at position 0, and Continue.dev rendered an
+            # empty completion for every suggestion that began with a blank line.
+            lead = len(acc) - len(acc.lstrip())
+            body = acc[lead:]
+            hit = next((s for s in stops if s in body), None) if body.strip() else None
             if hit:
-                cut = acc[:acc.index(hit)]
+                cut = acc[:lead + body.index(hit)]
                 if len(cut) > prev_len:
                     yield cut[prev_len:]
                 return
@@ -353,6 +359,8 @@ async def generate(req: Request):
     opts = body.get("options") or {}
     raw = body.get("raw", M.raw_default)
     prompt = body.get("prompt", "")
+    print(raw)
+    print(prompt)
     if raw:
         prompt, suffix = (normalize_fim(prompt) if M.supports_fim
                           else strip_fim(prompt))
