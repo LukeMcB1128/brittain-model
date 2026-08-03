@@ -103,6 +103,8 @@ class CodeTok:
 
     def token_bytes(self, i):
         tokstr = self._tok.id_to_token(i)
+        if tokstr is None:
+            return b""
         return bytes(self._bd[c] for c in tokstr)
 
     def decode(self, ids):
