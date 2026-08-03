@@ -48,6 +48,15 @@ ap.add_argument("--resume", default=None,
 ap.add_argument("--data_dir", default=str(PROCESSED_DATA_DIR / "fim"))
 ap.add_argument("--iters", type=int, default=5700,
                 help="5700 x 524288 tok ~= 3B tokens")
+ap.add_argument("--block_size", type=int, default=None,
+                help="train at a LONGER context than --base was trained at. Only "
+                     "meaningful with --base (a --resume keeps its own). The model "
+                     "uses RoPE, computed on demand for whatever length is asked, so "
+                     "there is no position table to resize and the weights load "
+                     "unchanged — but the DATA must have been built for this length "
+                     "too (prepare_fim.py --block_size), or FIM spans stay capped at "
+                     "the old window. Halve --batch_size and double --grad_accum when "
+                     "you double this, to hold tokens/iter constant.")
 ap.add_argument("--batch_size", type=int, default=16)
 ap.add_argument("--grad_accum", type=int, default=32)
 ap.add_argument("--lr", type=float, default=1e-4, help="peak LR (low: this is a nudge)")
@@ -90,6 +99,11 @@ if args.resume:
     cfg = GPTConfig(**ck["cfg"])
     if cfg.vocab_size != new_vocab:
         raise SystemExit(f"resume vocab {cfg.vocab_size} != FIM data vocab {new_vocab}")
+    if args.block_size and args.block_size != cfg.block_size:
+        raise SystemExit(
+            f"--block_size {args.block_size} != the resumed run's {cfg.block_size}. "
+            "A resume continues one run's cosine and optimizer state; changing the "
+            "context mid-run is a new stage — point --base at the checkpoint instead.")
     block_size = cfg.block_size
     model = Brittain(cfg)
     model.load_state_dict(ck["model"])
@@ -113,11 +127,15 @@ else:
     ck = torch.load(args.base, map_location="cpu")
     old_cfg = dict(ck["cfg"])
     old_vocab = old_cfg["vocab_size"]
-    block_size = old_cfg["block_size"]
+    old_block = old_cfg["block_size"]
+    block_size = args.block_size or old_block
     if new_vocab < old_vocab:
         raise SystemExit(f"FIM vocab {new_vocab} smaller than base {old_vocab}")
+    if block_size < old_block:
+        raise SystemExit(f"--block_size {block_size} shorter than the base's {old_block}; "
+                         "this script extends context, it does not truncate it")
 
-    cfg = GPTConfig(**{**old_cfg, "vocab_size": new_vocab})
+    cfg = GPTConfig(**{**old_cfg, "vocab_size": new_vocab, "block_size": block_size})
     model = Brittain(cfg)
 
     sd = ck["model"]
@@ -138,7 +156,8 @@ else:
     model = model.to(device)
     raw_model = model
     print(f"Loaded {args.base}: {model.num_params():,} params, "
-          f"vocab {old_vocab} -> {new_vocab} (+{new_vocab - old_vocab} rows)")
+          f"vocab {old_vocab} -> {new_vocab} (+{new_vocab - old_vocab} rows), "
+          f"context {old_block} -> {block_size}")
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr,
                                   betas=(0.9, 0.95), weight_decay=args.weight_decay)

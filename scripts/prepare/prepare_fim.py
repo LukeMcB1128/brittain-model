@@ -61,9 +61,16 @@ p.add_argument("--langs", type=str, default="python,javascript,typescript")
 p.add_argument("--tokenizer_in", type=str, default=str(BASE_TOKENIZER))
 p.add_argument("--tokenizer_out", type=str, default=str(FIM_TOKENIZER))
 p.add_argument("--seed", type=int, default=1337)
+p.add_argument("--block_size", type=int, default=1024,
+               help="the CONTEXT the data is being built for. Sets the FIM span cap "
+                    "(see FIM_MAX_TOKENS below). Must match the block_size the run "
+                    "will train at, or FIM triples are capped below the window.")
+p.add_argument("--out_dir", type=str, default=None,
+               help="default data/processed/fim. Give a distinct directory per "
+                    "context length so a 2K build does not clobber the 1K one.")
 args = p.parse_args()
 
-OUT = str(PROCESSED_DATA_DIR / "fim")
+OUT = args.out_dir or str(PROCESSED_DATA_DIR / "fim")
 os.makedirs(OUT, exist_ok=True)
 LANGS = [l.strip() for l in args.langs.split(",")]
 BATCH = 256
@@ -80,14 +87,22 @@ rng = random.Random(args.seed)
 # and indentation), so a character cap that is right on average overshoots badly
 # on the worst documents. Capping tokens bounds it directly.
 #
-# Budget against the 1024 context: 900 window + 4 sentinels, leaving ~120 for the
-# re-tokenization overhead of splitting one span into three (each cut can land
-# mid-token and cost a few extra).
+# The reserve is a FIXED 124 tokens, not a percentage: 4 sentinels plus ~120 for
+# the re-tokenization overhead of splitting one span into three (each cut can land
+# mid-token and cost a few extra). That overhead is a handful of tokens per cut and
+# does not grow with the window, so scaling it proportionally would just waste
+# context at 2K and 4K. At block_size 1024 this reproduces the 900 the released
+# 1K data was built with, exactly.
+#
+# This MUST track the context the run trains at. Training at 2048 on data built
+# for 1024 gives a model that has never seen a FIM span longer than 900 tokens —
+# it gets the longer window for causal text only, which is not what the context
+# upgrade is being paid for.
 #
 # Long files still contribute — as random windows, not as one oversized sequence.
 # Plain causal documents are deliberately NOT capped: crossing chunk boundaries is
 # exactly what left-to-right training should learn from.
-FIM_MAX_TOKENS = 900
+FIM_MAX_TOKENS = args.block_size - 124
 
 FIM_PREFIX, FIM_SUFFIX, FIM_MIDDLE = "<fim_prefix>", "<fim_suffix>", "<fim_middle>"
 
