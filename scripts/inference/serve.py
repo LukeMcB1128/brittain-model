@@ -5,12 +5,12 @@ so clients can switch between them.
     pip install fastapi uvicorn
 
     # serve everything you have; mode is inferred per model
-    python3 scripts/inference/serve.py checkpoints/brittain_50m_bs.pt \
-        checkpoints/brittain_235m_weights.pt checkpoints/brittain_124m_sft.pt
+    python3 scripts/inference/serve.py checkpoints/brittain2_50m_bs.pt \
+        checkpoints/brittain2_235m_weights.pt checkpoints/brittain2_235m_fim.pt
 
     # rename for nicer client-side labels
     python3 scripts/inference/serve.py \
-        checkpoints/brittain_50m_bs.pt=brittain2-xs-coder:50m
+        checkpoints/brittain2_50m_bs.pt=brittain2-xs-coder:50m-bs
 
 Serves on http://localhost:11435 (11434 is real Ollama, so both can coexist).
 Point Continue.dev / Brittain Code at it as an Ollama provider; the models show
