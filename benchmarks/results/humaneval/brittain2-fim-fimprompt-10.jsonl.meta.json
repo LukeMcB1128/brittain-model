@@ -1,0 +1,29 @@
+{
+  "checkpoint": "/Users/lukemclarenbrittain/Downloads/Coding/BRITTAIN MODEL/checkpoints/brittain2_235m_fim.pt",
+  "checkpoint_sha256": "82810e78c44afa0844dcf81cff37abc434445c264b67fe0b88b074c1896fe4c0",
+  "checkpoint_iter": 4200,
+  "checkpoint_val": 1.4010032415390015,
+  "model": {
+    "vocab_size": 32003,
+    "block_size": 1024,
+    "n_layer": 16,
+    "n_head": 16,
+    "n_embd": 1024
+  },
+  "tokenizer": "code_bpe",
+  "tokenizer_vocab_size": 32003,
+  "device": "mps",
+  "torch_version": "2.13.0",
+  "tasks": 164,
+  "samples_per_task": 10,
+  "max_tokens": 256,
+  "greedy": false,
+  "temperature": 0.4,
+  "top_p": 0.95,
+  "top_k": null,
+  "repetition_penalty": 1.12,
+  "seed": 1337,
+  "human_eval_plus_mini": false,
+  "fim_prompt": true,
+  "fim_prompt_mode": "auto"
+}

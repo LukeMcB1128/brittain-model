@@ -1,0 +1,27 @@
+{
+  "checkpoint": "/Users/lukemclarenbrittain/Downloads/Coding/BRITTAIN MODEL/checkpoints/brittain2_235m_weights.pt",
+  "checkpoint_sha256": "81831f8f6a0aaf8c0a06df4534b9e8a36d04f6855f974fb8d6f6c6d4fe79107e",
+  "checkpoint_iter": 23200,
+  "checkpoint_val": 1.4176549911499023,
+  "model": {
+    "vocab_size": 32000,
+    "block_size": 1024,
+    "n_layer": 16,
+    "n_head": 16,
+    "n_embd": 1024
+  },
+  "tokenizer": "code_bpe",
+  "tokenizer_vocab_size": 32000,
+  "device": "mps",
+  "torch_version": "2.13.0",
+  "tasks": 164,
+  "samples_per_task": 10,
+  "max_tokens": 256,
+  "greedy": false,
+  "temperature": 0.4,
+  "top_p": 0.95,
+  "top_k": null,
+  "repetition_penalty": 1.12,
+  "seed": 1337,
+  "human_eval_plus_mini": false
+}
