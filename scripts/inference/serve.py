@@ -67,7 +67,15 @@ ap.add_argument("checkpoints", nargs="*",
 ap.add_argument("--raw", action="store_true", help="force raw mode for all models")
 ap.add_argument("--instruct", action="store_true", help="force template mode for all models")
 ap.add_argument("--port", type=int, default=11435)
+ap.add_argument("--host", default="127.0.0.1",
+                help="127.0.0.1 keeps it local; ngrok tunnels to it either way")
+ap.add_argument("--cors-origin", action="append", default=None,
+                help="allowed browser origin, repeatable. Defaults to '*'. A "
+                     "GitHub Pages site should name its own origin — that does "
+                     "not stop curl, but it stops other sites embedding this "
+                     "endpoint from a visitor's browser.")
 args = ap.parse_args()
+args.cors_origin = args.cors_origin or ["*"]
 
 device = (torch.device("cuda") if torch.cuda.is_available()
           else torch.device("mps") if torch.backends.mps.is_available()
@@ -127,9 +135,58 @@ if not MODELS:
 DEFAULT = next(iter(MODELS))
 
 app = FastAPI()
-app.add_middleware(CORSMiddleware, allow_origins=["*"],
+app.add_middleware(CORSMiddleware, allow_origins=args.cors_origin,
                    allow_methods=["*"], allow_headers=["*"])
 now = lambda: time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+# ---------------------------------------------------------------- public limits
+# Tunnelled through ngrok, this endpoint is reachable by anyone who has the URL,
+# and every request runs on Luke's laptop. Three bounds, none of which a normal
+# user or Continue.dev will ever touch:
+#
+#   * generation length — an unbounded num_predict holds the GPU for as long as
+#     the caller likes.
+#   * prompt length — checked in CHARACTERS, before tokenizing, because
+#     tokenizing a 50MB prompt IS the denial of service. Truncating to block_size
+#     afterwards is too late.
+#   * request rate per IP — a token bucket, so bursts are fine and sustained
+#     hammering is not.
+#
+# Deliberately NOT an in-flight request counter. Generation is serialised per
+# token, so concurrent callers interleave and all make progress. A counter would
+# need decrementing in a generator's finally, and an abandoned generator stays
+# suspended without running it — exactly the bug that wedged this server before.
+MAX_NEW_TOKENS = 512
+MAX_PROMPT_CHARS = 20_000
+RATE_BURST = 4          # requests available instantly
+RATE_PER_MIN = 40       # sustained refill
+
+_buckets = {}
+_bucket_lock = threading.Lock()
+
+
+def rate_limited(request):
+    """Token bucket per client IP. True when the caller should back off."""
+    ip = (request.client.host if request.client else "?")
+    nowt = time.time()
+    with _bucket_lock:
+        tokens, last = _buckets.get(ip, (float(RATE_BURST), nowt))
+        tokens = min(RATE_BURST, tokens + (nowt - last) * RATE_PER_MIN / 60.0)
+        if tokens < 1.0:
+            _buckets[ip] = (tokens, nowt)
+            return True
+        _buckets[ip] = (tokens - 1.0, nowt)
+        if len(_buckets) > 4096:            # bound the map itself
+            for k in [k for k, (_, t) in _buckets.items() if nowt - t > 3600]:
+                _buckets.pop(k, None)
+    return False
+
+
+def too_many(request):
+    if rate_limited(request):
+        return JSONResponse({"error": "rate limited — slow down"}, status_code=429)
+    return None
 
 
 # Continue.dev and most autocomplete clients assume a fill-in-the-middle model
@@ -245,6 +302,9 @@ def stream_pieces(M, prompt, raw, opts):
         stops = opts.get("stop") or []
         rep = opts.get("repeat_penalty", 1.12)
     top_p = opts.get("top_p", 0.95)
+    # Clamp, don't trust. Reachable from the public internet through ngrok, an
+    # unbounded num_predict holds the one GPU for as long as the caller asks.
+    max_new = max(1, min(int(max_new), MAX_NEW_TOKENS))
 
     token_ids = M.enc.encode(prompt)
     # An EMPTY prompt is normal, not a client error: the cursor sits at the top of
@@ -339,14 +399,39 @@ def stream_pieces(M, prompt, raw, opts):
             yield piece
 
 
+def describe(m):
+    """What a model is and how it wants to be talked to.
+
+    A client picks its input shape from `mode`, so checkpoints can be swapped
+    behind this without the client changing: 235m-fim -> 235m-fim-2k, 50m-bs ->
+    50m-bs-4b, or a new *-instruct appearing, all show up correctly on their own.
+    `fim` is derived from the tokenizer (vocab 32003) and `instruct` from the
+    filename, so neither needs configuring.
+
+      fim       prefix AND suffix; the model writes the middle
+      raw       a prefix; the model continues it
+      instruct  an instruction; the server applies the Alpaca template
+    """
+    mode = "fim" if m.supports_fim else ("raw" if m.raw_default else "instruct")
+    return {
+        "name": m.name, "model": m.name, "modified_at": now(), "size": 0,
+        "digest": m.name, "context": str(m.block),
+        "mode": mode,
+        "supports_fim": m.supports_fim,
+        "max_tokens": MAX_NEW_TOKENS,
+        "defaults": ({"temperature": 0.2, "num_predict": 64}
+                     if m.raw_default else
+                     {"temperature": 0.5, "num_predict": 256}),
+        "details": {"family": "brittain",
+                    "parameter_size": f"{m.params/1e6:.0f}M",
+                    "tokenizer": m.enc.name,
+                    "mode": mode},
+    }
+
+
 @app.get("/api/tags")
 def tags():
-    return {"models": [
-        {"name": m.name, "model": m.name, "modified_at": now(), "size": 0,
-         "digest": m.name, "context": str(m.block),
-         "details": {"family": "brittain",
-                     "parameter_size": f"{m.params/1e6:.0f}M"}}
-        for m in MODELS.values()]}
+    return {"models": [describe(m) for m in MODELS.values()]}
 
 
 @app.get("/api/version")
@@ -378,12 +463,21 @@ async def show(req: Request):
 
 @app.post("/api/generate")
 async def generate(req: Request):
+    limited = too_many(req)
+    if limited:
+        return limited
     body = await req.json()
     M = pick(body)
     opts = body.get("options") or {}
     raw = body.get("raw", M.raw_default)
     prompt = body.get("prompt") or ""
     request_suffix = body.get("suffix")
+    # Checked in CHARACTERS, before tokenizing — tokenizing a huge prompt IS the
+    # denial of service, so truncating to block_size afterwards is too late.
+    if len(prompt) + len(request_suffix or "") > MAX_PROMPT_CHARS:
+        return JSONResponse(
+            {"error": f"prompt too long (limit {MAX_PROMPT_CHARS} characters)"},
+            status_code=413)
     stream = body.get("stream", True)
     request_id = next(REQUEST_IDS)
     print(f"[generate {request_id}] model={M.name!r} raw={raw} stream={stream} "
@@ -442,10 +536,17 @@ async def generate(req: Request):
 
 @app.post("/api/chat")
 async def chat(req: Request):
+    limited = too_many(req)
+    if limited:
+        return limited
     body = await req.json()
     M = pick(body)
     opts = body.get("options") or {}
     msgs = body.get("messages", [])
+    if sum(len(m.get("content") or "") for m in msgs) > MAX_PROMPT_CHARS:
+        return JSONResponse(
+            {"error": f"prompt too long (limit {MAX_PROMPT_CHARS} characters)"},
+            status_code=413)
     user = next((m["content"] for m in reversed(msgs) if m.get("role") == "user"), "")
     # single-turn: these models never saw multi-turn conversations in training
     raw = body.get("raw", M.raw_default)
@@ -478,4 +579,4 @@ if __name__ == "__main__":
         print(f"  {m.name:<30} {m.params/1e6:6.0f}M  ctx {m.block:<5} "
               f"{m.enc.name:<9} {'raw' if m.raw_default else 'instruct'}"
               f"{'  FIM' if m.supports_fim else ''}")
-    uvicorn.run(app, host="127.0.0.1", port=args.port)
+    uvicorn.run(app, host=args.host, port=args.port)
