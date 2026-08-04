@@ -28,7 +28,8 @@ head_dim = 64          # n_embd / n_head, hardcoded: BS division returns a float
 block = 512
 batch = 4
 accum = 16             # effective batch = batch * accum
-max_iters = 30000      # 30520 iters x 32768 tok = one pass over the 1B corpus
+max_iters = 92000      # continues the 30000-iter run: 92000 x 32768 tok = 3.01B,
+                       # taking the total to 3.99B = 4 passes over the 1B corpus
 lr = 0.0006
 min_lr = 0.00006
 warmup = 200
@@ -38,7 +39,8 @@ eval_batches = 20
 save_every = 500
 data_path = "data/processed/coder/train.bin"
 val_path = "data/processed/coder/val.bin"
-out_path = "checkpoints/brittain_50m_bs.pt"
+base_path = "checkpoints/brittain2_50m_bs.pt"
+out_path = "checkpoints/brittain_50m_bs_expanded_pretrain.pt"
 
 # ---------------- device ----------------
 dev = "cpu"
@@ -76,6 +78,21 @@ end
 sink = mods.append(nn.LayerNorm(n_embd))
 sink = mods.append(nn.Linear(n_embd, vocab, false))
 moved = mods.to(dev)
+
+# Continue from the finished 30000-iter run instead of starting over. Same two
+# lines specialize_50m.bs uses. Only weights come back: this trainer never saved
+# optimizer state, so AdamW's moments rebuild over the first few hundred steps,
+# and lr_at restarts its cosine from 0.0006 — a deliberate warm restart, since
+# the first run finished sitting at min_lr.
+#
+# BrittainScript does NOT raise on a failed bridge call — it prints the error,
+# returns none, and carries on. A wrong base_path therefore trains from scratch
+# for the full run without stopping. Push the load_state_dict report, not the
+# path: "<All keys matched successfully>" means resumed, "None" means it did not.
+state = torch.load(base_path)
+report = mods.load_state_dict(state)
+push("resume:")
+push(report)
 
 total = 0
 for prm in mods.parameters():
