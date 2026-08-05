@@ -4,7 +4,7 @@ import './App.css'
 function App() {
   const [prompt, setPrompt] = useState('');
   const [output, setOutput] = useState('');
-  const [loading, setLoading] = useState('');
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [models, setModels] = useState([]);
   const [model, setModel] = useState("");
@@ -37,7 +37,7 @@ function App() {
   async function generate(event) {
     event.preventDefault();
 
-    if (!prompt.trim) {
+    if (!prompt.trim()) {
       return;
     }
 
@@ -67,7 +67,7 @@ function App() {
         throw new Error(`Server responded with ${response.status}`);
       }
 
-      const data = await response.json;
+      const data = await response.json();
       setOutput(data.response);
     } catch (err) {
       setError(err.message);
@@ -87,7 +87,7 @@ function App() {
           id="model"
           value={model}
           onChange={(event) => setModel(event.target.value)}
-          disable={models.length === 0}
+          disabled={models.length === 0}
         >
           {models.length === 0 && (
             <option>Loading models...</option>
