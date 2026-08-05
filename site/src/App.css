@@ -1,0 +1,67 @@
+:root {
+  --bg: #111214;
+  --bg-panel: #1a1b1e;
+  --bg-input: #202124;
+  --border: #33353a;
+  --text: #d7d8db;
+  --text-dim: #8b8d94;
+  --accent: #4a9eda;
+  --green: #4dab6d;
+  --red: #d05c5c;
+  --yellow: #c9a24a;
+  --purple: #a583d9;
+  --mono: "SF Mono", Menlo, Consolas, monospace;
+  font-family: var(--mono);
+  color: var(--text);
+  background: var(--bg);
+}
+
+.app {
+  max-width: 800px;
+  margin: 64px auto;
+}
+
+textarea,
+pre {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 16px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+textarea {
+  display: block;
+  margin: 10px 0 36px;
+  resize: vertical;
+}
+
+button {
+  padding: 10px 16px;
+  border: 0px;
+  background: var(--accent);
+  color: white;
+  font: inherit;
+  cursor: pointer;
+}
+
+pre {
+  white-space: pre-wrap;
+}
+
+select {
+  display: block;
+  width: 100%;
+  margin: 10px 0 16px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text);
+  font: inherit;
+}
+
+.error {
+  color: var(--red);
+}
