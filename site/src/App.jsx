@@ -1,6 +1,15 @@
 import { useState, useEffect } from 'react'
 import './App.css'
 
+const API_ORIGIN = 'https://fragility-devoutly-dazzling.ngrok-free.dev';
+
+// ngrok's free tunnels send an HTML warning page with status 200 to browser
+// requests unless this header is present. That page is not an API response and
+// has no CORS headers, so fetch reports it as a CORS/network failure.
+const apiHeaders = {
+  'ngrok-skip-browser-warning': 'true',
+};
+
 function App() {
   const [prompt, setPrompt] = useState('');
   const [output, setOutput] = useState('');
@@ -12,7 +21,9 @@ function App() {
 
   async function loadModels() {
     try {
-      const response = await fetch("https://fragility-devoutly-dazzling.ngrok-free.dev/api/tags");
+      const response = await fetch(`${API_ORIGIN}/api/tags`, {
+        headers: apiHeaders,
+      });
 
       if (!response.ok) {
         throw new Error(`Could not load models: ${response.status}`);
@@ -50,9 +61,10 @@ function App() {
     setOutput("");
 
     try {
-      const response = await fetch("https://fragility-devoutly-dazzling.ngrok-free.dev/api/generate", {
+      const response = await fetch(`${API_ORIGIN}/api/generate`, {
         method: "POST",
         headers: {
+          ...apiHeaders,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
