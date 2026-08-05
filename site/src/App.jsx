@@ -8,6 +8,7 @@ function App() {
   const [error, setError] = useState('');
   const [models, setModels] = useState([]);
   const [model, setModel] = useState("");
+  const [suffix, setSuffix] = useState('');
 
   async function loadModels() {
     try {
@@ -34,6 +35,9 @@ function App() {
     loadModels();
   }, []);
 
+  const selectedModel = models.find((item) => item.name === model);
+  const mode = selectedModel?.mode ?? "raw";
+
   async function generate(event) {
     event.preventDefault();
 
@@ -54,7 +58,11 @@ function App() {
         body: JSON.stringify({
           model,
           prompt,
-          raw: true,
+          // The server applies the correct format from this request shape.
+          // FIM needs both sides of the cursor. Instruct checkpoints need the
+          // server's Alpaca template, so they must not use raw mode.
+          suffix: mode === "fim" ? suffix : undefined,
+          raw: mode !== "instruct",
           stream: false,
           options: {
             num_predict: 80,
@@ -107,8 +115,22 @@ function App() {
           value={prompt}
           onChange={(event) => setPrompt(event.target.value)}
           placeholder='def add(a,b)'
-          row="10"
+          rows="10"
         />
+
+        {mode === "fim" && (
+          <>
+            <label htmlFor="suffix">Code after cursor</label>
+
+            <textarea
+              id="suffix"
+              value={suffix}
+              onChange={(event) => setSuffix(event.target.value)}
+              placeholder="Optional code after the missing section"
+              rows="6"
+            />
+          </>
+        )}
 
         <button type="submit" disabled={loading}>
           {loading ? "Generating..." : "Generate"}
