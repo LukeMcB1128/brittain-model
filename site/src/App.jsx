@@ -147,34 +147,37 @@ function App() {
 
           {models.map((item) => (
             <option key={item.name} value={item.name}>
-              {item.name} - {item.details.parameter_size} - {item.context} ctx
+              {item.name}
             </option>
           ))}
         </select>
-        
-        <label htmlFor="prompt">Prompt</label>
 
-        <textarea
-          id="prompt"
-          value={prompt}
-          onChange={(event) => setPrompt(event.target.value)}
-          placeholder='def add(a,b)'
-          rows="10"
-        />
+        <div className="generation-area">
 
-        {mode === "fim" && (
-          <>
-            <label htmlFor="suffix">Code after cursor</label>
+          <label htmlFor="prompt">Prompt</label>
 
-            <textarea
-              id="suffix"
-              value={suffix}
-              onChange={(event) => setSuffix(event.target.value)}
-              placeholder="Optional code after the missing section"
-              rows="6"
-            />
-          </>
-        )}
+          <textarea
+            id="prompt"
+            value={prompt}
+            onChange={(event) => setPrompt(event.target.value)}
+            placeholder='def add(a,b)'
+            rows="10"
+          />
+
+          {mode === "fim" && (
+            <>
+              <label htmlFor="suffix">Code after cursor</label>
+
+              <textarea
+                id="suffix"
+                value={suffix}
+                onChange={(event) => setSuffix(event.target.value)}
+                placeholder="Optional code after the missing section"
+                rows="6"
+              />
+            </>
+          )}
+        </div>
 
         <button type="submit" disabled={loading}>
           {loading ? "Generating..." : "Generate"}
@@ -189,6 +192,14 @@ function App() {
           <pre>{output}</pre>
         </>
       )}
+
+      <div className="model-details">
+        <strong>Model Details:</strong>
+        <p>{selectedModel?.name}</p>
+        <p>{selectedModel?.details?.parameter_size ?? "unknown"} parameters</p>
+        <p>{selectedModel?.context} token context</p>
+        <p>Mode: {mode}</p>
+      </div>
     </main>
   )
 }

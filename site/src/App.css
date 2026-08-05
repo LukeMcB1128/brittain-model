@@ -62,6 +62,15 @@ select {
   font: inherit;
 }
 
+.generation-area {
+  position: relative;
+}
+
+.model-details {
+  width: 350px;
+  margin-top: 48px;
+}
+
 .error {
   color: var(--red);
 }
