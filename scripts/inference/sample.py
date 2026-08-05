@@ -100,6 +100,21 @@ print(f"{enc.name} vocab {enc.vocab_size} | ctx {block} | {device.type} | "
       f"temp {args.temperature} top_p {args.top_p} rep {args.repetition_penalty}")
 if enc.has_fim:
     print("FIM tokenizer detected | use --suffix or --suffix_file to provide right context")
+
+# This script feeds the prompt to the model UNTOUCHED. An SFT checkpoint was
+# trained to see the Alpaca template, so handing it a bare instruction makes it
+# continue the sentence as prose instead of answering. It still produces roughly
+# the right code, buried in an unterminated docstring and invented surrounding
+# context — which reads as a broken model rather than a misused one.
+#
+# Same class of mistake in the other direction gave brittain_124m_sft "I am a
+# person." for `def add(a, b):`. Mode is inferred the way serve.py infers it, so
+# the two agree.
+if any(tag in os.path.basename(ckpt).lower() for tag in ("sft", "instruct")):
+    print("\n  !! This looks like an INSTRUCTION-TUNED checkpoint, and sample.py\n"
+          "     sends prompts raw — no Alpaca template. Expect it to continue your\n"
+          "     text rather than answer it. Use chat.py instead:\n"
+          f"       python3 scripts/inference/chat.py {ckpt}\n")
 print("-" * 70)
 
 
