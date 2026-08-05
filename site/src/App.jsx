@@ -12,7 +12,7 @@ function App() {
 
   async function loadModels() {
     try {
-      const response = await fetch("http://127.0.0.1:11435/api/tags");
+      const response = await fetch("https://fragility-devoutly-dazzling.ngrok-free.dev/api/tags");
 
       if (!response.ok) {
         throw new Error(`Could not load models: ${response.status}`);
@@ -50,7 +50,7 @@ function App() {
     setOutput("");
 
     try {
-      const response = await fetch("http://127.0.0.1:11435/api/generate", {
+      const response = await fetch("https://fragility-devoutly-dazzling.ngrok-free.dev/api/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
