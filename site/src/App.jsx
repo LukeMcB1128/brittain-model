@@ -10,6 +10,35 @@ const apiHeaders = {
   'ngrok-skip-browser-warning': 'true',
 };
 
+async function readNdjson(response, onChunk) {
+  if (!response.body) {
+    throw new Error('The server did not return a response stream.');
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let pending = '';
+
+  while (true) {
+    const { value, done } = await reader.read();
+    pending += decoder.decode(value, { stream: !done });
+
+    const lines = pending.split('\n');
+    pending = lines.pop();
+
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      onChunk(JSON.parse(line));
+    }
+
+    if (done) break;
+  }
+
+  if (pending.trim()) {
+    onChunk(JSON.parse(pending));
+  }
+}
+
 function App() {
   const [prompt, setPrompt] = useState('');
   const [output, setOutput] = useState('');
@@ -75,9 +104,9 @@ function App() {
           // server's Alpaca template, so they must not use raw mode.
           suffix: mode === "fim" ? suffix : undefined,
           raw: mode !== "instruct",
-          stream: false,
+          stream: true,
           options: {
-            num_predict: 512,
+            num_predict: 1024,
             temperature: 0.2,
           },
         }),
@@ -87,8 +116,11 @@ function App() {
         throw new Error(`Server responded with ${response.status}`);
       }
 
-      const data = await response.json();
-      setOutput(data.response);
+      await readNdjson(response, (chunk) => {
+        if (chunk.response) {
+          setOutput((current) => current + chunk.response);
+        }
+      });
     } catch (err) {
       setError(err.message);
     } finally {
