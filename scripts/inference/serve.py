@@ -412,12 +412,18 @@ def describe(m):
       raw       a prefix; the model continues it
       instruct  an instruction; the server applies the Alpaca template
     """
-    mode = "fim" if m.supports_fim else ("raw" if m.raw_default else "instruct")
+    # An instruct fine-tune can keep the FIM tokenizer from its base model.
+    # It must still use the Alpaca prompt format. Report instruct first so the
+    # browser sends an instruction instead of a prefix and suffix.
+    mode = "instruct" if not m.raw_default else ("fim" if m.supports_fim else "raw")
     return {
         "name": m.name, "model": m.name, "modified_at": now(), "size": 0,
         "digest": m.name, "context": str(m.block),
         "mode": mode,
-        "supports_fim": m.supports_fim,
+        # This is the public client capability, not merely the tokenizer
+        # capability. An instruct model may retain FIM tokens but must not be
+        # called as a FIM model.
+        "supports_fim": mode == "fim",
         "max_tokens": MAX_NEW_TOKENS,
         "defaults": ({"temperature": 0.2, "num_predict": 64}
                      if m.raw_default else
@@ -452,7 +458,7 @@ async def show(req: Request):
                   "brittain.context_length": M.block,
               },
               "context_length": M.block}
-    if M.supports_fim:
+    if M.supports_fim and M.raw_default:
         # Continue's Ollama provider detects native FIM support by looking for
         # `.Suffix` in /api/show's template. Without this it silently chooses
         # streamComplete(prompt) instead of streamFim(prefix, suffix), even when
@@ -576,7 +582,8 @@ if __name__ == "__main__":
     print(f"BRITTAIN serving {len(MODELS)} model(s) on http://localhost:{args.port}"
           f"  [device {device}]")
     for m in MODELS.values():
+        mode = ("instruct" if not m.raw_default
+                else ("fim" if m.supports_fim else "raw"))
         print(f"  {m.name:<30} {m.params/1e6:6.0f}M  ctx {m.block:<5} "
-              f"{m.enc.name:<9} {'raw' if m.raw_default else 'instruct'}"
-              f"{'  FIM' if m.supports_fim else ''}")
+              f"{m.enc.name:<9} {mode}")
     uvicorn.run(app, host=args.host, port=args.port)

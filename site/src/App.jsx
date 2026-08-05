@@ -77,7 +77,7 @@ function App() {
           raw: mode !== "instruct",
           stream: false,
           options: {
-            num_predict: 80,
+            num_predict: 512,
             temperature: 0.2,
           },
         }),
