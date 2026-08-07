@@ -319,18 +319,12 @@ def stream_pieces(M, prompt, raw, opts):
     utf8 = codecs.getincrementaldecoder("utf-8")("replace")
     acc = ""
     def token_stream():
-        """One token at a time. Brittain models keep a KV cache across the whole
-        completion; the BS model has no stream() and falls back to the old
-        one-token-at-a-time loop."""
-        if M.is_brittain:
-            yield from M.model.stream(ids, max_new, temperature=temperature,
-                                      top_p=top_p, repetition_penalty=rep)
-            return
-        cur = ids
-        for _ in range(max_new):
-            cur = M.model.generate(cur[:, -M.block:], 1, temperature=temperature,
-                                   top_p=top_p, repetition_penalty=rep)
-            yield cur[:, -1:]
+        """One token at a time, with the KV cache held open for the whole
+        completion. Both architectures implement stream() now — the BS models
+        used to lack it and fell back to a full forward per token, which made the
+        52M slower than the 235M."""
+        yield from M.model.stream(ids, max_new, temperature=temperature,
+                                  top_p=top_p, repetition_penalty=rep)
 
     # ONE REQUEST AT A TIME. StreamingResponse runs a sync generator in Starlette's
     # threadpool, so overlapping requests put two threads inside the same model.
