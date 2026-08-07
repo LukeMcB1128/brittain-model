@@ -199,6 +199,7 @@ function App() {
         <p>{selectedModel?.details?.parameter_size ?? "unknown"} parameters</p>
         <p>{selectedModel?.context} token context</p>
         <p>Mode: {mode}</p>
+        <p>Note: these models are not all Brittain models, just our current best models.</p>
       </div>
     </main>
   )
