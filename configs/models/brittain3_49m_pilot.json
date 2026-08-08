@@ -1,0 +1,18 @@
+{
+  "architecture": "brittain3",
+  "architecture_version": 1,
+  "vocab_size": 24576,
+  "max_seq_len": 16384,
+  "n_layer": 10,
+  "n_head": 9,
+  "n_kv_head": 3,
+  "n_embd": 576,
+  "intermediate_size": 1536,
+  "rope_theta": 100000.0,
+  "rms_norm_eps": 0.00001,
+  "dropout": 0.0,
+  "bias": false,
+  "qk_norm": true,
+  "activation_checkpointing": true,
+  "logit_chunk_size": 256
+}

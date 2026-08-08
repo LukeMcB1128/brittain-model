@@ -1,0 +1,28 @@
+{
+  "format": "brittain3-training-v1",
+  "model_config": "configs/models/brittain3_181m.json",
+  "tokenizer_path": "tokenizers/brittain3-code-24k/tokenizer.json",
+  "output_dir": "checkpoints/brittain3_181m",
+  "seed": 1337,
+  "precision": "bf16",
+  "compile": true,
+  "optimizer": {
+    "betas": [0.9, 0.95],
+    "epsilon": 1e-8,
+    "weight_decay": 0.1,
+    "gradient_clip": 1.0
+  },
+  "evaluation": {
+    "interval": 200,
+    "batches": 20,
+    "plateau_evaluations": 10,
+    "minimum_delta": 0.001
+  },
+  "stages": [
+    {"name": "1k", "context": 1024, "microbatch": 16, "accumulation": 16, "updates": 15260, "warmup_updates": 200, "decay_updates": 1500, "peak_lr": 0.0005, "min_lr": 0.00005, "train_data": "data/processed/brittain3/train_1024.npz", "validation_data": "data/processed/brittain3/validation_1024.npz"},
+    {"name": "2k", "context": 2048, "microbatch": 8, "accumulation": 16, "updates": 2670, "warmup_updates": 50, "decay_updates": 400, "peak_lr": 0.0001, "min_lr": 0.00003, "train_data": "data/processed/brittain3/train_2048.npz", "validation_data": "data/processed/brittain3/validation_2048.npz"},
+    {"name": "4k", "context": 4096, "microbatch": 4, "accumulation": 16, "updates": 1145, "warmup_updates": 25, "decay_updates": 200, "peak_lr": 0.00006, "min_lr": 0.00002, "train_data": "data/processed/brittain3/train_4096.npz", "validation_data": "data/processed/brittain3/validation_4096.npz"},
+    {"name": "8k", "context": 8192, "microbatch": 2, "accumulation": 16, "updates": 458, "warmup_updates": 10, "decay_updates": 100, "peak_lr": 0.00003, "min_lr": 0.00001, "train_data": "data/processed/brittain3/train_8192.npz", "validation_data": "data/processed/brittain3/validation_8192.npz"},
+    {"name": "16k", "context": 16384, "microbatch": 1, "accumulation": 16, "updates": 305, "warmup_updates": 10, "decay_updates": 100, "peak_lr": 0.000015, "min_lr": 0.000005, "train_data": "data/processed/brittain3/train_16384.npz", "validation_data": "data/processed/brittain3/validation_16384.npz"}
+  ]
+}

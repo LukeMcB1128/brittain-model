@@ -115,6 +115,10 @@ See [`docs/MODELS.md`](docs/MODELS.md) for the complete lineage and architecture
 history. See [`benchmarks/brittainscript/README.md`](benchmarks/brittainscript/README.md)
 for the executable BrittainScript capability suite.
 
+The local engineering foundation for the next architecture is documented in
+[`docs/BRITTAIN3.md`](docs/BRITTAIN3.md). The full tokenizer, pilot, and paid
+training runs are not included in ordinary setup or tests.
+
 ## License
 
 The original repository code, documentation, tokenizer assets, and released

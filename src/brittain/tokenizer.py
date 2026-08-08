@@ -123,6 +123,10 @@ def load_tokenizer(ck, code_bpe_path=BASE_TOKENIZER):
         name = "gpt2" if ck["cfg"]["vocab_size"] > 40000 else "code_bpe"
     if name == "gpt2":
         enc = GPT2Tok()
+    elif name == "brittain3_bpe":
+        from .tokenizer_v3 import Brittain3Tokenizer
+        tokenizer_path = ck.get("tokenizer_path")
+        enc = Brittain3Tokenizer(tokenizer_path) if tokenizer_path else Brittain3Tokenizer()
     else:
         enc = CodeTok(ck.get("tokenizer_path") or code_bpe_path)
     want = ck.get("cfg", {}).get("vocab_size")

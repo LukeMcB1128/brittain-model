@@ -33,6 +33,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 import torch
 
 from brittain.model import Brittain, GPTConfig
+from brittain.model_v3 import Brittain3, Brittain3Config
 from brittain import model_bs
 from brittain.paths import CHECKPOINT_DIR
 from brittain.tokenizer import load_tokenizer
@@ -77,12 +78,17 @@ else:
 
 ck = torch.load(ckpt, map_location=device)
 if isinstance(ck, dict) and "cfg" in ck:
-    cfg = GPTConfig(**ck["cfg"])
-    model = Brittain(cfg).to(device)
+    if ck.get("architecture") == "brittain3":
+        cfg = Brittain3Config(**ck["cfg"])
+        model = Brittain3(cfg).to(device)
+        block = cfg.max_seq_len
+    else:
+        cfg = GPTConfig(**ck["cfg"])
+        model = Brittain(cfg).to(device)
+        block = cfg.block_size
     model.load_state_dict(ck["model"])
     model.eval()
-    enc = load_tokenizer(ck)   # gpt2 for v1 ckpts, code BPE for v2
-    block = cfg.block_size
+    enc = load_tokenizer(ck)   # gpt2 for v1, code BPE for v2/v3
     iteration = ck.get("iter", "?")
     val = ck.get("val")
 else:
@@ -144,7 +150,8 @@ def generate(prompt, suffix=None):
                   + suffix_ids + [enc.fim_middle])
         ids = torch.tensor([packed], dtype=torch.long, device=device)
     else:
-        ids = torch.tensor([enc.encode(prompt)], dtype=torch.long, device=device)
+        prompt_ids = enc.encode(prompt) or [enc.eot]
+        ids = torch.tensor([prompt_ids], dtype=torch.long, device=device)
         if ids.size(1) >= block:
             kept = block - 1
             print(f"[prompt is {ids.size(1)} tokens; the model sees only the last {kept}]")
@@ -155,7 +162,7 @@ def generate(prompt, suffix=None):
     utf8 = codecs.getincrementaldecoder("utf-8")("replace")
     emitted = ""
     def token_stream():
-        if isinstance(model, Brittain):
+        if isinstance(model, (Brittain, Brittain3)):
             # stream() keeps the KV cache alive across tokens.
             yield from model.stream(ids, args.max_tokens,
                                     temperature=args.temperature, top_k=args.top_k,
@@ -173,6 +180,7 @@ def generate(prompt, suffix=None):
     stop_ids = {enc.eot}
     if enc.has_fim:
         stop_ids.update((enc.fim_prefix, enc.fim_suffix, enc.fim_middle))
+    stop_ids.update(getattr(enc, "special_ids", {}).values())
     with torch.no_grad(), torch.autocast(device_type=device.type, dtype=torch.bfloat16):
         for tok in token_stream():
             nxt = tok[0, -1].item()

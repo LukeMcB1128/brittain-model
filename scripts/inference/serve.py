@@ -55,6 +55,7 @@ from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from brittain.model import Brittain, GPTConfig
+from brittain.model_v3 import Brittain3, Brittain3Config
 from brittain import model_bs
 from brittain.paths import CHECKPOINT_DIR
 from brittain.prompts import format_prompt
@@ -90,15 +91,20 @@ class Loaded:
             self.model, self.enc = model_bs.load(path, device)
             self.block = self.model.block
         else:
-            cfg = GPTConfig(**ck["cfg"])
-            self.model = Brittain(cfg).to(device)
+            if ck.get("architecture") == "brittain3":
+                cfg = Brittain3Config(**ck["cfg"])
+                self.model = Brittain3(cfg).to(device)
+                self.block = cfg.max_seq_len
+            else:
+                cfg = GPTConfig(**ck["cfg"])
+                self.model = Brittain(cfg).to(device)
+                self.block = cfg.block_size
             self.model.load_state_dict(ck["model"])
             self.model.eval()
             self.enc = load_tokenizer(ck)
-            self.block = cfg.block_size
         self.name = name
         self.params = self.model.num_params()
-        self.is_brittain = isinstance(self.model, Brittain)
+        self.is_brittain = isinstance(self.model, (Brittain, Brittain3))
         self.supports_fim = bool(getattr(self.enc, "has_fim", False))
         low = os.path.basename(path).lower()
         if args.raw:
@@ -221,36 +227,38 @@ def strip_fim(prompt):
     return prompt, None
 
 
-def normalize_fim(prompt):
+def normalize_fim(prompt, canonical=("<fim_prefix>", "<fim_suffix>", "<fim_middle>")):
     """Translate common client FIM dialects into BRITTAIN's PSM format."""
     for pre, suf, mid in FIM_MARKERS:
         if pre in prompt and suf in prompt:
             body = prompt.split(pre, 1)[1]
             prefix, rest = body.split(suf, 1)
             suffix = rest.split(mid, 1)[0] if mid in rest else rest
-            canonical = (f"<fim_prefix>{prefix}<fim_suffix>{suffix}"
-                         f"<fim_middle>")
-            return canonical, suffix
+            prepared = f"{canonical[0]}{prefix}{canonical[1]}{suffix}{canonical[2]}"
+            return prepared, suffix
     if "[SUFFIX]" in prompt and "[PREFIX]" in prompt:
         after = prompt.split("[SUFFIX]", 1)[1]
         suffix, prefix = after.split("[PREFIX]", 1)
-        canonical = (f"<fim_prefix>{prefix}<fim_suffix>{suffix}"
-                     f"<fim_middle>")
-        return canonical, suffix
+        prepared = f"{canonical[0]}{prefix}{canonical[1]}{suffix}{canonical[2]}"
+        return prepared, suffix
     return prompt, None
 
 
-def prepare_raw_completion(prompt, request_suffix, supports_fim):
+def prepare_raw_completion(prompt, request_suffix, supports_fim, canonical=None):
     """Normalize wrapped FIM or Ollama's separate prompt/suffix form."""
-    transform = normalize_fim if supports_fim else strip_fim
-    prepared, embedded_suffix = transform(prompt)
+    if supports_fim:
+        prepared, embedded_suffix = normalize_fim(
+            prompt, canonical or ("<fim_prefix>", "<fim_suffix>", "<fim_middle>")
+        )
+    else:
+        prepared, embedded_suffix = strip_fim(prompt)
     if embedded_suffix is not None:
         return prepared, embedded_suffix
     if request_suffix is None:
         return prepared, None
     if supports_fim:
-        return (f"<fim_prefix>{prepared}<fim_suffix>{request_suffix}"
-                f"<fim_middle>"), request_suffix
+        markers = canonical or ("<fim_prefix>", "<fim_suffix>", "<fim_middle>")
+        return f"{markers[0]}{prepared}{markers[1]}{request_suffix}{markers[2]}", request_suffix
     return prepared, request_suffix
 
 
@@ -368,7 +376,8 @@ def stream_pieces(M, prompt, raw, opts):
     with torch.no_grad():
         for tok in locked_tokens():
             nxt = tok[0, -1].item()
-            if nxt == M.enc.eot:
+            stop_ids = {M.enc.eot, *getattr(M.enc, "special_ids", {}).values()}
+            if nxt in stop_ids:
                 break
             piece = utf8.decode(M.enc.token_bytes(nxt))
             if not piece:
@@ -489,8 +498,10 @@ async def generate(req: Request):
     # successfully without spending a generation on an empty document.
     empty_request = prompt == "" and request_suffix is None
     if raw:
+        canonical = (("<|fim_prefix|>", "<|fim_suffix|>", "<|fim_middle|>")
+                     if M.enc.name == "brittain3_bpe" else None)
         prompt, suffix = prepare_raw_completion(
-            prompt, request_suffix, M.supports_fim)
+            prompt, request_suffix, M.supports_fim, canonical)
         if suffix is not None and not opts.get("stop"):
             extra = suffix_stop(suffix)
             if extra:
@@ -551,7 +562,12 @@ async def chat(req: Request):
     # single-turn: these models never saw multi-turn conversations in training
     raw = body.get("raw", M.raw_default)
     if raw:
-        prompt, _ = (normalize_fim(user) if M.supports_fim else strip_fim(user))
+        canonical = (("<|fim_prefix|>", "<|fim_suffix|>", "<|fim_middle|>")
+                     if M.enc.name == "brittain3_bpe" else None)
+        prompt, _ = (normalize_fim(
+            user, canonical or ("<fim_prefix>", "<fim_suffix>", "<fim_middle>")
+        ) if M.supports_fim
+                     else strip_fim(user))
     else:
         prompt = format_prompt(user)
 

@@ -1,0 +1,25 @@
+{
+  "format": "brittain3-training-v1",
+  "model_config": "configs/models/brittain3_49m_pilot.json",
+  "tokenizer_path": "tokenizers/brittain3-code-24k/tokenizer.json",
+  "output_dir": "checkpoints/brittain3_49m_pilot",
+  "seed": 1337,
+  "precision": "bf16",
+  "compile": true,
+  "optimizer": {
+    "betas": [0.9, 0.95],
+    "epsilon": 1e-8,
+    "weight_decay": 0.1,
+    "gradient_clip": 1.0
+  },
+  "evaluation": {
+    "interval": 200,
+    "batches": 20,
+    "plateau_evaluations": 10,
+    "minimum_delta": 0.001
+  },
+  "stages": [
+    {"name": "1k-pilot", "context": 1024, "microbatch": 12, "accumulation": 16, "updates": 3200, "warmup_updates": 100, "decay_updates": 400, "peak_lr": 0.0006, "min_lr": 0.00006, "train_data": "data/processed/brittain3/train_1024.npz", "validation_data": "data/processed/brittain3/validation_1024.npz"},
+    {"name": "2k-pilot", "context": 2048, "microbatch": 6, "accumulation": 16, "updates": 400, "warmup_updates": 20, "decay_updates": 100, "peak_lr": 0.0001, "min_lr": 0.00002, "train_data": "data/processed/brittain3/train_2048.npz", "validation_data": "data/processed/brittain3/validation_2048.npz"}
+  ]
+}
