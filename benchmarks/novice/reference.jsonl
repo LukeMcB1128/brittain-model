@@ -1,0 +1,36 @@
+{"id": "functions/add", "body": "    return a + b\n"}
+{"id": "functions/is_even", "body": "    return n % 2 == 0\n"}
+{"id": "functions/celsius_to_fahrenheit", "body": "    return celsius * 9 / 5 + 32\n"}
+{"id": "functions/clamp", "body": "    return max(low, min(value, high))\n"}
+{"id": "functions/safe_divide", "body": "    if b == 0:\n        return None\n    return a / b\n"}
+{"id": "functions/greet", "body": "    return 'Hello, ' + name + '!'\n"}
+{"id": "arrays/sum_list", "body": "    total = 0\n    for value in values:\n        total += value\n    return total\n"}
+{"id": "arrays/max_of_list", "body": "    if not values:\n        return None\n    return max(values)\n"}
+{"id": "arrays/reverse_list", "body": "    return list(reversed(values))\n"}
+{"id": "arrays/count_occurrences", "body": "    count = 0\n    for value in values:\n        if value == target:\n            count += 1\n    return count\n"}
+{"id": "arrays/unique_preserve_order", "body": "    seen = []\n    for value in values:\n        if value not in seen:\n            seen.append(value)\n    return seen\n"}
+{"id": "arrays/average", "body": "    if not values:\n        return 0.0\n    return sum(values) / len(values)\n"}
+{"id": "objects/get_field", "body": "    if key in record:\n        return record[key]\n    return default\n"}
+{"id": "objects/merge_dicts", "body": "    merged = dict(first)\n    merged.update(second)\n    return merged\n"}
+{"id": "objects/invert_dict", "body": "    return {value: key for key, value in mapping.items()}\n"}
+{"id": "objects/count_words", "body": "    counts = {}\n    for word in text.split():\n        counts[word] = counts.get(word, 0) + 1\n    return counts\n"}
+{"id": "objects/keys_with_value", "body": "    return sorted(key for key, value in mapping.items() if value == target)\n"}
+{"id": "objects/set_default_score", "body": "    if name not in scores:\n        scores[name] = 0\n    return scores\n"}
+{"id": "loops/factorial", "body": "    result = 1\n    for i in range(2, n + 1):\n        result *= i\n    return result\n"}
+{"id": "loops/sum_even", "body": "    total = 0\n    for value in values:\n        if value % 2 == 0:\n            total += value\n    return total\n"}
+{"id": "loops/repeat_string", "body": "    result = ''\n    for _ in range(times):\n        result += text\n    return result\n"}
+{"id": "loops/running_total", "body": "    totals = []\n    total = 0\n    for value in values:\n        total += value\n        totals.append(total)\n    return totals\n"}
+{"id": "loops/first_index", "body": "    for index, value in enumerate(values):\n        if value == target:\n            return index\n    return -1\n"}
+{"id": "loops/count_vowels", "body": "    count = 0\n    for char in text.lower():\n        if char in 'aeiou':\n            count += 1\n    return count\n"}
+{"id": "parsing/parse_int_list", "body": "    if not text.strip():\n        return []\n    return [int(part) for part in text.split(',')]\n"}
+{"id": "parsing/split_key_value", "body": "    if '=' not in line:\n        return None\n    key, _, value = line.partition('=')\n    return (key.strip(), value.strip())\n"}
+{"id": "parsing/parse_bool", "body": "    lowered = text.strip().lower()\n    if lowered == 'true':\n        return True\n    if lowered == 'false':\n        return False\n    return None\n"}
+{"id": "parsing/extract_digits", "body": "    return ''.join(char for char in text if char.isdigit())\n"}
+{"id": "parsing/parse_csv_line", "body": "    return [field.strip() for field in line.split(',')]\n"}
+{"id": "parsing/strip_comment", "body": "    if '#' in line:\n        line = line[:line.index('#')]\n    return line.strip()\n"}
+{"id": "state/counter_class", "body": "    def __init__(self):\n        self.value = 0\n\n    def increment(self):\n        self.value += 1\n"}
+{"id": "state/account_deposit", "body": "    def __init__(self, balance=0):\n        self.balance = balance\n\n    def deposit(self, amount):\n        self.balance += amount\n\n    def withdraw(self, amount):\n        if amount > self.balance:\n            return False\n        self.balance -= amount\n        return True\n"}
+{"id": "state/toggle_flag", "body": "    settings[name] = not settings.get(name, False)\n    return settings[name]\n"}
+{"id": "state/append_history", "body": "    history.append(entry)\n    while len(history) > limit:\n        history.pop(0)\n    return history\n"}
+{"id": "state/update_score", "body": "    scores[name] = scores.get(name, 0) + points\n    return scores[name]\n"}
+{"id": "state/stack_class", "body": "    def __init__(self):\n        self.items = []\n\n    def push(self, item):\n        self.items.append(item)\n\n    def pop(self):\n        if not self.items:\n            return None\n        return self.items.pop()\n\n    def size(self):\n        return len(self.items)\n"}

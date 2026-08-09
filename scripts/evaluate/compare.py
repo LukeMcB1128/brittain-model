@@ -57,10 +57,11 @@ warnings.filterwarnings("ignore", category=SyntaxWarning)
 
 import torch
 
-from brittain.model import Brittain, GPTConfig
-from brittain import model_bs
+from brittain.loading import generate, load_any, resolve_device
+from brittain.metrics import repetition_collapse
+from brittain.model import Brittain
+from brittain.model_v3 import Brittain3
 from brittain.paths import BENCHMARK_PROMPTS_DIR
-from brittain.tokenizer import load_tokenizer
 
 p = argparse.ArgumentParser()
 p.add_argument("checkpoints", nargs="+")
@@ -69,12 +70,19 @@ p.add_argument("--code_text", default=str(BENCHMARK_PROMPTS_DIR / "code.py"),
 p.add_argument("--prose_text", default=str(BENCHMARK_PROMPTS_DIR / "prose.txt"),
                help="raw English file for BPB")
 p.add_argument("--max_bytes", type=int, default=200_000)
-p.add_argument("--samples", type=int, default=20, help="completions per prompt")
+p.add_argument("--samples", type=int, default=100,
+               help="completions per prompt. Syntax validity is a binomial "
+                    "proportion: at 5 prompts x 20 samples sigma is ~5 points, so "
+                    "a 7-point difference is noise. 100 puts sigma near 2.2.")
+p.add_argument("--device", default=None)
+p.add_argument("--block", type=int, default=None,
+               help="score every model with this BPB window instead of its own "
+                    "context. Use it when contexts differ: a longer window eats "
+                    "fewer chunk boundaries, so an untrained 16K-capable model "
+                    "would beat a 512-context one on window size alone.")
 args = p.parse_args()
 
-device = (torch.device("cuda") if torch.cuda.is_available()
-          else torch.device("mps") if torch.backends.mps.is_available()
-          else torch.device("cpu"))
+device = resolve_device(args.device)
 
 CODE_PROMPTS = [
     "def fibonacci(n):\n",
@@ -85,39 +93,18 @@ CODE_PROMPTS = [
 ]
 
 
-class _BSCfg:
-    """Minimal cfg shim so BS models expose the same fields as GPTConfig."""
-    def __init__(self, m):
-        self.vocab_size, self.block_size = m.vocab, m.block
-
-
-def load(path):
-    ck = torch.load(path, map_location=device)
-    # train_50m.bs checkpoints are a bare ModuleList state_dict (no 'cfg' key)
-    # and use a different architecture — route them through model_bs.
-    if not isinstance(ck, dict) or "cfg" not in ck:
-        model, enc = model_bs.load(path, device)
-        return model, _BSCfg(model), enc
-    cfg = GPTConfig(**ck["cfg"])
-    model = Brittain(cfg).to(device)
-    model.load_state_dict(ck["model"])
-    model.eval()
-    return model, cfg, load_tokenizer(ck)
-
-
 def read_text(path, limit):
     with open(path, "r", encoding="utf-8", errors="ignore") as f:
         return f.read(limit)
 
 
 @torch.no_grad()
-def bits_per_byte(model, cfg, enc, text):
+def bits_per_byte(model, block, enc, text):
     """Total NLL over the text, normalised by its UTF-8 byte count."""
     n_bytes = len(text.encode("utf-8"))
     ids = enc.encode(text)
     if len(ids) < 2:
         return float("nan")
-    block = cfg.block_size
     total_nll = 0.0
     # non-overlapping windows; every model is scored the same way
     for start in range(0, len(ids) - 1, block):
@@ -126,7 +113,7 @@ def bits_per_byte(model, cfg, enc, text):
             break
         x = torch.tensor([chunk[:-1]], dtype=torch.long, device=device)
         y = torch.tensor([chunk[1:]], dtype=torch.long, device=device)
-        out = model(x, y) if isinstance(model, Brittain) else model(x)
+        out = model(x, y) if isinstance(model, (Brittain, Brittain3)) else model(x)
         logits = out[0] if isinstance(out, tuple) else out
         # recompute unreduced so we can sum rather than average
         lp = torch.nn.functional.cross_entropy(
@@ -136,34 +123,38 @@ def bits_per_byte(model, cfg, enc, text):
 
 
 @torch.no_grad()
-def syntax_validity(model, cfg, enc, n_samples):
-    """Fraction of generated completions that parse as Python."""
+def syntax_validity(model, enc, n_samples):
+    """Fraction of generated completions that parse, and how many collapsed.
+
+    Returns (syntax_fraction, collapse_fraction). Collapse is measured on the
+    same generations because a degenerate loop often still parses — the two
+    numbers only mean something read together.
+    """
     ok = 0
+    collapsed = 0
     total = 0
     for prompt in CODE_PROMPTS:
         ids = torch.tensor([enc.encode(prompt)], dtype=torch.long, device=device)
         for _ in range(n_samples):
             # identical sampling for every model, or the comparison isn't fair
-            if isinstance(model, Brittain):
-                out = model.generate(ids, max_new_tokens=80, temperature=0.4,
-                                     top_p=0.95, repetition_penalty=1.12)
-            else:
-                out = model.generate(ids, 80, temperature=0.4, top_p=0.95,
-                                     repetition_penalty=1.12)
+            out = generate(model, ids, 80, temperature=0.4, top_p=0.95,
+                           repetition_penalty=1.12)
             gen = out[0, ids.size(1):].tolist()
             if enc.eot in gen:
                 gen = gen[:gen.index(enc.eot)]
+            total += 1
+            if repetition_collapse(gen):
+                collapsed += 1
             text = prompt + enc.decode(gen)
             # trim to the last complete line — a cut-off final line is a
             # generation-length artifact, not a syntax failure
             text = text[:text.rfind("\n") + 1] if "\n" in text else text
-            total += 1
             try:
                 ast.parse(text)
                 ok += 1
             except (SyntaxError, ValueError):
                 pass
-    return ok / max(1, total)
+    return ok / max(1, total), collapsed / max(1, total)
 
 
 code_sample = read_text(args.code_text, args.max_bytes)
@@ -176,17 +167,21 @@ for path in args.checkpoints:
         print(f"[skip] {path} not found")
         continue
     print(f"evaluating {path} ...", flush=True)
-    model, cfg, enc = load(path)
+    model, block, enc = load_any(path, device)
+    window = min(block, args.block) if args.block else block
+    syntax, collapse = syntax_validity(model, enc, args.samples)
     row = {
         "name": os.path.basename(path),
         "params": model.num_params(),
-        "vocab": cfg.vocab_size,
-        "ctx": cfg.block_size,
+        "vocab": enc.vocab_size,
+        "ctx": block,
+        "window": window,
         "tok": enc.name,
         "tok_eff": len(code_sample.encode()) / max(1, len(enc.encode(code_sample))),
-        "bpb_code": bits_per_byte(model, cfg, enc, code_sample),
-        "bpb_prose": bits_per_byte(model, cfg, enc, prose_sample) if prose_sample else float("nan"),
-        "syntax": syntax_validity(model, cfg, enc, args.samples),
+        "bpb_code": bits_per_byte(model, window, enc, code_sample),
+        "bpb_prose": bits_per_byte(model, window, enc, prose_sample) if prose_sample else float("nan"),
+        "syntax": syntax,
+        "collapse": collapse,
     }
     rows.append(row)
     del model
@@ -194,13 +189,17 @@ for path in args.checkpoints:
         torch.mps.empty_cache()
 
 print()
-hdr = f"{'model':<28}{'params':>12}{'vocab':>8}{'ctx':>6}{'B/tok':>7}" \
-      f"{'BPB code':>10}{'BPB prose':>11}{'syntax%':>9}"
+hdr = f"{'model':<28}{'params':>12}{'vocab':>8}{'ctx':>6}{'win':>7}{'B/tok':>7}" \
+      f"{'BPB code':>10}{'BPB prose':>11}{'syntax%':>9}{'collapse%':>11}"
 print(hdr)
 print("-" * len(hdr))
 for r in rows:
-    print(f"{r['name']:<28}{r['params']:>12,}{r['vocab']:>8}{r['ctx']:>6}"
+    print(f"{r['name']:<28}{r['params']:>12,}{r['vocab']:>8}{r['ctx']:>6}{r['window']:>7}"
           f"{r['tok_eff']:>7.2f}{r['bpb_code']:>10.3f}{r['bpb_prose']:>11.3f}"
-          f"{100*r['syntax']:>8.0f}%")
+          f"{100*r['syntax']:>8.0f}%{100*r['collapse']:>10.1f}%")
 print("\nBPB: lower is better, and IS comparable across tokenizers.")
 print("Raw val loss is NOT comparable across these models — use BPB.")
+if len({r["window"] for r in rows}) > 1:
+    print("\nWARNING: BPB windows differ across these models, so the BPB column is "
+          "NOT a like-for-like comparison. Re-run with --block "
+          f"{min(r['window'] for r in rows)} to equalise it.")
