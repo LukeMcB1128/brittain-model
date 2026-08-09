@@ -302,6 +302,94 @@ def pack_segments(
     )
 
 
+def pack_segments_streaming(
+    segments: Iterable[EncodedSegment],
+    block_size: int,
+    pad_id: int,
+    *,
+    keep_spans: bool = False,
+    block_rows: int = 8192,
+) -> tuple[np.ndarray, np.ndarray, list[list[dict]]]:
+    """Memory-bounded equivalent of `pack_segments`, for corpus-scale inputs.
+
+    `pack_segments` builds `list[list[int]]` for every row and then two more
+    list-of-list copies before converting to numpy. Each token becomes a boxed
+    Python int with a pointer, so at corpus scale it costs roughly 70 bytes per
+    token. Measured on a 17MB slice and extrapolated, packing the 2.2GB pilot
+    corpus peaked at an estimated 49GB on a 38GB machine.
+
+    This version accepts an ITERABLE of segments — so the caller can pass a
+    generator and never materialise every encoded segment — and appends finished
+    rows into fixed-size numpy blocks that are concatenated once at the end.
+
+    `keep_spans` defaults to False because the span list is one dict per segment;
+    at 780,000 segments it turns the metadata JSON into hundreds of megabytes.
+    Spans are analysis metadata and play no part in training.
+
+    Output is identical to `pack_segments` for the same segment order. That is
+    asserted in `tests/test_data_v3_packing.py`.
+    """
+    limit = block_size + 1
+    input_blocks: list[np.ndarray] = []
+    label_blocks: list[np.ndarray] = []
+    input_block = np.empty((block_rows, block_size), dtype=np.uint16)
+    label_block = np.empty((block_rows, block_size), dtype=np.int32)
+    used = 0
+    rows_written = 0
+
+    current: list[int] = []
+    current_spans: list[dict] = []
+    spans: list[list[dict]] = []
+
+    def emit(row: list[int], row_spans: list[dict]) -> None:
+        nonlocal used, rows_written, input_block, label_block
+        padding = limit - len(row)
+        padded = row + [pad_id] * padding
+        labels = padded[1:]
+        graded = max(0, len(row) - 1)
+        labels[graded:] = [-100] * (block_size - graded)
+        input_block[used] = padded[:-1]
+        label_block[used] = labels
+        used += 1
+        rows_written += 1
+        if keep_spans:
+            spans.append(row_spans)
+        if used == block_rows:
+            input_blocks.append(input_block.copy())
+            label_blocks.append(label_block.copy())
+            used = 0
+
+    for segment in segments:
+        if len(segment.ids) > limit:
+            raise ValueError("a segment exceeds the packer row limit")
+        if current and len(current) + len(segment.ids) > limit:
+            emit(current, current_spans)
+            current, current_spans = [], []
+        start = len(current)
+        current.extend(segment.ids)
+        current_spans.append({
+            "start": start,
+            "end": len(current),
+            "repository": segment.repository,
+            "path": segment.path,
+            "source": segment.source,
+            "is_fim": segment.is_fim,
+            "fim_order": segment.fim_order,
+            "hole_kind": segment.hole_kind,
+        })
+    if current:
+        emit(current, current_spans)
+
+    if used:
+        input_blocks.append(input_block[:used].copy())
+        label_blocks.append(label_block[:used].copy())
+    if not input_blocks:
+        return (np.empty((0, block_size), dtype=np.uint16),
+                np.empty((0, block_size), dtype=np.int32),
+                spans)
+    return (np.concatenate(input_blocks), np.concatenate(label_blocks), spans)
+
+
 def token_controlled_mix(
     groups: dict[str, Sequence[Document]],
     weights: dict[str, float],

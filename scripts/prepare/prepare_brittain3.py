@@ -19,11 +19,14 @@ from brittain.data_v3 import (
     Document,
     FIMSettings,
     encode_document,
-    pack_segments,
+    pack_segments_streaming,
     split_by_repository,
     token_controlled_mix,
     write_dataset,
 )
+
+# Categories that receive fill-in-the-middle. Prose and structured text do not.
+FIM_CATEGORIES = {"code", "exercises"}
 from brittain.paths import BRITTAIN3_TOKENIZER, PROCESSED_DATA_DIR
 from brittain.tokenizer_v3 import Brittain3Tokenizer
 
@@ -41,6 +44,11 @@ def parse_args():
     parser.add_argument("--line-rate", type=float, default=0.50)
     parser.add_argument("--block-rate", type=float, default=0.25)
     parser.add_argument("--weights", default=None, help="JSON object of source token weights")
+    parser.add_argument("--keep-spans", action="store_true",
+                        help="record per-segment spans in the metadata. One dict "
+                             "per segment: at corpus scale this makes the metadata "
+                             "JSON hundreds of megabytes. Spans are analysis data "
+                             "and are not used by training.")
     return parser.parse_args()
 
 
@@ -52,12 +60,19 @@ def read_documents(path: Path) -> list[Document]:
                 continue
             try:
                 row = json.loads(line)
+                # The collector writes `category`, not `is_code`. FIM applies to
+                # code and to the generated exercises; prose and structured text
+                # must not be holed out.
+                if "is_code" in row:
+                    is_code = bool(row["is_code"])
+                else:
+                    is_code = row["category"] in FIM_CATEGORIES
                 documents.append(Document(
                     repository=str(row["repository"]),
                     path=str(row["path"]),
                     text=str(row["text"]),
                     source=str(row["source"]),
-                    is_code=bool(row["is_code"]),
+                    is_code=is_code,
                 ))
             except (json.JSONDecodeError, KeyError, TypeError) as exc:
                 raise SystemExit(f"invalid input at {path}:{line_number}: {exc}") from exc
@@ -83,8 +98,16 @@ def prepare_split(name, documents, tokenizer, args, settings, weights):
         groups, local_weights, lambda document: len(tokenizer.encode(document.text)), args.seed
     )
     rng = random.Random(args.seed + (1 if name == "validation" else 0))
-    segments = [encode_document(document, tokenizer, args.block_size, settings, rng) for document in ordered]
-    inputs, labels, spans = pack_segments(segments, args.block_size, tokenizer.pad)
+    # A GENERATOR, not a list. Materialising every EncodedSegment for the pilot
+    # corpus was projected to peak near 49GB on a 38GB machine, because each
+    # token becomes a boxed Python int. Streaming keeps only one segment alive.
+    segments = (
+        encode_document(document, tokenizer, args.block_size, settings, rng)
+        for document in ordered
+    )
+    inputs, labels, spans = pack_segments_streaming(
+        segments, args.block_size, tokenizer.pad, keep_spans=args.keep_spans,
+    )
     output = Path(args.output_dir) / f"{name}_{args.block_size}.npz"
     metadata = {
         "format": "brittain3-packed-v1",
@@ -99,10 +122,12 @@ def prepare_split(name, documents, tokenizer, args, settings, weights):
         "fim": vars(settings),
         "documents": len(documents),
         "rows": len(inputs),
-        "spans": spans,
+        "tokens": int(inputs.size),
+        "spans": spans if args.keep_spans else [],
+        "spans_recorded": bool(args.keep_spans),
     }
     write_dataset(output, inputs, labels, metadata)
-    print(f"wrote {output}: {len(inputs)} rows")
+    print(f"wrote {output}: {len(inputs):,} rows, {inputs.size:,} tokens", flush=True)
 
 
 def main():
