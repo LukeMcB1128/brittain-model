@@ -12,6 +12,7 @@ from brittain.tokenizer_v3 import (
     Brittain3Tokenizer,
     evaluate_tokenizer_corpus,
 )
+from scripts.prepare.train_tokenizer_v3 import portable_report_path
 
 
 def make_tokenizer(path):
@@ -68,7 +69,10 @@ def test_held_out_corpus_efficiency_report(tmp_path):
     tokenizer = Brittain3Tokenizer(path)
     evaluation = tmp_path / "evaluation.jsonl"
     rows = [
-        {"category": "code", "text": "def add(a, b):\n    return a + b\n"},
+        {
+            "category": "code", "language": "python",
+            "text": "def add(a, b):\n    return a + b\n",
+        },
         {"category": "english", "text": "This function adds two values.\n"},
     ]
     evaluation.write_text(
@@ -79,3 +83,10 @@ def test_held_out_corpus_efficiency_report(tmp_path):
     assert report["evaluated_bytes"] > 0
     assert report["categories"]["code"]["documents"] == 1
     assert report["categories"]["english"]["bytes_per_token"] > 0
+    assert report["code_languages"]["python"]["documents"] == 1
+
+
+def test_validation_report_uses_portable_project_path(tmp_path):
+    project_tokenizer = PROJECT_ROOT / "tokenizers/example/tokenizer.json"
+    assert portable_report_path(project_tokenizer) == "tokenizers/example/tokenizer.json"
+    assert portable_report_path(tmp_path / "tokenizer.json").startswith("/")

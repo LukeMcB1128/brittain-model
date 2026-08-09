@@ -70,6 +70,14 @@ def documents(paths, field, limit):
                 yield text[:limit]
 
 
+def portable_report_path(path):
+    resolved = Path(path).resolve()
+    try:
+        return str(resolved.relative_to(PROJECT_ROOT))
+    except ValueError:
+        return str(resolved)
+
+
 def main():
     args = arguments()
     if args.vocab_size != 24_576:
@@ -109,7 +117,8 @@ def main():
             reference=reference, maximum_bytes=args.max_evaluation_bytes,
         )
     if reference is not None:
-        corpus_code = report.get("corpus_evaluation", {}).get("categories", {}).get("code")
+        corpus_evaluation = report.get("corpus_evaluation", {})
+        corpus_code = corpus_evaluation.get("categories", {}).get("code")
         regression = (
             corpus_code["token_change_fraction"] if corpus_code
             else report["samples"]["code"]["token_change_fraction"]
@@ -119,10 +128,17 @@ def main():
                 f"code token count regressed by {regression:.1%}; "
                 f"limit is {args.max_code_regression:.1%}"
             )
+        for language, metrics in corpus_evaluation.get("code_languages", {}).items():
+            regression = metrics["token_change_fraction"]
+            if regression > args.max_code_regression:
+                raise SystemExit(
+                    f"{language} token count regressed by {regression:.1%}; "
+                    f"limit is {args.max_code_regression:.1%}"
+                )
     if not args.validate_only:
         os.replace(candidate, output)
-        report["path"] = str(output.resolve())
         print(f"accepted candidate and saved {output}")
+    report["path"] = portable_report_path(output)
     report_path = Path(args.report) if args.report else output.with_name("validation.json")
     save_validation_report(report, report_path)
     print(json.dumps(report, indent=2))

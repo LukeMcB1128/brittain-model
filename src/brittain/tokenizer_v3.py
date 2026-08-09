@@ -151,6 +151,9 @@ def evaluate_tokenizer_corpus(
     if maximum_bytes <= 0:
         raise ValueError("maximum_bytes must be positive")
     totals = defaultdict(lambda: {"documents": 0, "bytes": 0, "tokens": 0, "reference_tokens": 0})
+    code_languages = defaultdict(
+        lambda: {"documents": 0, "bytes": 0, "tokens": 0, "reference_tokens": 0}
+    )
     consumed = 0
     for value in paths:
         path = Path(value)
@@ -174,18 +177,35 @@ def evaluate_tokenizer_corpus(
                 local["documents"] += 1
                 local["bytes"] += size
                 local["tokens"] += len(encoded)
-                if reference is not None:
-                    local["reference_tokens"] += len(reference.encode(text))
+                reference_tokens = len(reference.encode(text)) if reference is not None else 0
+                local["reference_tokens"] += reference_tokens
+                if category == "code":
+                    language = str(row.get("language", "other"))
+                    language_row = code_languages[language]
+                    language_row["documents"] += 1
+                    language_row["bytes"] += size
+                    language_row["tokens"] += len(encoded)
+                    language_row["reference_tokens"] += reference_tokens
                 consumed += size
             if consumed >= maximum_bytes:
                 break
-    rendered = {}
-    for category, row in sorted(totals.items()):
-        metrics = dict(row)
-        metrics["bytes_per_token"] = row["bytes"] / max(1, row["tokens"])
-        if reference is not None:
-            metrics["token_change_fraction"] = (
-                row["tokens"] - row["reference_tokens"]
-            ) / max(1, row["reference_tokens"])
-        rendered[category] = metrics
-    return {"maximum_bytes": maximum_bytes, "evaluated_bytes": consumed, "categories": rendered}
+    def render(rows):
+        result = {}
+        for name, row in sorted(rows.items()):
+            metrics = dict(row)
+            metrics["bytes_per_token"] = row["bytes"] / max(1, row["tokens"])
+            if reference is not None:
+                metrics["token_change_fraction"] = (
+                    row["tokens"] - row["reference_tokens"]
+                ) / max(1, row["reference_tokens"])
+            result[name] = metrics
+        return result
+
+    rendered = render(totals)
+    rendered_languages = render(code_languages)
+    return {
+        "maximum_bytes": maximum_bytes,
+        "evaluated_bytes": consumed,
+        "categories": rendered,
+        "code_languages": rendered_languages,
+    }

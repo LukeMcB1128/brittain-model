@@ -1,0 +1,186 @@
+{
+  "name": "brittain3_bpe",
+  "path": "tokenizers/brittain3-code-24k/tokenizer.json",
+  "vocab_size": 24576,
+  "special_tokens": {
+    "<|endoftext|>": 0,
+    "<|pad|>": 1,
+    "<|fim_prefix|>": 2,
+    "<|fim_suffix|>": 3,
+    "<|fim_middle|>": 4,
+    "<|repo_start|>": 5,
+    "<|repo_end|>": 6,
+    "<|file_start|>": 7,
+    "<|file_end|>": 8,
+    "<|system|>": 9,
+    "<|user|>": 10,
+    "<|assistant|>": 11,
+    "<|tool_call|>": 12,
+    "<|tool_result|>": 13,
+    "<|end_message|>": 14
+  },
+  "samples": {
+    "code": {
+      "bytes": 93,
+      "tokens": 41,
+      "reference_tokens": 41,
+      "token_change_fraction": 0.0
+    },
+    "english": {
+      "bytes": 70,
+      "tokens": 15,
+      "reference_tokens": 14,
+      "token_change_fraction": 0.07142857142857142
+    },
+    "indentation": {
+      "bytes": 54,
+      "tokens": 15,
+      "reference_tokens": 15,
+      "token_change_fraction": 0.0
+    },
+    "identifiers": {
+      "bytes": 59,
+      "tokens": 18,
+      "reference_tokens": 18,
+      "token_change_fraction": 0.0
+    },
+    "json": {
+      "bytes": 57,
+      "tokens": 14,
+      "reference_tokens": 14,
+      "token_change_fraction": 0.0
+    },
+    "tool_call": {
+      "bytes": 95,
+      "tokens": 20,
+      "reference_tokens": 35,
+      "token_change_fraction": -0.42857142857142855
+    },
+    "unicode": {
+      "bytes": 33,
+      "tokens": 17,
+      "reference_tokens": 18,
+      "token_change_fraction": -0.05555555555555555
+    }
+  },
+  "corpus_evaluation": {
+    "maximum_bytes": 10000000,
+    "evaluated_bytes": 10001714,
+    "categories": {
+      "code": {
+        "documents": 1588,
+        "bytes": 6086305,
+        "tokens": 1805793,
+        "reference_tokens": 1786958,
+        "bytes_per_token": 3.370433377469068,
+        "token_change_fraction": 0.010540258920467073
+      },
+      "documentation": {
+        "documents": 559,
+        "bytes": 2025750,
+        "tokens": 628170,
+        "reference_tokens": 652503,
+        "bytes_per_token": 3.2248435932948087,
+        "token_change_fraction": -0.03729178256651693
+      },
+      "english": {
+        "documents": 226,
+        "bytes": 881763,
+        "tokens": 221357,
+        "reference_tokens": 209767,
+        "bytes_per_token": 3.9834430354585577,
+        "token_change_fraction": 0.05525177935518933
+      },
+      "structured": {
+        "documents": 219,
+        "bytes": 982756,
+        "tokens": 313875,
+        "reference_tokens": 313968,
+        "bytes_per_token": 3.131042612504978,
+        "token_change_fraction": -0.0002962085308056872
+      },
+      "tool": {
+        "documents": 69,
+        "bytes": 25140,
+        "tokens": 5656,
+        "reference_tokens": 8711,
+        "bytes_per_token": 4.444837340876945,
+        "token_change_fraction": -0.350706003903111
+      }
+    },
+    "code_languages": {
+      "c_cpp": {
+        "documents": 65,
+        "bytes": 600384,
+        "tokens": 183747,
+        "reference_tokens": 182199,
+        "bytes_per_token": 3.2674492644777873,
+        "token_change_fraction": 0.008496204699257406
+      },
+      "go": {
+        "documents": 135,
+        "bytes": 462627,
+        "tokens": 161881,
+        "reference_tokens": 163607,
+        "bytes_per_token": 2.857821486153409,
+        "token_change_fraction": -0.010549670857603893
+      },
+      "java_kotlin": {
+        "documents": 79,
+        "bytes": 363461,
+        "tokens": 103634,
+        "reference_tokens": 102762,
+        "bytes_per_token": 3.5071598124167744,
+        "token_change_fraction": 0.00848562698273681
+      },
+      "javascript": {
+        "documents": 238,
+        "bytes": 934317,
+        "tokens": 281814,
+        "reference_tokens": 276263,
+        "bytes_per_token": 3.3153675828738103,
+        "token_change_fraction": 0.020093172086019483
+      },
+      "other": {
+        "documents": 137,
+        "bytes": 454259,
+        "tokens": 126066,
+        "reference_tokens": 126474,
+        "bytes_per_token": 3.603342693509749,
+        "token_change_fraction": -0.0032259594857441056
+      },
+      "python": {
+        "documents": 294,
+        "bytes": 1520953,
+        "tokens": 432579,
+        "reference_tokens": 424814,
+        "bytes_per_token": 3.5160121041474506,
+        "token_change_fraction": 0.018278587805486638
+      },
+      "rust": {
+        "documents": 81,
+        "bytes": 453837,
+        "tokens": 136350,
+        "reference_tokens": 137795,
+        "bytes_per_token": 3.3284708470847084,
+        "token_change_fraction": -0.010486592401756232
+      },
+      "shell": {
+        "documents": 107,
+        "bytes": 244613,
+        "tokens": 80787,
+        "reference_tokens": 81248,
+        "bytes_per_token": 3.0278757720920444,
+        "token_change_fraction": -0.005673985821189445
+      },
+      "typescript": {
+        "documents": 452,
+        "bytes": 1051854,
+        "tokens": 298935,
+        "reference_tokens": 291796,
+        "bytes_per_token": 3.518671283054845,
+        "token_change_fraction": 0.024465722628137464
+      }
+    }
+  }
+}
