@@ -1,0 +1,149 @@
+{
+  "format": "brittain3-tokenizer-corpus-v1",
+  "seed": 2027,
+  "output": "data/raw/brittain3-pilot/corpus.jsonl",
+  "report": "data/raw/brittain3-pilot/corpus.report.json",
+
+  "_pilot": [
+    "Pretraining corpus for the Brittain3 49M pilot. NOT the tokenizer corpus.",
+    "It reuses the proven brittain3-tokenizer-corpus-v1 schema and collector so",
+    "that a long unattended build runs code that has already been exercised.",
+    "",
+    "The 10% 'verified novice exercises' slice is NOT built here. It is generated",
+    "and execution-verified by scripts/prepare/build_exercises_v3.py into",
+    "data/generated/brittain3-pilot/exercises.jsonl and merged at the packing",
+    "step. The v1 schema has a fixed five-category set and cannot express it.",
+    "",
+    "Token targets from the pilot brief, converted with the bytes-per-token",
+    "measured on the frozen tokenizer (code 3.3708, documentation 3.2258,",
+    "english 4.0000, structured 3.1452):",
+    "  code          425M tokens -> 1,432,000,000 bytes",
+    "  documentation 106M tokens ->   342,000,000 bytes",
+    "  english        71M tokens ->   284,000,000 bytes",
+    "  structured     35M tokens ->   110,000,000 bytes",
+    "  exercises      71M tokens ->   234,000,000 bytes  (generated separately)",
+    "",
+    "The 5MB tool slice is not in the brief. The schema requires the category,",
+    "and Brittain tool-protocol text is wanted later for agent SFT. At 0.2% it",
+    "cannot influence ordinary code merges."
+  ],
+
+  "category_target_bytes": {
+    "code": 1432000000,
+    "documentation": 342000000,
+    "english": 284000000,
+    "structured": 110000000,
+    "tool": 5000000
+  },
+
+  "code_language_shares": {
+    "python": 0.35,
+    "typescript": 0.25,
+    "javascript": 0.20,
+    "go": 0.05,
+    "rust": 0.05,
+    "java_kotlin": 0.04,
+    "c_cpp": 0.04,
+    "shell": 0.02
+  },
+  "_code_language_shares": [
+    "Python/TypeScript/JavaScript are from the brief. The remaining 20% split",
+    "across go/rust/java_kotlin/c_cpp/shell is a proposal, not a specified value.",
+    "Key names must match normalize_language() buckets: 'java_kotlin', not 'java'.",
+    "There is deliberately no 'other' key, so any language outside this list gets",
+    "a zero quota and is rejected."
+  ],
+
+  "allowed_licenses": [
+    "Apache-2.0",
+    "MIT",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "CC0-1.0",
+    "Unlicense",
+    "ODC-By-1.0",
+    "OWNED"
+  ],
+
+  "filters": {
+    "minimum_document_bytes": 200,
+    "maximum_document_bytes": 300000,
+    "maximum_line_bytes": 20000,
+    "minimum_printable_fraction": 0.90,
+    "max_repository_bytes": 4000000,
+    "excluded_repository_substrings": [
+      "openai/human-eval",
+      "human_eval",
+      "humaneval",
+      "mbpp",
+      "swe-bench",
+      "swebench",
+      "bigcodebench",
+      "bigcode-bench",
+      "hendrycks/apps",
+      "codeparrot/apps",
+      "livecodebench",
+      "evalplus"
+    ]
+  },
+  "_repository_cap": [
+    "4MB, down from 20MB for the tokenizer corpus. This corpus is a third the",
+    "size, so the old cap would let one large repository own a visible slice."
+  ],
+
+  "local_sources": [
+    {"name": "brittain-model", "path": ".", "license": "Apache-2.0", "enabled": true},
+    {"name": "brittain-app", "path": "../brittain-code", "license": "OWNED", "enabled": true}
+  ],
+
+  "tool_files": [
+    "../brittain-code/tools.js",
+    "../brittain-code/src/tools/apply-patch.js",
+    "../brittain-code/src/tools/policy.js",
+    "../brittain-code/src/tools/semantic-navigation.js"
+  ],
+
+  "normalized_sources": [],
+
+  "remote_sources": [
+    {
+      "name": "the-stack-dedup",
+      "type": "stack_v1_huggingface",
+      "dataset": "bigcode/the-stack-dedup",
+      "revision": "main",
+      "split": "train",
+      "shuffle_buffer": 10000,
+      "directory_aliases": {"c++": "cpp"},
+      "stream_shares": {
+        "c++": 0.60,
+        "c": 0.40,
+        "json": 0.30,
+        "yaml": 0.25,
+        "toml": 0.15,
+        "sql": 0.15,
+        "html": 0.15
+      },
+      "languages": [
+        "python", "typescript", "javascript", "go", "rust", "java",
+        "c++", "c", "shell", "markdown", "json", "yaml", "toml", "sql", "html"
+      ],
+      "enabled": true,
+      "requires": "Hugging Face dataset terms acceptance and hf auth login"
+    },
+    {
+      "name": "fineweb-edu",
+      "type": "huggingface_text",
+      "dataset": "HuggingFaceFW/fineweb-edu",
+      "revision": "v1.0.0",
+      "subset": "sample-10BT",
+      "split": "train",
+      "text_field": "text",
+      "category": "english",
+      "language": "english",
+      "license": "ODC-By-1.0",
+      "shuffle_buffer": 10000,
+      "enabled": true
+    }
+  ]
+}

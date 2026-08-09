@@ -1,0 +1,154 @@
+{
+  "format": "brittain3-tokenizer-corpus-v1",
+  "seed": 2027,
+  "output": "data/raw/brittain3-pilot/corpus2.jsonl",
+  "report": "data/raw/brittain3-pilot/corpus2.report.json",
+  "_pilot": [
+    "EXPANDED pilot corpus. Byte targets are 2.25x the token-derived targets.",
+    "Measured 2026-08-09: prepare_brittain3.py keeps ONE ~1000-token window per",
+    "document and discards the rest, so only 49.2% of collected tokens ever reach",
+    "training. At 1x the schedule would have been 2.21 epochs over 320M usable",
+    "tokens, contradicting the brief's '708M mostly unique tokens'.",
+    "Per-category keep rates measured: code 48%, documentation 45%, english 63%,",
+    "structured 32%, exercises 100% (their documents are already short).",
+    "",
+    "The exercises slice is generated separately and is NOT scaled here: its",
+    "ceiling is template diversity, not bytes. See docs/BRITTAIN3_PILOT.md."
+  ],
+  "category_target_bytes": {
+    "code": 3222000000,
+    "documentation": 769500000,
+    "english": 639000000,
+    "structured": 247500000,
+    "tool": 5000000
+  },
+  "code_language_shares": {
+    "python": 0.35,
+    "typescript": 0.25,
+    "javascript": 0.2,
+    "go": 0.05,
+    "rust": 0.05,
+    "java_kotlin": 0.04,
+    "c_cpp": 0.04,
+    "shell": 0.02
+  },
+  "_code_language_shares": [
+    "Python/TypeScript/JavaScript are from the brief. The remaining 20% split",
+    "across go/rust/java_kotlin/c_cpp/shell is a proposal, not a specified value.",
+    "Key names must match normalize_language() buckets: 'java_kotlin', not 'java'.",
+    "There is deliberately no 'other' key, so any language outside this list gets",
+    "a zero quota and is rejected."
+  ],
+  "allowed_licenses": [
+    "Apache-2.0",
+    "MIT",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "CC0-1.0",
+    "Unlicense",
+    "ODC-By-1.0",
+    "OWNED"
+  ],
+  "filters": {
+    "minimum_document_bytes": 200,
+    "maximum_document_bytes": 300000,
+    "maximum_line_bytes": 20000,
+    "minimum_printable_fraction": 0.9,
+    "max_repository_bytes": 4000000,
+    "excluded_repository_substrings": [
+      "openai/human-eval",
+      "human_eval",
+      "humaneval",
+      "mbpp",
+      "swe-bench",
+      "swebench",
+      "bigcodebench",
+      "bigcode-bench",
+      "hendrycks/apps",
+      "codeparrot/apps",
+      "livecodebench",
+      "evalplus"
+    ]
+  },
+  "_repository_cap": [
+    "4MB, down from 20MB for the tokenizer corpus. This corpus is a third the",
+    "size, so the old cap would let one large repository own a visible slice."
+  ],
+  "local_sources": [
+    {
+      "name": "brittain-model",
+      "path": ".",
+      "license": "Apache-2.0",
+      "enabled": true
+    },
+    {
+      "name": "brittain-app",
+      "path": "../brittain-code",
+      "license": "OWNED",
+      "enabled": true
+    }
+  ],
+  "tool_files": [
+    "../brittain-code/tools.js",
+    "../brittain-code/src/tools/apply-patch.js",
+    "../brittain-code/src/tools/policy.js",
+    "../brittain-code/src/tools/semantic-navigation.js"
+  ],
+  "normalized_sources": [],
+  "remote_sources": [
+    {
+      "name": "the-stack-dedup",
+      "type": "stack_v1_huggingface",
+      "dataset": "bigcode/the-stack-dedup",
+      "revision": "main",
+      "split": "train",
+      "shuffle_buffer": 10000,
+      "directory_aliases": {
+        "c++": "cpp"
+      },
+      "stream_shares": {
+        "c++": 0.6,
+        "c": 0.4,
+        "json": 0.3,
+        "yaml": 0.25,
+        "toml": 0.15,
+        "sql": 0.15,
+        "html": 0.15
+      },
+      "languages": [
+        "python",
+        "typescript",
+        "javascript",
+        "go",
+        "rust",
+        "java",
+        "c++",
+        "c",
+        "shell",
+        "markdown",
+        "json",
+        "yaml",
+        "toml",
+        "sql",
+        "html"
+      ],
+      "enabled": true,
+      "requires": "Hugging Face dataset terms acceptance and hf auth login"
+    },
+    {
+      "name": "fineweb-edu",
+      "type": "huggingface_text",
+      "dataset": "HuggingFaceFW/fineweb-edu",
+      "revision": "v1.0.0",
+      "subset": "sample-10BT",
+      "split": "train",
+      "text_field": "text",
+      "category": "english",
+      "language": "english",
+      "license": "ODC-By-1.0",
+      "shuffle_buffer": 10000,
+      "enabled": true
+    }
+  ]
+}

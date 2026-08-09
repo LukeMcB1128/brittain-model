@@ -6,6 +6,9 @@
 # Tokenized dataset binaries + downloaded corpora
 data/raw/
 data/processed/
+# Generated + execution-verified corpora (build_exercises_v3.py). Rebuilt in
+# about two minutes from the seed in its report, so there is no reason to store it.
+data/generated/
 benchmarks/prompts/prose.txt
 # Corpora are large. prepare_bs.py defaults outside this repo for that reason,
 # but --out can point back in here, and a 130MB blob commits fine then fails at
