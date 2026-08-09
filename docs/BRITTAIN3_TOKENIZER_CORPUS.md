@@ -20,6 +20,11 @@ The code quota has separate language quotas. Python receives 25% of code.
 TypeScript receives 17.5%, JavaScript 15%, C and C++ 10%, Rust 7.5%, Go 7.5%,
 Java and Kotlin 6%, shell languages 4%, and other languages 7.5%.
 
+Grouped quotas also have stream limits. The C and C++ group is 40% C and 60%
+C++. The Java and Kotlin group is 75% Java and 25% Kotlin. The shell group is
+80% shell and 20% PowerShell. The other group is 35% Ruby, 35% PHP, and 30%
+Swift. Structured text is split across JSON, YAML, TOML, HTML, CSS, and SQL.
+
 The tool share is small by design. Structural tokens are reserved before BPE
 training. Repeated synthetic tool text must not control ordinary code merges.
 The synthetic examples are tokenizer text only. Do not use them as agent SFT

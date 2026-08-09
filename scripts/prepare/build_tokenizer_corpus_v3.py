@@ -72,7 +72,32 @@ def load_config(path):
         "code", "documentation", "english", "structured", "tool"
     }:
         raise SystemExit("category_target_bytes must define all five corpus categories")
+    for source in config.get("remote_sources", []):
+        if source.get("type") != "stack_v1_huggingface":
+            continue
+        shares = source.get("stream_shares", {})
+        buckets = {}
+        for language in source["languages"]:
+            category, normalized = stack_stream_bucket(language)
+            bucket = (category, normalized if category == "code" else category)
+            buckets.setdefault(bucket, []).append(language)
+        for bucket, languages in buckets.items():
+            if len(languages) < 2:
+                continue
+            total = sum(float(shares.get(language, 1.0)) for language in languages)
+            if abs(total - 1.0) > 1e-9:
+                raise SystemExit(
+                    f"stream_shares for {bucket} must add to 1.0: {languages}"
+                )
     return config
+
+
+def stack_stream_bucket(dataset_language):
+    if dataset_language == "markdown":
+        return "documentation", "english"
+    if dataset_language in {"json", "yaml", "toml", "html", "css", "sql"}:
+        return "structured", "other"
+    return "code", normalize_language(dataset_language)
 
 
 def load_exclusions(builder, paths):
@@ -210,24 +235,38 @@ def add_stack_v1(builder, source, config):
     """Stream the Hugging Face-hosted Stack v1 file contents."""
     load_dataset = datasets_module()
     revision = resolved_huggingface_revision(source)
-    builder.record_source(source["name"], {
+    source_metadata = {
         "type": source["type"], "dataset": source["dataset"], "revision": revision,
         "license_policy": "all row license values must be in allowed_licenses",
-    })
+        "directory_aliases": source.get("directory_aliases", {}),
+        "stream_shares": source.get("stream_shares", {}),
+        "stream_target_bytes": {},
+        "stream_accepted_bytes": {},
+    }
+    builder.record_source(source["name"], source_metadata)
     allowed = set(config["allowed_licenses"])
+    bucket_remaining = {}
+    for dataset_language in source["languages"]:
+        category, language = stack_stream_bucket(dataset_language)
+        bucket = (category, language if category == "code" else category)
+        if bucket not in bucket_remaining:
+            bucket_remaining[bucket] = builder.category_remaining(category, language)
+        share = float(source.get("stream_shares", {}).get(dataset_language, 1.0))
+        available = bucket_remaining[bucket]
+        source_metadata["stream_target_bytes"][dataset_language] = (
+            max(1, int(available * share)) if available else 0
+        )
     for language_index, dataset_language in enumerate(source["languages"]):
+        source_metadata["stream_accepted_bytes"][dataset_language] = 0
         data_directory = source.get("directory_aliases", {}).get(
             dataset_language, dataset_language
         )
+        expected_category, expected_language = stack_stream_bucket(dataset_language)
         normalized = normalize_language(dataset_language)
-        if dataset_language in {"markdown"}:
-            expected_category, expected_language = "documentation", "english"
-        elif dataset_language in {"json", "yaml", "toml", "html", "css", "sql"}:
-            expected_category, expected_language = "structured", "other"
-        else:
-            expected_category, expected_language = "code", normalized
         if builder.category_remaining(expected_category, expected_language) == 0:
             continue
+        stream_target = source_metadata["stream_target_bytes"][dataset_language]
+        stream_accepted = 0
         print(f"remote source {source['name']}: {dataset_language}", flush=True)
         dataset = load_dataset(
             source["dataset"], data_dir=f"data/{data_directory}",
@@ -239,7 +278,10 @@ def add_stack_v1(builder, source, config):
                 seed=config["seed"] + language_index, buffer_size=buffer
             )
         for row in dataset:
-            if builder.category_remaining(expected_category, expected_language) == 0:
+            if (
+                stream_accepted >= stream_target
+                or builder.category_remaining(expected_category, expected_language) == 0
+            ):
                 break
             provenance = stack_v1_provenance(row, allowed)
             if provenance is None:
@@ -254,11 +296,14 @@ def add_stack_v1(builder, source, config):
             language = normalized if category == "code" else path_language
             if builder.category_remaining(category, language) == 0:
                 continue
-            builder.add(CorpusRecord(
+            accepted = builder.add(CorpusRecord(
                 text=text, source=source["name"], category=category,
                 language=language, repository=repository, path=path,
                 license=license_name,
             ))
+            if accepted:
+                stream_accepted += len(text.encode("utf-8"))
+        source_metadata["stream_accepted_bytes"][dataset_language] = stream_accepted
 
 
 def main():

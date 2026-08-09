@@ -15,6 +15,8 @@ from brittain.corpus_v3 import (
     tool_records,
     stack_v1_provenance,
 )
+import scripts.prepare.build_tokenizer_corpus_v3 as corpus_script
+from scripts.prepare.build_tokenizer_corpus_v3 import load_config, stack_stream_bucket
 
 
 def config():
@@ -75,6 +77,56 @@ def test_stack_v1_dedup_provenance_fields():
     assert stack_v1_provenance(row, allowed) == (
         "MIT", "owner/project", "src/app.py"
     )
+
+
+def test_stack_grouped_streams_have_valid_sub_mixtures():
+    assert stack_stream_bucket("c++") == ("code", "c_cpp")
+    assert stack_stream_bucket("kotlin") == ("code", "java_kotlin")
+    assert stack_stream_bucket("powershell") == ("code", "shell")
+    assert stack_stream_bucket("json") == ("structured", "other")
+    configured = load_config(PROJECT_ROOT / "configs/data/brittain3_tokenizer_corpus.json")
+    stack = next(
+        source for source in configured["remote_sources"]
+        if source["name"] == "the-stack-dedup"
+    )
+    assert stack["directory_aliases"]["c++"] == "cpp"
+    assert stack["stream_shares"]["c++"] + stack["stream_shares"]["c"] == 1.0
+
+
+def test_stack_grouped_stream_cap_keeps_later_language(monkeypatch):
+    output = io.StringIO()
+    builder = CorpusBuilder(config(), output)
+    local_code = record(
+        "int local_value = 1;\nint local_result = local_value + 1;\n",
+        language="c_cpp", path="local.c",
+    )
+    assert builder.add(local_code)
+    remote_capacity = builder.category_remaining("code", "c_cpp")
+
+    def fake_load_dataset(_dataset, *, data_dir, **_kwargs):
+        suffix = ".cpp" if data_dir == "data/cpp" else ".c"
+        return [{
+            "content": f"/* {data_dir} */\n" + "int value = 1;\n" * 20,
+            "licenses": ["MIT"],
+            "repository_name": f"owner/{data_dir}",
+            "path": f"src/value{suffix}",
+        }]
+
+    monkeypatch.setattr(corpus_script, "datasets_module", lambda: fake_load_dataset)
+    monkeypatch.setattr(corpus_script, "resolved_huggingface_revision", lambda _source: "sha")
+    source = {
+        "name": "stack", "type": "stack_v1_huggingface", "dataset": "fixture",
+        "languages": ["c++", "c"], "directory_aliases": {"c++": "cpp"},
+        "stream_shares": {"c++": 0.5, "c": 0.5},
+    }
+    corpus_script.add_stack_v1(builder, source, config())
+    rows = [json.loads(line) for line in output.getvalue().splitlines()]
+    assert {Path(row["path"]).suffix for row in rows} == {".cpp", ".c"}
+    stream_bytes = builder.source_metadata["stack"]["stream_accepted_bytes"]
+    assert stream_bytes["c++"] > 0
+    assert stream_bytes["c"] > 0
+    stream_targets = builder.source_metadata["stack"]["stream_target_bytes"]
+    assert stream_targets["c++"] + stream_targets["c"] <= remote_capacity
 
 
 def test_builder_filters_license_secret_generated_and_duplicates():
