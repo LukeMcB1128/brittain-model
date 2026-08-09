@@ -23,6 +23,7 @@ dependencies = [
 [project.optional-dependencies]
 serve = ["fastapi", "uvicorn"]
 train = ["datasets", "tqdm"]
+corpus = ["datasets", "tqdm"]
 dev = ["pytest"]
 
 [tool.setuptools]

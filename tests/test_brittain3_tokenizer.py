@@ -1,3 +1,4 @@
+import json
 import sys
 from pathlib import Path
 
@@ -6,7 +7,11 @@ from tokenizers import Tokenizer, decoders, models, pre_tokenizers, trainers
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from brittain.tokenizer_v3 import BRITTAIN3_SPECIAL_TOKENS, Brittain3Tokenizer
+from brittain.tokenizer_v3 import (
+    BRITTAIN3_SPECIAL_TOKENS,
+    Brittain3Tokenizer,
+    evaluate_tokenizer_corpus,
+)
 
 
 def make_tokenizer(path):
@@ -56,3 +61,21 @@ def test_tool_call_structure_round_trips(tmp_path):
     assert ids[1] == tokenizer.special_ids["<|tool_call|>"]
     assert ids[-1] == tokenizer.special_ids["<|end_message|>"]
 
+
+def test_held_out_corpus_efficiency_report(tmp_path):
+    path = tmp_path / "tokenizer.json"
+    make_tokenizer(path)
+    tokenizer = Brittain3Tokenizer(path)
+    evaluation = tmp_path / "evaluation.jsonl"
+    rows = [
+        {"category": "code", "text": "def add(a, b):\n    return a + b\n"},
+        {"category": "english", "text": "This function adds two values.\n"},
+    ]
+    evaluation.write_text(
+        "".join(json.dumps(row) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+    report = evaluate_tokenizer_corpus(tokenizer, [evaluation], maximum_bytes=10_000)
+    assert report["evaluated_bytes"] > 0
+    assert report["categories"]["code"]["documents"] == 1
+    assert report["categories"]["english"]["bytes_per_token"] > 0

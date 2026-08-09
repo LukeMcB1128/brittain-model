@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -19,6 +20,7 @@ from brittain.tokenizer import CodeTok
 from brittain.tokenizer_v3 import (
     BRITTAIN3_SPECIAL_TOKENS,
     Brittain3Tokenizer,
+    evaluate_tokenizer_corpus,
     save_validation_report,
     validate_tokenizer,
 )
@@ -30,11 +32,18 @@ def arguments():
     parser.add_argument("--jsonl-field", default="text")
     parser.add_argument("--output", default=str(BRITTAIN3_TOKENIZER))
     parser.add_argument("--vocab-size", type=int, default=24_576)
-    parser.add_argument("--max-document-chars", type=int, default=100_000)
+    parser.add_argument("--max-document-chars", type=int, default=300_000)
+    parser.add_argument("--min-frequency", type=int, default=2)
+    parser.add_argument("--max-token-length", type=int, default=64)
     parser.add_argument("--validate-only", action="store_true")
     parser.add_argument("--report", default=None)
     parser.add_argument("--compare-brittain2", action="store_true")
     parser.add_argument("--max-code-regression", type=float, default=0.03)
+    parser.add_argument(
+        "--evaluation", action="append", default=[],
+        help="held-out provenance JSONL; repeat as needed",
+    )
+    parser.add_argument("--max-evaluation-bytes", type=int, default=10_000_000)
     return parser.parse_args()
 
 
@@ -65,7 +74,10 @@ def main():
     args = arguments()
     if args.vocab_size != 24_576:
         raise SystemExit("Brittain3 requires --vocab-size 24576")
+    if args.min_frequency < 1 or args.max_token_length < 1:
+        raise SystemExit("--min-frequency and --max-token-length must be positive")
     output = Path(args.output)
+    candidate = output.with_name(output.name + ".candidate")
     if not args.validate_only:
         if not args.input:
             raise SystemExit("give at least one --input, or use --validate-only")
@@ -75,25 +87,41 @@ def main():
         tokenizer.decoder = decoders.ByteLevel()
         trainer = trainers.BpeTrainer(
             vocab_size=args.vocab_size,
+            min_frequency=args.min_frequency,
             special_tokens=list(BRITTAIN3_SPECIAL_TOKENS),
             initial_alphabet=pre_tokenizers.ByteLevel.alphabet(),
+            max_token_length=args.max_token_length,
             show_progress=True,
         )
         tokenizer.train_from_iterator(
             documents(args.input, args.jsonl_field, args.max_document_chars),
             trainer=trainer,
         )
-        tokenizer.save(str(output))
-        print(f"saved {output} with vocab {tokenizer.get_vocab_size()}")
+        tokenizer.save(str(candidate))
+        print(f"wrote candidate {candidate} with vocab {tokenizer.get_vocab_size()}")
     reference = CodeTok() if args.compare_brittain2 else None
-    report = validate_tokenizer(Brittain3Tokenizer(output), reference=reference)
+    validation_path = output if args.validate_only else candidate
+    report = validate_tokenizer(Brittain3Tokenizer(validation_path), reference=reference)
+    if args.evaluation:
+        report["corpus_evaluation"] = evaluate_tokenizer_corpus(
+            Brittain3Tokenizer(output), args.evaluation,
+            reference=reference, maximum_bytes=args.max_evaluation_bytes,
+        )
     if reference is not None:
-        regression = report["samples"]["code"]["token_change_fraction"]
+        corpus_code = report.get("corpus_evaluation", {}).get("categories", {}).get("code")
+        regression = (
+            corpus_code["token_change_fraction"] if corpus_code
+            else report["samples"]["code"]["token_change_fraction"]
+        )
         if regression > args.max_code_regression:
             raise SystemExit(
                 f"code token count regressed by {regression:.1%}; "
                 f"limit is {args.max_code_regression:.1%}"
             )
+    if not args.validate_only:
+        os.replace(candidate, output)
+        report["path"] = str(output.resolve())
+        print(f"accepted candidate and saved {output}")
     report_path = Path(args.report) if args.report else output.with_name("validation.json")
     save_validation_report(report, report_path)
     print(json.dumps(report, indent=2))

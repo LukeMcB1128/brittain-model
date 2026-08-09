@@ -1,0 +1,106 @@
+{
+  "format": "brittain3-tokenizer-corpus-v1",
+  "seed": 1337,
+  "output": "data/raw/brittain3-tokenizer/corpus.jsonl",
+  "report": "data/raw/brittain3-tokenizer/corpus.report.json",
+  "category_target_bytes": {
+    "code": 1200000000,
+    "documentation": 400000000,
+    "english": 200000000,
+    "structured": 195000000,
+    "tool": 5000000
+  },
+  "code_language_shares": {
+    "python": 0.25,
+    "typescript": 0.175,
+    "javascript": 0.15,
+    "c_cpp": 0.10,
+    "rust": 0.075,
+    "go": 0.075,
+    "java_kotlin": 0.06,
+    "shell": 0.04,
+    "other": 0.075
+  },
+  "allowed_licenses": [
+    "Apache-2.0",
+    "MIT",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "CC0-1.0",
+    "Unlicense",
+    "ODC-By-1.0",
+    "OWNED"
+  ],
+  "filters": {
+    "minimum_document_bytes": 200,
+    "maximum_document_bytes": 300000,
+    "maximum_line_bytes": 20000,
+    "minimum_printable_fraction": 0.90,
+    "max_repository_bytes": 20000000,
+    "excluded_repository_substrings": [
+      "openai/human-eval",
+      "human_eval",
+      "humaneval",
+      "mbpp",
+      "swe-bench",
+      "swebench",
+      "bigcodebench",
+      "bigcode-bench",
+      "hendrycks/apps",
+      "codeparrot/apps"
+    ]
+  },
+  "local_sources": [
+    {
+      "name": "brittain-model",
+      "path": ".",
+      "license": "Apache-2.0",
+      "enabled": true
+    },
+    {
+      "name": "brittain-app",
+      "path": "../brittain-code",
+      "license": "OWNED",
+      "enabled": true
+    }
+  ],
+  "tool_files": [
+    "../brittain-code/tools.js",
+    "../brittain-code/src/tools/apply-patch.js",
+    "../brittain-code/src/tools/policy.js",
+    "../brittain-code/src/tools/semantic-navigation.js"
+  ],
+  "normalized_sources": [],
+  "remote_sources": [
+    {
+      "name": "the-stack-dedup",
+      "type": "stack_v1_huggingface",
+      "dataset": "bigcode/the-stack-dedup",
+      "revision": "main",
+      "split": "train",
+      "shuffle_buffer": 10000,
+      "languages": [
+        "python", "typescript", "javascript", "c++", "c", "rust", "go",
+        "java", "kotlin", "shell", "powershell", "ruby", "php", "swift",
+        "markdown", "json", "yaml", "toml", "html", "css", "sql"
+      ],
+      "enabled": true,
+      "requires": "Hugging Face dataset terms acceptance and hf auth login"
+    },
+    {
+      "name": "fineweb-edu",
+      "type": "huggingface_text",
+      "dataset": "HuggingFaceFW/fineweb-edu",
+      "revision": "v1.0.0",
+      "subset": "sample-10BT",
+      "split": "train",
+      "text_field": "text",
+      "category": "english",
+      "language": "english",
+      "license": "ODC-By-1.0",
+      "shuffle_buffer": 10000,
+      "enabled": true
+    }
+  ]
+}

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from collections import defaultdict
 from typing import Iterable
 
 from .paths import BRITTAIN3_TOKENIZER, PROJECT_ROOT
@@ -137,3 +138,54 @@ def save_validation_report(report: dict, path: str | Path) -> None:
     destination = Path(path)
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+
+
+def evaluate_tokenizer_corpus(
+    tokenizer: Brittain3Tokenizer,
+    paths: Iterable[str | Path],
+    *,
+    reference=None,
+    maximum_bytes: int = 10_000_000,
+) -> dict:
+    """Measure token efficiency on provenance-rich held-out JSONL rows."""
+    if maximum_bytes <= 0:
+        raise ValueError("maximum_bytes must be positive")
+    totals = defaultdict(lambda: {"documents": 0, "bytes": 0, "tokens": 0, "reference_tokens": 0})
+    consumed = 0
+    for value in paths:
+        path = Path(value)
+        with path.open(encoding="utf-8") as handle:
+            for line_number, line in enumerate(handle, 1):
+                if consumed >= maximum_bytes:
+                    break
+                try:
+                    row = json.loads(line)
+                    text = row["text"]
+                    category = str(row.get("category", "unknown"))
+                except (json.JSONDecodeError, KeyError, TypeError) as exc:
+                    raise ValueError(f"invalid evaluation row at {path}:{line_number}") from exc
+                if not isinstance(text, str) or not text:
+                    continue
+                encoded = tokenizer.encode(text)
+                if tokenizer.decode(encoded, skip_special_tokens=False) != text:
+                    raise ValueError(f"byte round trip failed at {path}:{line_number}")
+                size = len(text.encode("utf-8"))
+                local = totals[category]
+                local["documents"] += 1
+                local["bytes"] += size
+                local["tokens"] += len(encoded)
+                if reference is not None:
+                    local["reference_tokens"] += len(reference.encode(text))
+                consumed += size
+            if consumed >= maximum_bytes:
+                break
+    rendered = {}
+    for category, row in sorted(totals.items()):
+        metrics = dict(row)
+        metrics["bytes_per_token"] = row["bytes"] / max(1, row["tokens"])
+        if reference is not None:
+            metrics["token_change_fraction"] = (
+                row["tokens"] - row["reference_tokens"]
+            ) / max(1, row["reference_tokens"])
+        rendered[category] = metrics
+    return {"maximum_bytes": maximum_bytes, "evaluated_bytes": consumed, "categories": rendered}

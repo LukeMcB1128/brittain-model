@@ -85,13 +85,17 @@ command-line configuration cannot silently change the remaining stages.
 Brittain3 uses a new byte-level BPE. It includes EOT, padding, FIM, repository,
 file, role, tool-call, tool-result, and message-end tokens from the start.
 
+See `docs/BRITTAIN3_TOKENIZER_CORPUS.md` for the versioned 2GB mixture, license
+policy, offline test, remote access steps, and held-out evaluation procedure.
+
 The tokenizer script reads local files only:
 
 ```bash
 python3 scripts/prepare/train_tokenizer_v3.py \
-  --input data/raw/brittain3-tokenizer.jsonl \
+  --input data/raw/brittain3-tokenizer/corpus.jsonl \
   --jsonl-field text \
   --output tokenizers/brittain3-code-24k/tokenizer.json \
+  --evaluation data/raw/brittain3-tokenizer/evaluation.jsonl \
   --compare-brittain2
 ```
 

@@ -6,3 +6,8 @@ tokenizer is not committed until it passes the validation gates in
 
 Training the real tokenizer reads a prepared local corpus and can take time. It
 is not part of the local smoke test.
+
+The corpus policy and full procedure are in
+`docs/BRITTAIN3_TOKENIZER_CORPUS.md`. Keep `corpus.report.json` and the held-out
+evaluation report with the training record. Do not commit the multi-gigabyte
+corpus.
