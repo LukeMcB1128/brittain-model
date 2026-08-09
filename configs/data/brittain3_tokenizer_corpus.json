@@ -83,6 +83,23 @@
       "directory_aliases": {
         "c++": "cpp"
       },
+      "stream_shares": {
+        "c++": 0.60,
+        "c": 0.40,
+        "java": 0.75,
+        "kotlin": 0.25,
+        "shell": 0.80,
+        "powershell": 0.20,
+        "ruby": 0.35,
+        "php": 0.35,
+        "swift": 0.30,
+        "json": 0.25,
+        "yaml": 0.15,
+        "toml": 0.10,
+        "html": 0.20,
+        "css": 0.15,
+        "sql": 0.15
+      },
       "languages": [
         "python", "typescript", "javascript", "c++", "c", "rust", "go",
         "java", "kotlin", "shell", "powershell", "ruby", "php", "swift",
