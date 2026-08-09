@@ -101,10 +101,11 @@ def main():
         print(f"wrote candidate {candidate} with vocab {tokenizer.get_vocab_size()}")
     reference = CodeTok() if args.compare_brittain2 else None
     validation_path = output if args.validate_only else candidate
-    report = validate_tokenizer(Brittain3Tokenizer(validation_path), reference=reference)
+    validation_tokenizer = Brittain3Tokenizer(validation_path)
+    report = validate_tokenizer(validation_tokenizer, reference=reference)
     if args.evaluation:
         report["corpus_evaluation"] = evaluate_tokenizer_corpus(
-            Brittain3Tokenizer(output), args.evaluation,
+            validation_tokenizer, args.evaluation,
             reference=reference, maximum_bytes=args.max_evaluation_bytes,
         )
     if reference is not None:

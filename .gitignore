@@ -29,6 +29,7 @@ runs/
 
 # Python
 __pycache__/
+*.egg-info/
 *.pyc
 .venv/
 venv/

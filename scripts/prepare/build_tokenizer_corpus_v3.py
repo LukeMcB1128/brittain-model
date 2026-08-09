@@ -301,7 +301,14 @@ def add_stack_v1(builder, source, config):
                 language=language, repository=repository, path=path,
                 license=license_name,
             ))
-            if accepted:
+            accepted_in_stream_bucket = (
+                category == expected_category
+                and (
+                    category != "code"
+                    or normalize_language(language) == expected_language
+                )
+            )
+            if accepted and accepted_in_stream_bucket:
                 stream_accepted += len(text.encode("utf-8"))
         source_metadata["stream_accepted_bytes"][dataset_language] = stream_accepted
 

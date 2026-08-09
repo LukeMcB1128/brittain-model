@@ -105,12 +105,22 @@ def test_stack_grouped_stream_cap_keeps_later_language(monkeypatch):
 
     def fake_load_dataset(_dataset, *, data_dir, **_kwargs):
         suffix = ".cpp" if data_dir == "data/cpp" else ".c"
-        return [{
-            "content": f"/* {data_dir} */\n" + "int value = 1;\n" * 20,
+        common = {
             "licenses": ["MIT"],
             "repository_name": f"owner/{data_dir}",
-            "path": f"src/value{suffix}",
-        }]
+        }
+        return [
+            {
+                **common,
+                "content": f"# Documentation for {data_dir}\n" + "Useful text.\n" * 20,
+                "path": f"docs/{data_dir}-README.md",
+            },
+            {
+                **common,
+                "content": f"/* {data_dir} */\n" + "int value = 1;\n" * 20,
+                "path": f"src/value{suffix}",
+            },
+        ]
 
     monkeypatch.setattr(corpus_script, "datasets_module", lambda: fake_load_dataset)
     monkeypatch.setattr(corpus_script, "resolved_huggingface_revision", lambda _source: "sha")
@@ -121,12 +131,33 @@ def test_stack_grouped_stream_cap_keeps_later_language(monkeypatch):
     }
     corpus_script.add_stack_v1(builder, source, config())
     rows = [json.loads(line) for line in output.getvalue().splitlines()]
-    assert {Path(row["path"]).suffix for row in rows} == {".cpp", ".c"}
+    stack_code = [
+        row for row in rows
+        if row["source"] == "stack" and row["category"] == "code"
+    ]
+    assert {Path(row["path"]).suffix for row in stack_code} == {".cpp", ".c"}
     stream_bytes = builder.source_metadata["stack"]["stream_accepted_bytes"]
     assert stream_bytes["c++"] > 0
     assert stream_bytes["c"] > 0
+    assert sum(stream_bytes.values()) == sum(
+        len(row["text"].encode("utf-8")) for row in stack_code
+    )
     stream_targets = builder.source_metadata["stack"]["stream_target_bytes"]
     assert stream_targets["c++"] + stream_targets["c"] <= remote_capacity
+
+
+def test_report_accepts_only_sub_per_mille_rounding_shortfall():
+    builder = CorpusBuilder(config(), io.StringIO())
+    builder.accepted_bytes.update(builder.category_targets)
+    builder.language_bytes.update(builder.language_targets)
+    builder.accepted_bytes["code"] -= 5
+    builder.language_bytes["python"] -= 5
+    report = builder.report()
+    assert report["exact_complete"] is False
+    assert report["complete"] is True
+    assert report["completion_tolerance_fraction"] == 0.001
+    builder.language_bytes["python"] -= 1
+    assert builder.report()["complete"] is False
 
 
 def test_builder_filters_license_secret_generated_and_duplicates():

@@ -294,6 +294,17 @@ class CorpusBuilder:
             language: max(0, target - self.language_bytes[language])
             for language, target in self.language_targets.items()
         }
+        tolerance_fraction = 0.001
+        exact_complete = not any(shortfall.values()) and not any(
+            language_shortfall.values()
+        )
+        complete = all(
+            shortfall[name] <= max(1, int(target * tolerance_fraction))
+            for name, target in self.category_targets.items()
+        ) and all(
+            language_shortfall[name] <= max(1, int(target * tolerance_fraction))
+            for name, target in self.language_targets.items()
+        )
         return {
             "format": "brittain3-tokenizer-corpus-report-v1",
             "config_sha256": hashlib.sha256(
@@ -302,7 +313,9 @@ class CorpusBuilder:
             "seed": self.seed,
             "target_bytes": self.target_bytes,
             "accepted_bytes": self.total_bytes,
-            "complete": not any(shortfall.values()) and not any(language_shortfall.values()),
+            "exact_complete": exact_complete,
+            "complete": complete,
+            "completion_tolerance_fraction": tolerance_fraction,
             "category_target_bytes": self.category_targets,
             "category_accepted_bytes": dict(self.accepted_bytes),
             "category_shortfall_bytes": shortfall,

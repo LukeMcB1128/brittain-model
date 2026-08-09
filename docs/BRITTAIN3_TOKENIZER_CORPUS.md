@@ -46,6 +46,9 @@ The collector:
   names.
 - Writes a report with accepted bytes, shortfalls, rejections, source revisions,
   licenses, and a configuration hash.
+- Reports exact completion separately. A corpus can pass completion when every
+  category and code-language shortfall is no more than 0.1%. This permits
+  whole-document quota rounding without hiding a material shortfall.
 
 License detection can be wrong. Keep the source report and review the selected
 licenses before a public release. This pipeline does not replace legal review.
