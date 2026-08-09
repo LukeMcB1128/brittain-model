@@ -80,6 +80,9 @@
       "revision": "main",
       "split": "train",
       "shuffle_buffer": 10000,
+      "directory_aliases": {
+        "c++": "cpp"
+      },
       "languages": [
         "python", "typescript", "javascript", "c++", "c", "rust", "go",
         "java", "kotlin", "shell", "powershell", "ruby", "php", "swift",

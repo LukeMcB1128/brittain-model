@@ -216,6 +216,9 @@ def add_stack_v1(builder, source, config):
     })
     allowed = set(config["allowed_licenses"])
     for language_index, dataset_language in enumerate(source["languages"]):
+        data_directory = source.get("directory_aliases", {}).get(
+            dataset_language, dataset_language
+        )
         normalized = normalize_language(dataset_language)
         if dataset_language in {"markdown"}:
             expected_category, expected_language = "documentation", "english"
@@ -227,7 +230,7 @@ def add_stack_v1(builder, source, config):
             continue
         print(f"remote source {source['name']}: {dataset_language}", flush=True)
         dataset = load_dataset(
-            source["dataset"], data_dir=f"data/{dataset_language}",
+            source["dataset"], data_dir=f"data/{data_directory}",
             split=source.get("split", "train"), streaming=True, revision=revision,
         )
         buffer = int(source.get("shuffle_buffer", 0))
