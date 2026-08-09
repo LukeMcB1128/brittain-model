@@ -5,3 +5,6 @@ tiktoken
 datasets
 tokenizers
 tqdm
+# inference server (scripts/inference/serve.py):
+fastapi
+uvicorn
