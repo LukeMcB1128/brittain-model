@@ -122,7 +122,7 @@ def load_model(device):
     """
     import torch
 
-    ck = torch.load(args.checkpoint, map_location=device)
+    ck = torch.load(args.checkpoint, map_location=device, weights_only=False)
     if isinstance(ck, dict) and "cfg" in ck:
         from brittain.model import Brittain, GPTConfig
         from brittain.tokenizer import load_tokenizer

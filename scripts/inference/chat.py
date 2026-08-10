@@ -28,7 +28,7 @@ device = (torch.device("cuda") if torch.cuda.is_available()
           else torch.device("mps") if torch.backends.mps.is_available()
           else torch.device("cpu"))
 
-ck = torch.load(CKPT, map_location=device)
+ck = torch.load(CKPT, map_location=device, weights_only=False)
 cfg = GPTConfig(**ck['cfg'])
 model = Brittain(cfg).to(device)
 model.load_state_dict(ck['model'])

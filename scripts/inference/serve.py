@@ -85,7 +85,7 @@ device = (torch.device("cuda") if torch.cuda.is_available()
 
 class Loaded:
     def __init__(self, path, name):
-        ck = torch.load(path, map_location=device)
+        ck = torch.load(path, map_location=device, weights_only=False)
         # BS checkpoints are a bare ModuleList state_dict with no 'cfg' key
         if not isinstance(ck, dict) or "cfg" not in ck:
             self.model, self.enc = model_bs.load(path, device)

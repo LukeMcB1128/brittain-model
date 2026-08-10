@@ -174,7 +174,7 @@ class BrittainBS(nn.Module):
 
 def load(path, device):
     model = BrittainBS().to(device)
-    sd = torch.load(path, map_location=device)
+    sd = torch.load(path, map_location=device, weights_only=False)
     # train_50m.bs saves the ModuleList's own state_dict, so keys are "0.weight",
     # not "mods.0.weight" — load into the ModuleList directly.
     if not any(k.startswith("mods.") for k in sd):
