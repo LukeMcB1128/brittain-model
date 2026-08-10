@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import copy
 import json
 import random
 import sys
@@ -20,7 +21,13 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 import numpy as np
 import torch
 
-from brittain.checkpoint_v3 import atomic_torch_save, checkpoint_payload, restore_rng_state, validate_checkpoint
+from brittain.checkpoint_v3 import (
+    atomic_torch_save,
+    checkpoint_payload,
+    restore_rng_state,
+    validate_checkpoint,
+    validate_initialization_checkpoint,
+)
 from brittain.model_v3 import Brittain3, Brittain3Config
 from brittain.training_v3 import (
     PackedBatchStream,
@@ -30,13 +37,18 @@ from brittain.training_v3 import (
     resolve_project_path,
     stage_learning_rate,
     synthetic_dataset,
+    file_sha256,
 )
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/training/brittain3_49m_pilot.json")
-    parser.add_argument("--resume", default=None)
+    start = parser.add_mutually_exclusive_group()
+    start.add_argument("--resume", default=None,
+                       help="resume an interrupted run, including optimizer and data cursor")
+    start.add_argument("--init-from", default=None,
+                       help="start a new stage from model weights with a fresh optimizer")
     parser.add_argument("--device", choices=("auto", "cuda", "mps", "cpu"), default="auto")
     parser.add_argument("--max-updates", type=int, default=None, help="safe local run limit")
     parser.add_argument("--smoke", action="store_true", help="use a tiny model and synthetic data")
@@ -149,21 +161,42 @@ def smoke_configuration(args):
 
 def main():
     args = parse_args()
-    checkpoint = None
+    resume_checkpoint = None
+    initialization_checkpoint = None
     if args.resume:
-        checkpoint = torch.load(resolve_project_path(args.resume), map_location="cpu", weights_only=False)
-        cfg = validate_checkpoint(checkpoint)
-        if "optimizer" not in checkpoint:
+        resume_checkpoint = torch.load(
+            resolve_project_path(args.resume), map_location="cpu", weights_only=False
+        )
+        cfg = validate_checkpoint(resume_checkpoint)
+        if "optimizer" not in resume_checkpoint:
             raise SystemExit(
                 "--resume requires latest.pt or best.pt with optimizer state; "
                 "weights.pt is for inference and new training stages"
             )
-        training = checkpoint.get("training_config")
+        training = resume_checkpoint.get("training_config")
         if not isinstance(training, dict):
             raise SystemExit("resume checkpoint does not contain its training configuration")
         stages = parse_training_config(training, cfg)
     else:
         training, cfg, stages = smoke_configuration(args) if args.smoke else load_training_config(args.config)
+        if args.init_from:
+            if args.smoke:
+                raise SystemExit("--init-from cannot be used with --smoke")
+            source = resolve_project_path(args.init_from)
+            initialization_checkpoint = torch.load(source, map_location="cpu", weights_only=False)
+            try:
+                validate_initialization_checkpoint(
+                    initialization_checkpoint, cfg, training["tokenizer_path"]
+                )
+            except ValueError as exc:
+                raise SystemExit(str(exc)) from exc
+            training = copy.deepcopy(training)
+            source_state = initialization_checkpoint.get("training_state", {})
+            training["initialization"] = {
+                "checkpoint": str(source),
+                "source_global_update": source_state.get("global_update"),
+                "source_tokens_seen": source_state.get("tokens_seen"),
+            }
     device = select_device(args.device)
     seed = int(training.get("seed", 1337))
     random.seed(seed); np.random.seed(seed); torch.manual_seed(seed)
@@ -171,8 +204,9 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     model = Brittain3(cfg).to(device)
-    if checkpoint:
-        model.load_state_dict(checkpoint["model"])
+    source_checkpoint = resume_checkpoint or initialization_checkpoint
+    if source_checkpoint:
+        model.load_state_dict(source_checkpoint["model"])
     print(f"Brittain3 {model.num_params():,} parameters | device {device} | max context {cfg.max_seq_len}")
 
     opt_cfg = training["optimizer"]
@@ -181,8 +215,8 @@ def main():
         betas=tuple(opt_cfg["betas"]), eps=opt_cfg["epsilon"],
         weight_decay=opt_cfg["weight_decay"],
     )
-    if checkpoint and "optimizer" in checkpoint:
-        optimizer.load_state_dict(checkpoint["optimizer"])
+    if resume_checkpoint and "optimizer" in resume_checkpoint:
+        optimizer.load_state_dict(resume_checkpoint["optimizer"])
         move_optimizer_state(optimizer, device)
     if training.get("compile") and device.type == "cuda":
         try:
@@ -192,12 +226,18 @@ def main():
 
     state = {"stage": 0, "stage_update": 0, "global_update": 0, "tokens_seen": 0, "plateau_count": 0}
     best = float("inf")
-    if checkpoint:
-        state.update(checkpoint["training_state"])
+    if resume_checkpoint:
+        state.update(resume_checkpoint["training_state"])
         best = float(state.pop("best_validation"))
-        restore_rng_state(checkpoint["rng_state"])
+        restore_rng_state(resume_checkpoint["rng_state"])
 
-    tokenizer = {"name": "brittain3_bpe", "path": training["tokenizer_path"], "vocab_size": cfg.vocab_size}
+    tokenizer = {
+        "name": "brittain3_bpe",
+        "path": training["tokenizer_path"],
+        "vocab_size": cfg.vocab_size,
+        "sha256": (file_sha256(training["tokenizer_path"])
+                   if training["tokenizer_path"] != "synthetic" else None),
+    }
     started = time.time()
     total_limit = args.max_updates
     completed_this_run = 0
@@ -207,9 +247,9 @@ def main():
         validation_stream = PackedBatchStream(stage.validation_data, stage.microbatch, seed + 1000 + stage_index)
         if train_stream.context != stage.context or validation_stream.context != stage.context:
             raise SystemExit(f"stage {stage.name} data context does not match {stage.context}")
-        if checkpoint and stage_index == state["stage"]:
-            train_stream.load_state_dict(checkpoint["data_state"]["train"])
-            validation_stream.load_state_dict(checkpoint["data_state"]["validation"])
+        if resume_checkpoint and stage_index == state["stage"]:
+            train_stream.load_state_dict(resume_checkpoint["data_state"]["train"])
+            validation_stream.load_state_dict(resume_checkpoint["data_state"]["validation"])
             start_update = state["stage_update"]
         else:
             start_update = 0
@@ -273,7 +313,7 @@ def main():
                     print(f"PLATEAU: no material validation gain for {state['plateau_count']} evaluations; training continues")
         state["stage"] = stage_index + 1
         state["stage_update"] = 0
-        checkpoint = None
+        resume_checkpoint = None
     print(json.dumps({
         "status": "complete", "tokens_seen": state["tokens_seen"],
         "best_validation": best, "seconds": time.time() - started,

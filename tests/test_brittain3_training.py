@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pytest
 import torch
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -13,6 +14,7 @@ from brittain.checkpoint_v3 import (
     checkpoint_payload,
     load_brittain3_checkpoint,
     restore_rng_state,
+    validate_initialization_checkpoint,
 )
 from brittain.model_v3 import Brittain3, Brittain3Config
 from brittain.training_v3 import (
@@ -27,6 +29,7 @@ from brittain.training_v3 import (
 def test_versioned_training_configs_and_effective_batch():
     for path in (
         "configs/training/brittain3_49m_pilot.json",
+        "configs/training/brittain3_49m_curriculum.json",
         "configs/training/brittain3_181m.json",
     ):
         _, model, stages = load_training_config(path)
@@ -91,3 +94,28 @@ def test_checkpoint_restores_model_optimizer_rng_and_metadata(tmp_path):
     assert checkpoint["architecture_version"] == 1
     assert checkpoint["tokenizer"] == "synthetic"
     assert checkpoint["tokenizer_path"] == "synthetic.json"
+
+
+def test_new_stage_requires_matching_model_and_tokenizer():
+    cfg = Brittain3Config(
+        vocab_size=64, max_seq_len=32, n_layer=1, n_head=2,
+        n_kv_head=1, n_embd=16, intermediate_size=32,
+        activation_checkpointing=False,
+    )
+    model = Brittain3(cfg)
+    payload = checkpoint_payload(
+        model, optimizer=None, scheduler_state={}, training_state={}, data_state={},
+        tokenizer={"name": "test", "path": "tokenizer.json", "vocab_size": 64},
+        training_config={"format": "test"}, include_optimizer=False,
+    )
+    validate_initialization_checkpoint(payload, cfg, "tokenizer.json")
+
+    wrong_cfg = Brittain3Config(
+        vocab_size=64, max_seq_len=32, n_layer=2, n_head=2,
+        n_kv_head=1, n_embd=16, intermediate_size=32,
+        activation_checkpointing=False,
+    )
+    with pytest.raises(ValueError, match="model configuration"):
+        validate_initialization_checkpoint(payload, wrong_cfg, "tokenizer.json")
+    with pytest.raises(ValueError, match="tokenizer path"):
+        validate_initialization_checkpoint(payload, cfg, "other-tokenizer.json")

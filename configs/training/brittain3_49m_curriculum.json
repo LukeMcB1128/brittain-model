@@ -1,0 +1,37 @@
+{
+  "format": "brittain3-training-v1",
+  "model_config": "configs/models/brittain3_49m_pilot.json",
+  "tokenizer_path": "tokenizers/brittain3-code-24k/tokenizer.json",
+  "tokenizer_sha256": "40defb2b987470b2c14dcaee234a2ff95d2c8eaddbb89037980338d6708602a8",
+  "output_dir": "checkpoints/brittain3_49m_curriculum",
+  "seed": 2031,
+  "precision": "bf16",
+  "compile": true,
+  "optimizer": {
+    "betas": [0.9, 0.95],
+    "epsilon": 1e-8,
+    "weight_decay": 0.1,
+    "gradient_clip": 1.0
+  },
+  "evaluation": {
+    "interval": 50,
+    "batches": 40,
+    "plateau_evaluations": 5,
+    "minimum_delta": 0.001
+  },
+  "stages": [
+    {
+      "name": "2k-curriculum-100m",
+      "context": 2048,
+      "microbatch": 6,
+      "accumulation": 16,
+      "updates": 510,
+      "warmup_updates": 25,
+      "decay_updates": 150,
+      "peak_lr": 0.00008,
+      "min_lr": 0.000008,
+      "train_data": "data/processed/brittain3-curriculum/train_2048.npz",
+      "validation_data": "data/processed/brittain3-curriculum/validation_2048.npz"
+    }
+  ]
+}
