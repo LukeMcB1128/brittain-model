@@ -1,0 +1,47 @@
+{
+  "format": "brittain-shakespeare-tokenizer-report-v1",
+  "output": "C:\\Coding\\brittain-model\\tokenizers\\brittain-shakespeare-prose-8k\\tokenizer.json",
+  "vocab_size": 8192,
+  "sample_bytes": 900000000,
+  "archaic_boost": 3,
+  "min_frequency": 2,
+  "max_token_length": 24,
+  "seed": 1337,
+  "metrics": {
+    "modern": {
+      "bytes": 55,
+      "tokens": 15,
+      "bytes_per_token": 3.6666666666666665
+    },
+    "early_modern": {
+      "bytes": 88,
+      "tokens": 25,
+      "bytes_per_token": 3.52
+    },
+    "dialogue": {
+      "bytes": 50,
+      "tokens": 16,
+      "bytes_per_token": 3.125
+    },
+    "tags": {
+      "bytes": 70,
+      "tokens": 28,
+      "bytes_per_token": 2.5
+    },
+    "names": {
+      "bytes": 36,
+      "tokens": 15,
+      "bytes_per_token": 2.4
+    },
+    "punctuation": {
+      "bytes": 49,
+      "tokens": 17,
+      "bytes_per_token": 2.8823529411764706
+    },
+    "unicode": {
+      "bytes": 33,
+      "tokens": 24,
+      "bytes_per_token": 1.375
+    }
+  }
+}
