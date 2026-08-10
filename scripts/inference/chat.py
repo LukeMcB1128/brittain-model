@@ -23,7 +23,7 @@ from brittain.prompts import format_prompt
 from brittain.tokenizer import load_tokenizer
 
 CKPT = (sys.argv[1] if len(sys.argv) > 1
-        else str(CHECKPOINT_DIR / "brittain_124m_sft.pt"))
+        else str(CHECKPOINT_DIR / "brittain2_235m_instruct_2k.pt"))
 device = (torch.device("cuda") if torch.cuda.is_available()
           else torch.device("mps") if torch.backends.mps.is_available()
           else torch.device("cpu"))
@@ -50,7 +50,7 @@ while True:
             # stream() holds the KV cache open for the whole response
             for tok in model.stream(ids, 400, temperature=0.7, top_p=0.9,
                                     repetition_penalty=1.3):
-                nxt = tok[0, -1].item()
+                nxt = int(tok[0, -1].item())
                 if nxt == enc.eot:
                     break
                 print(utf8.decode(enc.token_bytes(nxt)), end="", flush=True)

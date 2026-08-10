@@ -1,0 +1,4 @@
+# Checksum manifests are verified byte-for-byte by sha256sum -c, which treats a
+# trailing CR as part of the filename. Keep them LF regardless of core.autocrlf.
+SHA256SUMS* -text
+*.sha256 -text
