@@ -1,0 +1,256 @@
+{
+  "format": "brittain-shakespeare-corpus-v1",
+  "seed": 1337,
+  "output": "data/raw/brittain-shakespeare/corpus.jsonl",
+  "report": "data/raw/brittain-shakespeare/corpus.report.json",
+  "note": "Narrative prose only. See docs/BRITTAIN_SHAKESPEARE.md before remote use.",
+
+  "category_target_tokens": {
+    "gutenberg_fiction": 1200000000,
+    "standard_ebooks": 120000000,
+    "early_modern": 48000000,
+    "world_texture": 80000000,
+    "synthetic": 60000000
+  },
+
+  "upsampling": {
+    "early_modern": 4.0
+  },
+
+  "validation_fraction": 0.01,
+  "sft_reserve_tokens": 40000000,
+
+  "voice_author_death_years": {
+    "note": "Register comes from author life dates, NOT dcterms:issued. Gutenberg's issued date is its own release date - Dracula is stamped 1995 - so publication year is unavailable and would label the corpus Modern almost everywhere.",
+    "shakespearean_max": 1700,
+    "victorian_min": 1820,
+    "victorian_max": 1930,
+    "modern_min": 1931,
+    "assumed_career_end_after_birth": 60
+  },
+
+  "fiction_filter": {
+    "note": "A document must pass every rule. This is the control that keeps encyclopedic text out of an 80M-parameter story model.",
+    "required_lcc_classes": ["PR", "PS", "PQ", "PT", "PZ"],
+    "lcc_note": "Literature classes only. Necessary but not sufficient: PR also holds poetry, criticism, and essays, so the subject exclusions and the dialogue floor still apply on top.",
+    "required_subject_patterns": [
+      "fiction",
+      "stories",
+      "tales",
+      "novel",
+      "romances",
+      "drama",
+      "plays",
+      "tragedies",
+      "comedies",
+      "legends",
+      "fairy tales",
+      "folklore"
+    ],
+    "minimum_dialogue_fraction": 0.04,
+    "minimum_narrative_verb_ratio": 0.010,
+    "minimum_document_tokens": 1500,
+    "maximum_document_tokens": 400000,
+    "minimum_printable_fraction": 0.95,
+    "maximum_line_bytes": 5000
+  },
+
+  "world_texture": {
+    "note": "Narrative prose shelved under history, religion, or folklore: legends, folk tales, saints' lives, first-person war memoirs, Bible-story retellings. Setting texture for stories about the Crusades, a war, or a saint - NOT a route to encyclopedic knowledge. Capped so it cannot dilute, and gated by the text floors, which are what separate 'Tales and Legends of the English Lakes' from a regnal chronology.",
+    "maximum_corpus_share": 0.05,
+    "lcc_prefixes": [
+      "D", "DA", "DC", "DD", "DE", "DF", "DG", "DK", "DL", "DP", "DQ", "DR",
+      "DS", "DT", "DU", "E", "F",
+      "BL", "BM", "BP", "BR", "BS", "BX",
+      "GR", "GN",
+      "PN"
+    ],
+    "lcc_note": "History, religion, folklore (GR), and general literature. Philosophy (B, BC, BD), psychology (BF), ethics (BJ), doctrinal theology (BT), and practical theology (BV) are deliberately absent: they are argument, not narrative.",
+    "required_subject_markers": [
+      "legends",
+      "legend",
+      "tales",
+      "folklore",
+      "folk-lore",
+      "mythology",
+      "myths",
+      "sagas",
+      "chronicles",
+      "personal narratives",
+      "adventure",
+      "romances",
+      "stories",
+      "biography"
+    ],
+    "marker_note": "biography is excluded from the fiction path but allowed here: saints' lives and first-person war memoirs are the most narrative material in these classes.",
+    "excluded_subject_patterns": [
+      "criticism and interpretation",
+      "history and criticism",
+      "dictionaries",
+      "encyclopedias",
+      "bibliography",
+      "concordances",
+      "textbooks",
+      "statistics",
+      "sermons",
+      "theology, doctrinal",
+      "commentaries",
+      "study and teaching",
+      "description and travel",
+      "guidebooks",
+      "politics and government",
+      "-- languages",
+      "regimental histories",
+      "antiquities",
+      "campaigns"
+    ],
+    "exclusion_note": "The relaxed 'biography' marker otherwise admits political autobiography, travel writing, linguistics references, and unit histories, all of which are expository.",
+    "minimum_dialogue_fraction": 0.03,
+    "minimum_narrative_verb_ratio": 0.012,
+    "floors_note": "Stricter than the fiction path. These classes carry more expository prose, so they must earn their place."
+  },
+
+  "excluded_subject_patterns": [
+    "encyclopedias",
+    "dictionaries",
+    "bibliography",
+    "catalogs",
+    "periodicals",
+    "science",
+    "mathematics",
+    "medicine",
+    "surgery",
+    "botany",
+    "geology",
+    "astronomy",
+    "agriculture",
+    "engineering",
+    "law",
+    "constitutional",
+    "politics",
+    "political science",
+    "economics",
+    "philosophy",
+    "theology",
+    "sermons",
+    "prayer",
+    "criticism and interpretation",
+    "history and criticism",
+    "cookery",
+    "handbooks, manuals",
+    "description and travel",
+    "guidebooks",
+    "biography",
+    "correspondence",
+    "diaries",
+    "speeches, addresses",
+    "essays",
+    "textbooks",
+    "readers",
+    "grammar",
+    "statistics",
+    "genealogy",
+    "military art and science"
+  ],
+
+  "allowed_rights": [
+    "Public domain in the USA.",
+    "CC0-1.0",
+    "PD-US",
+    "OWNED"
+  ],
+
+  "cleaning": {
+    "strip_gutenberg_boilerplate": true,
+    "strip_transcriber_notes": true,
+    "strip_front_matter": true,
+    "strip_index_and_toc": true,
+    "normalize_whitespace": true,
+    "collapse_blank_runs": 2
+  },
+
+  "deduplication": {
+    "exact": true,
+    "whitespace_normalized": true,
+    "paragraph_shingle_threshold": 0.80,
+    "max_tokens_per_author": 40000000
+  },
+
+  "windowing": {
+    "note": "Windows are cut at chapter or scene boundaries where detectable, else at paragraph boundaries. Never mid-sentence.",
+    "target_tokens": 1400,
+    "minimum_tokens": 200,
+    "maximum_tokens": 3800,
+    "prefer_chapter_boundaries": true
+  },
+
+  "tag_policy": {
+    "tag_dropout": 0.30,
+    "block_dropout": 0.10,
+    "shuffle_rate": 0.15,
+    "mask_rate": 0.80,
+    "reverse_rate": 0.05
+  },
+
+  "local_sources": [
+    {
+      "name": "early-modern",
+      "path": "data/raw/early-modern",
+      "voice": "Shakespearean",
+      "rights": "Public domain in the USA.",
+      "enabled": true,
+      "note": "Hand-assembled: Shakespeare, Marlowe, Jonson, Webster, and the KJV narrative books. The KJV needs book-level selection, which the per-file text floors cannot do, so the books are listed explicitly here.",
+      "kjv_narrative_books": [
+        "Genesis", "Exodus", "Numbers", "Joshua", "Judges", "Ruth",
+        "1 Samuel", "2 Samuel", "1 Kings", "2 Kings",
+        "Esther", "Job", "Jonah", "Daniel",
+        "Matthew", "Mark", "Luke", "John", "Acts"
+      ],
+      "kjv_excluded_note": "Leviticus and Deuteronomy are law, the Epistles are doctrinal argument, and the Psalms and Proverbs are poetry and wisdom. None are narrative, so none are included."
+    },
+    {
+      "name": "synthetic-stories",
+      "path": "data/raw/brittain-shakespeare-synthetic",
+      "rights": "OWNED",
+      "enabled": false
+    }
+  ],
+
+  "remote_sources": [
+    {
+      "name": "gutenberg-fiction",
+      "kind": "gutenberg-mirror",
+      "note": "The official mirror, not a Hugging Face mirror. The HF mirrors generally ship text with the subject headings stripped, and the fiction filter and Genre tag both run on those headings.",
+      "metadata_rdf": "https://www.gutenberg.org/cache/epub/feeds/rdf-files.tar.bz2",
+      "metadata_csv": "https://www.gutenberg.org/cache/epub/feeds/pg_catalog.csv",
+      "text_archive": "https://www.gutenberg.org/cache/epub/feeds/",
+      "metadata_fields": [
+        "dcterms:subject (LCSH)",
+        "dcterms:subject (LCC)",
+        "pgterms:bookshelf",
+        "pgterms:agent birthdate",
+        "pgterms:agent deathdate",
+        "dcterms:language",
+        "dcterms:rights"
+      ],
+      "language": "en",
+      "snapshot_date": "PIN_BEFORE_USE",
+      "enabled": false
+    },
+    {
+      "name": "standard-ebooks",
+      "kind": "git",
+      "note": "Bulk downloads are gated behind Patrons Circle membership. The free route is cloning the per-book repositories. Optional at ~7% of the corpus.",
+      "url": "https://github.com/standardebooks",
+      "rights": "CC0-1.0",
+      "snapshot_date": "PIN_BEFORE_USE",
+      "enabled": false
+    }
+  ],
+
+  "acceptance": {
+    "maximum_category_shortfall": 0.001,
+    "require_pinned_revisions": true,
+    "require_report": true
+  }
+}
