@@ -170,7 +170,7 @@ def main():
     if not args.catalog_only and output_path.exists() and not args.overwrite:
         raise SystemExit(f"{output_path} exists; pass --overwrite to replace it")
 
-    minimum_dialogue = float(fiction.get("minimum_dialogue_fraction", 0.0))
+    minimum_speech = float(fiction.get("minimum_speech_fraction", 0.0))
     minimum_verb_ratio = float(fiction.get("minimum_narrative_verb_ratio", 0.0))
     minimum_tokens = int(fiction.get("minimum_document_tokens", 0))
     maximum_tokens = int(fiction.get("maximum_document_tokens", 10**9))
@@ -242,13 +242,13 @@ def main():
             # stricter floors. They are what separate a book of legends from a
             # regnal chronology.
             if category == TEXTURE_CATEGORY:
-                floor_dialogue = texture_config.minimum_dialogue_fraction
+                floor_speech = texture_config.minimum_speech_fraction
                 floor_verbs = texture_config.minimum_narrative_verb_ratio
             else:
-                floor_dialogue, floor_verbs = minimum_dialogue, minimum_verb_ratio
+                floor_speech, floor_verbs = minimum_speech, minimum_verb_ratio
             text_reason = text_rejection_reason(
                 text,
-                minimum_dialogue=floor_dialogue,
+                minimum_speech=floor_speech,
                 minimum_verb_ratio=floor_verbs,
             )
             if text_reason is not None:
@@ -294,7 +294,7 @@ def main():
         "voice_distribution": dict(voice_counts),
         "genre_distribution": dict(genre_counts),
         "thresholds": {
-            "minimum_dialogue_fraction": minimum_dialogue,
+            "minimum_speech_fraction": minimum_speech,
             "minimum_narrative_verb_ratio": minimum_verb_ratio,
             "minimum_document_tokens": minimum_tokens,
             "maximum_document_tokens": maximum_tokens,

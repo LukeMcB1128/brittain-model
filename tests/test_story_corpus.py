@@ -20,11 +20,13 @@ from brittain.corpus_story import (
     book_tags,
     classify,
     dialogue_fraction,
+    drama_fraction,
     iter_catalog,
     narrative_verb_ratio,
     parse_rdf,
     read_catalog_directory,
     rejection_reason,
+    speech_fraction,
     strip_boilerplate,
     text_rejection_reason,
 )
@@ -336,8 +338,8 @@ def test_texture_path_is_inert_when_unconfigured(filter_config):
 
 def test_texture_floors_are_stricter_than_the_fiction_floors(texture_config):
     fiction = CORPUS_CONFIG["fiction_filter"]
-    assert texture_config.minimum_narrative_verb_ratio > float(
-        fiction["minimum_narrative_verb_ratio"]
+    assert texture_config.minimum_speech_fraction > float(
+        fiction["minimum_speech_fraction"]
     )
 
 
@@ -422,20 +424,72 @@ def test_narrative_verb_ratio_separates_fiction_from_a_treatise():
     assert narrative_verb_ratio(fiction) > narrative_verb_ratio(treatise)
 
 
-def test_text_floors_reject_and_name_the_failed_rule():
-    treatise = "The principle may be stated as follows and the proposition holds.\n" * 5
+# Drama carries no quotation marks at all: the speaker sits on its own line.
+HAMLET = """
+BARNARDO.
+See, it stalks away.
+
+HORATIO.
+Stay! speak, speak! I charge thee speak!
+
+[_Exit Ghost._]
+
+MARCELLUS.
+Tis gone, and will not answer.
+
+BARNARDO.
+How now, Horatio! You tremble and look pale.
+"""
+
+TREATISE = "The principle may be stated as follows and the proposition holds.\n" * 8
+
+
+def test_quoted_dialogue_detector_misses_drama():
+    # The reason the speech detector exists. Kept as its own test so the blind
+    # spot stays visible rather than silently papered over.
+    assert dialogue_fraction(HAMLET) == 0.0
+    assert drama_fraction(HAMLET) > 0.3
+
+
+def test_speech_fraction_sees_every_printing_convention():
+    for name, sample in (
+        ("quoted", '"I am here," she said.\n'),
+        ("curly", "“I am here,” she said.\n"),
+        ("em_dash", "— I am here, she said.\n"),
+        ("single", "'I am here at last,' she said.\n"),
+    ):
+        assert speech_fraction(sample) == 1.0, name
+    assert speech_fraction(HAMLET) > 0.3
+    assert speech_fraction(TREATISE) == 0.0
+
+
+def test_narrative_floor_rejects_only_when_both_signals_fail():
     assert text_rejection_reason(
-        treatise, minimum_dialogue=0.04, minimum_verb_ratio=0.01
-    ) == "dialogue_floor"
-    # Passing the dialogue floor but not the verb floor names the second rule.
-    quoted = '"The principle," he noted, "may be stated as follows."\n' * 5
+        TREATISE, minimum_speech=0.05, minimum_verb_ratio=0.01
+    ) == "narrative_floor"
+
+
+def test_drama_passes_on_speech_despite_having_no_narrative_verbs():
+    # The regression that matters. An AND rule rejected Shakespeare from a model
+    # named after him, and the corpus counts alone would never have shown it.
+    assert narrative_verb_ratio(HAMLET) < 0.01
     assert text_rejection_reason(
-        quoted, minimum_dialogue=0.04, minimum_verb_ratio=0.5
-    ) == "narrative_verb_floor"
+        HAMLET, minimum_speech=0.05, minimum_verb_ratio=0.01
+    ) is None
+
+
+def test_sparse_dialogue_prose_passes_on_verbs():
+    # The mirror case: narrative prose with little speech survives on verbs.
+    prose = ("He turned and walked to the window and looked out. He waited, and "
+             "then he went to the door and stood there and listened.\n") * 6
+    assert speech_fraction(prose) < 0.05
+    assert text_rejection_reason(
+        prose, minimum_speech=0.05, minimum_verb_ratio=0.01
+    ) is None
 
 
 def test_text_floors_accept_narrative_prose():
     fiction = strip_boilerplate(RAW_BOOK)
     assert text_rejection_reason(
-        fiction, minimum_dialogue=0.04, minimum_verb_ratio=0.01
+        fiction, minimum_speech=0.05, minimum_verb_ratio=0.01
     ) is None

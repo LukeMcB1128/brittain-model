@@ -174,7 +174,7 @@ class TextureConfig:
     lcc_prefixes: tuple[str, ...] = ()
     required_subject_markers: tuple[str, ...] = ()
     excluded_subject_patterns: tuple[str, ...] = ()
-    minimum_dialogue_fraction: float = 0.0
+    minimum_speech_fraction: float = 0.0
     minimum_narrative_verb_ratio: float = 0.0
     maximum_corpus_share: float = 0.05
 
@@ -199,8 +199,8 @@ class TextureConfig:
                 pattern.lower()
                 for pattern in texture.get("excluded_subject_patterns", ())
             ),
-            minimum_dialogue_fraction=float(
-                texture.get("minimum_dialogue_fraction", 0.0)
+            minimum_speech_fraction=float(
+                texture.get("minimum_speech_fraction", 0.0)
             ),
             minimum_narrative_verb_ratio=float(
                 texture.get("minimum_narrative_verb_ratio", 0.0)
@@ -379,19 +379,64 @@ def strip_boilerplate(text: str) -> str:
     return _BLANK_RUN.sub("\n\n", text).strip()
 
 
-_DIALOGUE_LINE = re.compile(r"[\"“”]")
+_DIALOGUE_LINE = re.compile(r"[\"“”«»]")
+
+# Speech does not always arrive in quotation marks, and assuming it does is a
+# trap: Hamlet contains no quotation marks at all. Drama puts the speaker on its
+# own line, Continental and Irish printings open with an em dash, and British
+# printings often use single quotes.
+_DRAMA_SPEAKER = re.compile(r"^[ \t]*[A-Z][A-Z'’.\- ]{1,28}\.[ \t]*$")
+_DRAMA_SPEAKER_TITLED = re.compile(r"^[ \t]*[A-Z][a-z]{2,14}\.[ \t]*$")
+_STAGE_DIRECTION = re.compile(r"^[ \t]*\[_.*_\.?\]")
+_EM_DASH_SPEECH = re.compile(r"^[ \t]*[—–][ \t]*[A-Z]")
+# A single-quoted span long enough not to be an apostrophe or a scare quote.
+_SINGLE_QUOTE_SPEECH = re.compile(r"(?<![A-Za-z])'[A-Z][^']{8,}?[,.!?]'")
 
 
 def dialogue_fraction(text: str) -> float:
-    """Share of non-empty lines carrying a quotation mark.
-
-    A crude but effective narrative signal: fiction has dialogue, treatises do
-    not. It is a floor, not a classifier.
-    """
+    """Share of non-empty lines carrying a quotation mark."""
     lines = [line for line in text.split("\n") if line.strip()]
     if not lines:
         return 0.0
     return sum(1 for line in lines if _DIALOGUE_LINE.search(line)) / len(lines)
+
+
+def drama_fraction(text: str) -> float:
+    """Share of non-empty lines that are a speaker cue or a stage direction."""
+    lines = [line for line in text.split("\n") if line.strip()]
+    if not lines:
+        return 0.0
+    hits = sum(
+        1
+        for line in lines
+        if _DRAMA_SPEAKER.match(line)
+        or _DRAMA_SPEAKER_TITLED.match(line)
+        or _STAGE_DIRECTION.match(line)
+    )
+    return hits / len(lines)
+
+
+def speech_fraction(text: str) -> float:
+    """Share of non-empty lines carrying speech in any printing convention.
+
+    This is the narrative signal the corpus floors use. Fiction and drama have
+    speech; treatises do not.
+    """
+    lines = [line for line in text.split("\n") if line.strip()]
+    if not lines:
+        return 0.0
+    hits = 0
+    for line in lines:
+        if (
+            _DIALOGUE_LINE.search(line)
+            or _DRAMA_SPEAKER.match(line)
+            or _DRAMA_SPEAKER_TITLED.match(line)
+            or _STAGE_DIRECTION.match(line)
+            or _EM_DASH_SPEECH.match(line)
+            or _SINGLE_QUOTE_SPEECH.search(line)
+        ):
+            hits += 1
+    return hits / len(lines)
 
 
 _NARRATIVE_VERBS = frozenset(
@@ -410,14 +455,22 @@ def narrative_verb_ratio(text: str) -> float:
 
 
 def text_rejection_reason(
-    text: str, *, minimum_dialogue: float, minimum_verb_ratio: float
+    text: str, *, minimum_speech: float, minimum_verb_ratio: float
 ) -> str | None:
-    """Apply the two text-based floors. Returns the failed rule or None."""
-    if dialogue_fraction(text) < minimum_dialogue:
-        return "dialogue_floor"
-    if narrative_verb_ratio(text) < minimum_verb_ratio:
-        return "narrative_verb_floor"
-    return None
+    """Apply the narrative floor. Returns the failed rule or None.
+
+    The two measures are combined with OR, not AND, because they detect
+    different forms of narrative and neither is present in both. Drama is almost
+    entirely speech and has nearly no narrative verbs: Hamlet scores 0.248 on
+    speech and 0.0023 on verbs. Sparse-dialogue literary prose is the reverse.
+    Requiring both would reject Shakespeare from a model named after him, and
+    that failure would have been invisible in the corpus counts.
+    """
+    if speech_fraction(text) >= minimum_speech:
+        return None
+    if narrative_verb_ratio(text) >= minimum_verb_ratio:
+        return None
+    return "narrative_floor"
 
 
 def read_book_text(path: str | Path) -> str:
