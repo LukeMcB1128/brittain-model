@@ -523,3 +523,39 @@ def test_every_objective_tag_has_an_extractor_path():
     # no objective tag is structurally unreachable.
     assert set(tags) <= set(TAG_ORDER)
     assert {"Voice", "POV", "Tense", "Length"} <= set(OBJECTIVE_TAGS)
+
+
+# --------------------------------------------------------------------------- #
+# Threshold scaling
+# --------------------------------------------------------------------------- #
+
+def test_tone_fires_inside_a_window_sized_passage():
+    # Flat evidence counts tuned for a whole book almost never fired inside a
+    # thousand-token window: Tone reached only 1.2% coverage and the lever was
+    # untrainable. The requirement scales with length instead.
+    passage = (
+        "The room was cold and the grate was empty. She sat in the grey light "
+        "and did not move. Everything felt hollow, and the house was silent, "
+        "and the hours went by wearily. Nothing remained of what had been. "
+    ) * 8
+    assert len(story_tagger.words(passage)) < 500
+    assert story_tagger.tone(passage) == "Bleak"
+
+
+def test_setting_fires_inside_a_window_sized_passage():
+    passage = (
+        "The ship rolled and the deck ran with water. The captain held the helm "
+        "and watched the sea. A sailor came up from below and said nothing. "
+    ) * 8
+    assert story_tagger.setting(passage) == "Sea"
+
+
+def test_third_limited_is_found_from_pronoun_interiority():
+    # Interiority usually attaches to a pronoun rather than a name, so counting
+    # only named subjects left most third-person windows unlabelled.
+    passage = (
+        "He came to the door and waited. He thought of the letter and he knew "
+        "what it meant. He remembered the house and he felt the cold. He went "
+        "down to the water and he watched the boats and he wondered about her. "
+    ) * 6
+    assert story_tagger.point_of_view(passage) == "Third-Limited"

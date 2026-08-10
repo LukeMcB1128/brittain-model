@@ -234,9 +234,16 @@ _FIRST_PERSON = frozenset("i me my mine we us our ours myself ourselves".split()
 _THIRD_PERSON = frozenset(
     "he him his she her hers they them their theirs himself herself themselves".split()
 )
-_INTERIORITY = re.compile(
-    r"\b([A-Z][a-z]{2,})\s+(?:thought|felt|knew|wondered|realized|realised|"
-    r"remembered|feared|hoped|believed|suspected)\b"
+_INTERIORITY_VERBS = (
+    r"thought|felt|knew|wondered|realized|realised|remembered|feared|hoped|"
+    r"believed|suspected|noticed|understood|imagined|recalled|decided|wished|"
+    r"guessed|supposed|doubted|resolved|considered"
+)
+_INTERIORITY = re.compile(rf"\b([A-Z][a-z]{{2,}})\s+(?:{_INTERIORITY_VERBS})\b")
+# Most interiority in limited third person attaches to a pronoun, not a name, so
+# counting only named subjects badly undercounts the evidence.
+_PRONOUN_INTERIORITY = re.compile(
+    rf"\b(?:he|she|they)\s+(?:{_INTERIORITY_VERBS})\b", re.IGNORECASE
 )
 
 
@@ -254,16 +261,17 @@ def point_of_view(text: str) -> str | None:
         return None
     if first / total >= 0.55:
         return "First"
-    if third / total < 0.80:
+    if third / total < 0.70:
         # Mixed narration. Neither label is defensible.
         return None
     # Third person. Interiority attributed to several distinct people reads as
     # omniscient; a single centre of consciousness reads as limited. This is the
-    # weakest extractor in the set, so it demands clear evidence either way.
+    # weakest extractor in the set, so it still declines on a genuine tie.
     subjects = {match.group(1) for match in _INTERIORITY.finditer(body)}
     if len(subjects) >= 3:
         return "Third-Omniscient"
-    if len(subjects) == 1:
+    pronoun_hits = len(_PRONOUN_INTERIORITY.findall(body))
+    if len(subjects) <= 1 and pronoun_hits + len(subjects) >= 1:
         return "Third-Limited"
     return None
 
@@ -378,13 +386,13 @@ def setting(text: str) -> str | None:
         return None
     ranked = counts.most_common(2)
     best, best_count = ranked[0]
-    # Require real evidence and a clear margin over the runner-up. A story that
-    # touches several places has no single setting, and guessing one would teach
-    # the model that the tag does not mean anything.
-    if best_count < 5:
+    # Require real evidence and a margin over the runner-up. Both scale with the
+    # window: a flat count tuned for a whole book almost never fires inside a
+    # thousand-token window, which left the lever untrainable.
+    if best_count < max(3, int(0.004 * len(tokens))):
         return None
     runner_up = ranked[1][1] if len(ranked) > 1 else 0
-    if best_count < 2 * runner_up:
+    if best_count < 1.5 * runner_up:
         return None
     return best
 
@@ -440,7 +448,7 @@ def tone(text: str) -> str | None:
     label is worse for the control lever than an absent one.
     """
     tokens = [word.lower() for word in words(text)]
-    if len(tokens) < 200:
+    if len(tokens) < 120:
         return None
     counts: Counter[str] = Counter()
     for token in tokens:
@@ -451,10 +459,10 @@ def tone(text: str) -> str | None:
         return None
     ranked = counts.most_common(2)
     best, best_count = ranked[0]
-    if best_count < 6:
+    if best_count < max(3, int(0.004 * len(tokens))):
         return None
     runner_up = ranked[1][1] if len(ranked) > 1 else 0
-    if best_count < 2 * runner_up:
+    if best_count < 1.5 * runner_up:
         return None
     return best
 
