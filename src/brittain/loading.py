@@ -81,6 +81,52 @@ def load_any(path: str | Path, device: torch.device | str = "cpu"):
     return model, block_size, _tokenizer_for(checkpoint)
 
 
+def document_prefix(tokenizer, repository: str = "benchmark/tasks",
+                    path: str = "task.py") -> str:
+    """Repository/file framing for models trained with it, else an empty string.
+
+    EVERY Brittain3 pretraining document is wrapped as
+
+        <|repo_start|>{repo}<|file_start|>{path} ... <|file_end|><|repo_end|>
+
+    so a bare prompt is out of distribution. Measured on the 49M pilot: an
+    unframed prompt produced `<|file_end|><|repo_end|>` and stopped after two
+    tokens, every time. The identical prompt with framing produced working code.
+
+    Any generation-based metric that skips this measures the prompt format, not
+    the model — and it would score Brittain3 near zero while Brittain1/2, which
+    were trained without framing, score normally. That is a false negative on the
+    pilot gate, in the direction that would wrongly condemn the corpus.
+
+    Brittain1/2 tokenizers have no such tokens, so they correctly get "".
+    """
+    vocab = getattr(tokenizer, "special_tokens", None)
+    try:
+        start = tokenizer.encode("<|repo_start|>")
+        file_start = tokenizer.encode("<|file_start|>")
+    except Exception:
+        return ""
+    if len(start) != 1 or len(file_start) != 1:
+        return ""
+    return f"<|repo_start|>{repository}<|file_start|>{path}\n"
+
+
+def strip_specials(tokenizer, ids: list[int]) -> list[int]:
+    """Cut a generation at the first special token.
+
+    A framed model ends a file with `<|file_end|>`, not only `<|endoftext|>`, so
+    stopping at EOT alone leaves the closing markers in the decoded text and
+    breaks any parse of it.
+    """
+    out = []
+    for value in ids:
+        text = tokenizer.decode([value])
+        if text.startswith("<|") and text.endswith("|>"):
+            break
+        out.append(value)
+    return out
+
+
 def generate(model, ids: torch.Tensor, max_new_tokens: int, **kwargs) -> torch.Tensor:
     """Generate from any family with one call signature.
 

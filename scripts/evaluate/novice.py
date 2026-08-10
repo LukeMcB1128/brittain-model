@@ -50,6 +50,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 warnings.filterwarnings("ignore", category=SyntaxWarning)
 
 from brittain.metrics import pass_at_k, repetition_collapse  # noqa: E402
+from brittain.loading import document_prefix, strip_specials  # noqa: E402
 
 DEFAULT_TASKS = PROJECT_ROOT / "benchmarks" / "novice" / "tasks.jsonl"
 DEFAULT_REFERENCE = PROJECT_ROOT / "benchmarks" / "novice" / "reference.jsonl"
@@ -179,6 +180,11 @@ def score_checkpoint(path: str, tasks: list[dict], args) -> dict:
 
     device = resolve_device(args.device)
     model, block_size, enc = load_any(path, device)
+    # Framed models must be prompted the way they were trained. This is prepended
+    # to the MODEL INPUT only; the program that gets executed stays unframed.
+    prefix = document_prefix(enc)
+    if prefix:
+        print(f"  using repository/file framing ({len(enc.encode(prefix))} tokens)", flush=True)
     torch.manual_seed(args.seed)
 
     results = []
@@ -188,7 +194,7 @@ def score_checkpoint(path: str, tasks: list[dict], args) -> dict:
     generations = 0
 
     for task in tasks:
-        prompt_ids = enc.encode(task["prompt"])
+        prompt_ids = enc.encode(prefix + task["prompt"])
         context = torch.tensor([prompt_ids], dtype=torch.long, device=device)
         if context.size(1) >= block_size:
             raise SystemExit(f"{task['id']}: prompt exceeds the model context of {block_size}")
@@ -200,9 +206,7 @@ def score_checkpoint(path: str, tasks: list[dict], args) -> dict:
                     temperature=args.temperature, top_p=args.top_p,
                     repetition_penalty=args.repetition_penalty,
                 )
-            new_ids = out[0, context.size(1):].tolist()
-            if enc.eot in new_ids:
-                new_ids = new_ids[:new_ids.index(enc.eot)]
+            new_ids = strip_specials(enc, out[0, context.size(1):].tolist())
             generations += 1
             if repetition_collapse(new_ids):
                 collapses += 1

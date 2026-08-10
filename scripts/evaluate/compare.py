@@ -57,7 +57,7 @@ warnings.filterwarnings("ignore", category=SyntaxWarning)
 
 import torch
 
-from brittain.loading import generate, load_any, resolve_device
+from brittain.loading import document_prefix, generate, load_any, resolve_device, strip_specials
 from brittain.metrics import repetition_collapse
 from brittain.model import Brittain
 from brittain.model_v3 import Brittain3
@@ -133,15 +133,14 @@ def syntax_validity(model, enc, n_samples):
     ok = 0
     collapsed = 0
     total = 0
+    prefix = document_prefix(enc)
     for prompt in CODE_PROMPTS:
-        ids = torch.tensor([enc.encode(prompt)], dtype=torch.long, device=device)
+        ids = torch.tensor([enc.encode(prefix + prompt)], dtype=torch.long, device=device)
         for _ in range(n_samples):
             # identical sampling for every model, or the comparison isn't fair
             out = generate(model, ids, 80, temperature=0.4, top_p=0.95,
                            repetition_penalty=1.12)
-            gen = out[0, ids.size(1):].tolist()
-            if enc.eot in gen:
-                gen = gen[:gen.index(enc.eot)]
+            gen = strip_specials(enc, out[0, ids.size(1):].tolist())
             total += 1
             if repetition_collapse(gen):
                 collapsed += 1

@@ -37,6 +37,7 @@ from brittain.model_v3 import Brittain3, Brittain3Config
 from brittain import model_bs
 from brittain.paths import CHECKPOINT_DIR
 from brittain.tokenizer import load_tokenizer
+from brittain.loading import document_prefix
 
 
 def newest_checkpoint():
@@ -64,6 +65,13 @@ ap.add_argument("-t", "--temperature", type=float, default=0.4)
 ap.add_argument("--top_p", type=float, default=0.95)
 ap.add_argument("--top_k", type=int, default=None)
 ap.add_argument("-r", "--repetition_penalty", type=float, default=1.12)
+ap.add_argument("--repo", default="benchmark/tasks",
+                help="repository name used in the Brittain3 document framing")
+ap.add_argument("--path", default="task.py",
+                help="file path used in the Brittain3 document framing")
+ap.add_argument("--no_frame", action="store_true",
+                help="do not add repository/file framing, even for a model trained "
+                     "with it. Expect an immediate end-of-document.")
 ap.add_argument("--stop_blank", action="store_true",
                 help="stop at the first blank line (how autocomplete behaves)")
 args = ap.parse_args()
@@ -76,7 +84,7 @@ elif torch.backends.mps.is_available():
 else:
     device = torch.device("cpu")
 
-ck = torch.load(ckpt, map_location=device)
+ck = torch.load(ckpt, map_location=device, weights_only=False)
 if isinstance(ck, dict) and "cfg" in ck:
     if ck.get("architecture") == "brittain3":
         cfg = Brittain3Config(**ck["cfg"])
@@ -150,7 +158,14 @@ def generate(prompt, suffix=None):
                   + suffix_ids + [enc.fim_middle])
         ids = torch.tensor([packed], dtype=torch.long, device=device)
     else:
-        prompt_ids = enc.encode(prompt) or [enc.eot]
+        # Brittain3 saw EVERY pretraining document wrapped as
+        # <|repo_start|>repo<|file_start|>path ... so an unframed prompt is out of
+        # distribution and the model just closes the document. Measured on the 49M
+        # pilot: a bare prompt emitted <|file_end|><|repo_end|> and stopped after
+        # two tokens; the same prompt framed produced working code. Brittain1/2
+        # have no such tokens and correctly get an empty prefix.
+        frame = "" if args.no_frame else document_prefix(enc, args.repo, args.path)
+        prompt_ids = enc.encode(frame + prompt) or [enc.eot]
         ids = torch.tensor([prompt_ids], dtype=torch.long, device=device)
         if ids.size(1) >= block:
             kept = block - 1
