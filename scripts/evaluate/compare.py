@@ -99,25 +99,41 @@ def read_text(path, limit):
 
 
 @torch.no_grad()
-def bits_per_byte(model, block, enc, text):
-    """Total NLL over the text, normalised by its UTF-8 byte count."""
+def bits_per_byte(model, block, enc, text, frame=""):
+    """Total NLL over the text, normalised by its UTF-8 byte count.
+
+    The framing prefix is CONTEXT, not content. Its targets are masked with -100
+    so it contributes no loss and no bytes — the model is scored on exactly the
+    same text either way, just prompted the way it was trained.
+
+    This matters enormously. Brittain3 saw every pretraining document wrapped in
+    <|repo_start|>/<|file_start|>, and scoring it on bare text measured the format
+    rather than the model: on the frozen code sample at a 512 window it read 1.342
+    unframed against 1.020 framed, a 0.323 swing. Unframed, the pilot looked far
+    worse than a Brittain2 baseline it actually matches.
+    """
     n_bytes = len(text.encode("utf-8"))
+    frame_ids = enc.encode(frame) if frame else []
     ids = enc.encode(text)
     if len(ids) < 2:
         return float("nan")
+    content = block - len(frame_ids)
+    if content < 8:
+        raise SystemExit("the framing prefix leaves no room in this window")
     total_nll = 0.0
-    # non-overlapping windows; every model is scored the same way
-    for start in range(0, len(ids) - 1, block):
-        chunk = ids[start:start + block + 1]
+    # non-overlapping windows; every model is scored over the same content
+    for start in range(0, len(ids) - 1, content):
+        chunk = ids[start:start + content + 1]
         if len(chunk) < 2:
             break
-        x = torch.tensor([chunk[:-1]], dtype=torch.long, device=device)
-        y = torch.tensor([chunk[1:]], dtype=torch.long, device=device)
+        x = torch.tensor([frame_ids + chunk[:-1]], dtype=torch.long, device=device)
+        y = torch.tensor([[-100] * len(frame_ids) + chunk[1:]], dtype=torch.long, device=device)
         out = model(x, y) if isinstance(model, (Brittain, Brittain3)) else model(x)
         logits = out[0] if isinstance(out, tuple) else out
         # recompute unreduced so we can sum rather than average
         lp = torch.nn.functional.cross_entropy(
-            logits.view(-1, logits.size(-1)), y.view(-1), reduction="sum")
+            logits.view(-1, logits.size(-1)), y.view(-1),
+            reduction="sum", ignore_index=-100)
         total_nll += lp.item()
     return total_nll / (math.log(2) * n_bytes)
 
@@ -168,6 +184,7 @@ for path in args.checkpoints:
     print(f"evaluating {path} ...", flush=True)
     model, block, enc = load_any(path, device)
     window = min(block, args.block) if args.block else block
+    frame = document_prefix(enc, "brittain/model", "src/brittain/model.py")
     syntax, collapse = syntax_validity(model, enc, args.samples)
     row = {
         "name": os.path.basename(path),
@@ -177,8 +194,8 @@ for path in args.checkpoints:
         "window": window,
         "tok": enc.name,
         "tok_eff": len(code_sample.encode()) / max(1, len(enc.encode(code_sample))),
-        "bpb_code": bits_per_byte(model, window, enc, code_sample),
-        "bpb_prose": bits_per_byte(model, window, enc, prose_sample) if prose_sample else float("nan"),
+        "bpb_code": bits_per_byte(model, window, enc, code_sample, frame),
+        "bpb_prose": bits_per_byte(model, window, enc, prose_sample, frame) if prose_sample else float("nan"),
         "syntax": syntax,
         "collapse": collapse,
     }
