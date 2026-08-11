@@ -20,6 +20,7 @@ data/**/meta.pkl
 
 .codex-build/
 artifacts/
+.claude/
 
 # NOTE: tokenizers/brittain2-code-32k/tokenizer.json IS committed on purpose.
 # Re-running scripts/prepare/train_tokenizer.py samples The Stack randomly and yields a DIFFERENT
