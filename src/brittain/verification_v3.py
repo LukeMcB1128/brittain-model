@@ -88,6 +88,37 @@ def _compile_then_run(
     return _run([str(executable)], workdir, timeout)
 
 
+def verify_syntax(
+    language: str,
+    source: str,
+    *,
+    timeout: float = 10.0,
+    tsc: str | Path = DEFAULT_TSC,
+) -> VerificationResult:
+    """Parse or compile source without running the candidate program."""
+    if language not in ("python", "typescript", "javascript"):
+        raise ValueError(f"syntax verification is not available for {language}")
+    command = backend_status(tsc).get(language)
+    if command is None:
+        return VerificationResult(False, "unavailable", f"{language} toolchain is not installed")
+    with tempfile.TemporaryDirectory(prefix="brittain3-syntax-") as temporary:
+        workdir = Path(temporary)
+        if language == "python":
+            path = workdir / "candidate.py"
+            path.write_text(source, encoding="utf-8")
+            return _run([sys.executable, "-I", "-m", "py_compile", str(path)], workdir, timeout)
+        if language == "javascript":
+            path = workdir / "candidate.js"
+            path.write_text(source, encoding="utf-8")
+            return _run([str(command), "--check", str(path)], workdir, timeout)
+        path = workdir / "candidate.ts"
+        path.write_text(source, encoding="utf-8")
+        return _run([
+            str(command), str(path), "--target", "ES2022", "--module", "commonjs",
+            "--strict", "--skipLibCheck", "--noEmit",
+        ], workdir, timeout)
+
+
 def verify_program(
     language: str,
     solution: str,

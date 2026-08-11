@@ -29,6 +29,7 @@ from brittain.training_v3 import (
 def test_versioned_training_configs_and_effective_batch():
     for path in (
         "configs/training/brittain3_49m_pilot.json",
+        "configs/training/brittain3_49m_curriculum_probe.json",
         "configs/training/brittain3_49m_curriculum.json",
         "configs/training/brittain3_181m.json",
     ):

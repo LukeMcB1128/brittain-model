@@ -1,0 +1,46 @@
+{
+  "format": "brittain3-curriculum-corpus-v1",
+  "seed": 2069,
+  "target_tokens": 10000000,
+  "tokenizer": "tokenizers/brittain3-code-24k/tokenizer.json",
+  "raw_corpus": "data/raw/brittain3-pilot/corpus2.clean.jsonl",
+  "raw_decontamination_report": "data/raw/brittain3-pilot/decontamination2.report.json",
+  "teacher_corpus": "data/generated/brittain3-curriculum/teacher-seeds.clean.jsonl",
+  "teacher_audit_report": "runs/brittain3-teacher-seeds.clean.report.json",
+  "exercise_corpus": "data/generated/brittain3-pilot/exercises.jsonl",
+  "source_token_targets": {
+    "verified_teacher": 100000,
+    "verified_exercises": 100000,
+    "test_code": 4000000,
+    "companion_code": 3000000,
+    "documentation": 1000000,
+    "english": 800000,
+    "tool": 500000,
+    "structured": 500000
+  },
+  "code_language_shares": {
+    "python": 0.30,
+    "typescript": 0.20,
+    "javascript": 0.15,
+    "rust": 0.12,
+    "cpp": 0.10,
+    "c": 0.08,
+    "go": 0.05
+  },
+  "candidate_sample_rates": {
+    "test_code": 1.0,
+    "companion_code": 1.0,
+    "documentation": 0.03,
+    "english": 0.03,
+    "tool": 1.0,
+    "structured": 0.08
+  },
+  "teacher_max_replays": 16,
+  "exercise_max_per_family": 64,
+  "max_documents_per_repository_per_source": 8,
+  "repository_cap_exempt_sources": ["tool"],
+  "minimum_document_tokens": 24,
+  "maximum_document_tokens": 2048,
+  "maximum_shortfall_fraction": 0.05,
+  "maximum_replay_fraction": 0.05
+}

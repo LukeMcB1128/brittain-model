@@ -26,20 +26,27 @@ Do not change `benchmarks/novice/` or its old result. It is the historical pilot
 gate. A larger suite must use a new versioned directory. Both suites must be
 removed from every new training corpus before packing.
 
-The next suite will use 20 samples per task. It will add many independent tasks
-instead of only adding more samples to the same 36 tasks. Results must name the
-prompt set:
+The expanded suite is frozen in `benchmarks/novice_v2/`. It has 30 independent
+tasks: 10 each for Python, TypeScript, and JavaScript. Use 20 samples per task.
+Results must name the prompt set:
 
 - `general_prompt_collapse`: the five prompts in `compare.py`.
 - `novice_suite_collapse`: the executable novice tasks.
 
 These values can differ because the prompts and generation lengths differ.
 
-The default scope for the new suite is Python, TypeScript, and JavaScript. Its
-core section will test functions, arrays, objects, loops, parsing, state, error
+The suite tests functions, arrays, objects, loops, parsing, state, error
 handling, and small multi-step changes. Python solutions run with isolated
-Python. JavaScript solutions run with Node.js. TypeScript needs a fixed compiler
-version before its scores can become a release gate.
+Python. JavaScript solutions run with Node.js. TypeScript uses the compiler in
+`tools/typescript/node_modules/.bin/tsc`.
+
+Validate the reference solutions before model evaluation:
+
+```bash
+python3 scripts/evaluate/novice.py --validate \
+  --tasks benchmarks/novice_v2/tasks.jsonl \
+  --reference benchmarks/novice_v2/reference.jsonl
+```
 
 ## Gates before 181M
 
@@ -63,32 +70,37 @@ Five percent pass@1 is still not a useful final coder. It is a scale-up gate: it
 shows that correctness training has a measurable effect before money is spent
 on 181M. After later instruction tuning, the minimum novice pass@1 target is 15%.
 
-## First continuation run
+## First continuation probe
 
-The fixed training plan is in
-`configs/training/brittain3_49m_curriculum.json`.
+Do not start with the old 100M curriculum assumption. First run the 10M-token
+probe in `configs/training/brittain3_49m_curriculum_probe.json`.
 
 - Context: 2,048 tokens.
 - Tokens per update: 196,608.
-- Updates: 510.
-- Total tokens: 100,270,080.
+- Updates: 64.
+- Tensor positions: 12,582,912.
+- Expected valid training labels: about 10,028,000 at the measured 79.7% packing efficiency.
 - Peak learning rate: 0.00008, with a new optimizer.
 
-The first 100M-token corpus target is:
+The corpus recipe is in
+`configs/data/brittain3_49m_curriculum_corpus.json`:
 
-| Content | Share |
-|---|---:|
-| Diverse, execution-verified solutions | 50% |
-| High-quality repository code replay | 25% |
-| Verified bug fixes and diffs | 10% |
-| Code documentation and clear English | 10% |
-| Brittain tool protocol and structured data | 5% |
+| Content | Tokens | Share |
+|---|---:|---:|
+| Test code | 4,000,000 | 40% |
+| Companion implementation code | 3,000,000 | 30% |
+| Documentation | 1,000,000 | 10% |
+| Clear English | 800,000 | 8% |
+| Brittain tool protocol | 500,000 | 5% |
+| Structured data | 500,000 | 5% |
+| Verified local teacher solutions | 100,000 | 1% |
+| Verified synthetic exercises | 100,000 | 1% |
 
-The verified slice targets Python 30%, TypeScript 20%, JavaScript 15%, Rust 12%,
-C++ 10%, C 8%, and Go 5%. Every solution must pass generated tests. Each
-semantic task family has a strict cap.
-Near-duplicates are removed by normalized syntax and token fingerprints. The
-corpus must also pass secret, license, and evaluation-contamination checks.
+Test and companion code each target Python 30%, TypeScript 20%, JavaScript 15%,
+Rust 12%, C++ 10%, C 8%, and Go 5%. The builder uses deterministic sampling,
+normalized-text deduplication, repository caps, secret checks, and both frozen
+evaluation suites. Verified teacher replay cannot exceed 5% of the final
+corpus.
 
 Do not repeat the current 42-template exercise set until it fills 50M tokens.
 Its report shows that a small number of templates produce most of its unique
@@ -139,35 +151,49 @@ python3 -u scripts/prepare/audit_teacher_seeds_v3.py --overwrite
 
 The audit keeps the raw bank and its rejection details for diagnosis.
 
-## Start command
+## Build and start commands
 
-Do not run this command until the curriculum NPZ files exist and their report
-passes validation.
+Build the 10M JSONL corpus and check that `failures` is empty:
+
+```bash
+python3 -u scripts/prepare/build_curriculum_corpus_v3.py --overwrite
+```
+
+Pack it at the probe context:
+
+```bash
+python3 -u scripts/prepare/prepare_brittain3.py \
+  --input data/generated/brittain3-curriculum/corpus.jsonl \
+  --output-dir data/processed/brittain3-curriculum-probe \
+  --block-size 2048 --seed 2031
+```
+
+Do not train until the corpus and packed-data reports pass validation.
 
 ```bash
 python3 -u scripts/train/pretrain_v3.py \
-  --config configs/training/brittain3_49m_curriculum.json \
+  --config configs/training/brittain3_49m_curriculum_probe.json \
   --init-from checkpoints/brittain3_49m_pilot/weights.pt \
   --device auto
 ```
 
-`--init-from` loads only the model weights and starts a new schedule. `--resume`
-is only for an interrupted curriculum checkpoint.
+`--init-from` loads only model weights and starts a new optimizer and schedule.
+Use `--resume` only for an interrupted probe checkpoint.
 
 ## Compute plan
 
-The pilot processed 707,788,800 tokens in 125,516 seconds on the M3 Max. At the
-same measured rate, 100,270,080 tokens take about 4.9 hours. Use a short run to
-measure the new corpus before planning the full run.
+The pilot processed 707,788,800 tensor positions in 125,516 seconds on the M3
+Max. At the same measured rate, 12,582,912 positions take about 37 minutes. The
+estimate does not include evaluation or startup. Measure the probe before a
+100M run.
 
 Preferred order:
 
 1. Run corpus preparation and evaluation on the M3 Max.
-2. Run a 10-update training test on the RTX 3060 12GB and the M3 Max.
-3. Use the faster stable device for the 510-update run.
+2. Run the 64-update probe on the M3 Max.
+3. Run all old and expanded novice gates.
 4. Use the RTX 3050 6GB only with a smaller microbatch and larger accumulation.
 5. Keep the L4 budget for the 181M run or for a later context-extension stage.
 
-Stop after 100M tokens and run all gates. Add a second 100M-token block only if
-functional scores improve and BPB does not regress. Do not spend the full L4
-budget by default.
+Continue to the 510-update, 100M configuration only if functional scores improve
+and BPB does not regress. Do not spend the L4 budget by default.

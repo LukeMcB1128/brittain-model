@@ -137,11 +137,15 @@ class EvaluationGuard:
     behavior_summaries: tuple[str, ...]
 
     @classmethod
-    def novice_v1(cls) -> "EvaluationGuard":
-        tasks_path = PROJECT_ROOT / "benchmarks" / "novice" / "tasks.jsonl"
-        references_path = PROJECT_ROOT / "benchmarks" / "novice" / "reference.jsonl"
-        tasks = _read_jsonl(tasks_path)
-        references = {row["id"]: row["body"] for row in _read_jsonl(references_path)}
+    def from_suites(cls, suites: tuple[tuple[Path, Path], ...]) -> "EvaluationGuard":
+        tasks = []
+        references = {}
+        for tasks_path, references_path in suites:
+            local_tasks = _read_jsonl(tasks_path)
+            tasks.extend(local_tasks)
+            references.update({
+                row["id"]: row["body"] for row in _read_jsonl(references_path)
+            })
         hashes: set[str] = set()
         assertions: set[str] = set()
         descriptions: set[str] = set()
@@ -156,7 +160,7 @@ class EvaluationGuard:
             assertions.update(value.strip() for value in task["tests"] if len(value.strip()) >= 20)
             prose = []
             for line in prompt.splitlines():
-                value = line.lstrip("#").strip()
+                value = line.lstrip("#/").strip()
                 if len(value) >= 30:
                     descriptions.add(normalized_text(value))
                     prose.append(value)
@@ -171,6 +175,26 @@ class EvaluationGuard:
             task_words=tuple(task_words),
             behavior_summaries=tuple(dict.fromkeys(behavior_summaries)),
         )
+
+    @classmethod
+    def novice_v1(cls) -> "EvaluationGuard":
+        return cls.from_suites(((
+            PROJECT_ROOT / "benchmarks" / "novice" / "tasks.jsonl",
+            PROJECT_ROOT / "benchmarks" / "novice" / "reference.jsonl",
+        ),))
+
+    @classmethod
+    def all_frozen(cls) -> "EvaluationGuard":
+        return cls.from_suites((
+            (
+                PROJECT_ROOT / "benchmarks" / "novice" / "tasks.jsonl",
+                PROJECT_ROOT / "benchmarks" / "novice" / "reference.jsonl",
+            ),
+            (
+                PROJECT_ROOT / "benchmarks" / "novice_v2" / "tasks.jsonl",
+                PROJECT_ROOT / "benchmarks" / "novice_v2" / "reference.jsonl",
+            ),
+        ))
 
     def reason(self, entry_point: str, texts: list[str], semantic_text: str) -> str | None:
         if entry_point.strip() in self.entry_points:

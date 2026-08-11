@@ -68,7 +68,7 @@ def atomic_write_jsonl(path: Path, rows: list[dict]) -> None:
 
 
 def audit_rows(rows: list[dict], verify_timeout: float, tsc: str) -> tuple[list[dict], dict]:
-    evaluation_guard = EvaluationGuard.novice_v1()
+    evaluation_guard = EvaluationGuard.all_frozen()
     duplicate_guard = DuplicateGuard()
     accepted = []
     rejected = Counter()
@@ -132,6 +132,7 @@ def audit_rows(rows: list[dict], verify_timeout: float, tsc: str) -> tuple[list[
         "rejected": dict(rejected),
         "language_counts": dict(Counter(row["language"] for row in accepted)),
         "category_counts": dict(Counter(row.get("semantic_category") for row in accepted)),
+        "evaluation_entry_points": len(evaluation_guard.entry_points),
         "rejection_details": rejection_details,
     }
     return accepted, report

@@ -55,6 +55,14 @@ def test_evaluation_guard_exposes_behavior_only_planner_exclusions():
     assert all("assert " not in value and "->" not in value for value in guard.behavior_summaries)
 
 
+def test_all_frozen_guard_includes_multilanguage_v2():
+    guard = EvaluationGuard.all_frozen()
+    assert "tiered_shipping" in guard.entry_points
+    assert "windowSums" in guard.entry_points
+    assert "daysInMonth" in guard.entry_points
+    assert any("Return shipping cost" in value for value in guard.behavior_summaries)
+
+
 def test_structural_fingerprint_ignores_names_and_literals():
     first = "def add_tax(price):\n    return price * 1.2\n"
     second = "def scale_score(value):\n    return value * 9.5\n"

@@ -5,7 +5,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from brittain.verification_v3 import backend_status, verify_program
+from brittain.verification_v3 import backend_status, verify_program, verify_syntax
 
 
 def test_python_verifier_accepts_correct_code():
@@ -29,6 +29,22 @@ def test_javascript_verifier_when_node_is_available():
     result = verify_program(
         "javascript", "function twice(value) { return value * 2; }",
         "if (twice(4) !== 8) throw new Error('bad');",
+    )
+    assert result.ok
+
+
+def test_javascript_syntax_check_does_not_run_top_level_code():
+    if backend_status()["javascript"] is None:
+        return
+    result = verify_syntax("javascript", "throw new Error('must not run');")
+    assert result.ok
+
+
+def test_typescript_syntax_check_is_strict_when_tsc_is_available():
+    if backend_status()["typescript"] is None:
+        return
+    result = verify_syntax(
+        "typescript", "function twice(value: number): number { return value * 2; }"
     )
     assert result.ok
 

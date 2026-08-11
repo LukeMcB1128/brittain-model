@@ -43,7 +43,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 DEFAULT_OUTPUT = PROJECT_ROOT / "data" / "generated" / "brittain3-pilot" / "exercises.jsonl"
-EVAL_TASKS = PROJECT_ROOT / "benchmarks" / "novice" / "tasks.jsonl"
+EVAL_TASKS = (
+    PROJECT_ROOT / "benchmarks" / "novice" / "tasks.jsonl",
+    PROJECT_ROOT / "benchmarks" / "novice_v2" / "tasks.jsonl",
+)
 
 
 def parse_args():
@@ -802,15 +805,16 @@ def _run_one(item: tuple[str, str], timeout: float) -> bool:
 
 def evaluation_identifiers() -> tuple[set[str], set[str]]:
     """Entry points and full prompts from the held-out suite."""
-    if not EVAL_TASKS.exists():
-        raise SystemExit(f"cannot decontaminate: {EVAL_TASKS} is missing")
     entry_points, prompts = set(), set()
-    for line in EVAL_TASKS.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
-            continue
-        row = json.loads(line)
-        entry_points.add(row["entry_point"])
-        prompts.add(row["prompt"].strip())
+    for path in EVAL_TASKS:
+        if not path.exists():
+            raise SystemExit(f"cannot decontaminate: {path} is missing")
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            entry_points.add(row["entry_point"])
+            prompts.add(row["prompt"].strip())
     return entry_points, prompts
 
 

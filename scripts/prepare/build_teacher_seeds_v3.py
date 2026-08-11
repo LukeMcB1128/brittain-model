@@ -430,7 +430,7 @@ def main() -> int:
     if not args.resume and state_path.exists() and not args.overwrite:
         raise SystemExit(f"{state_path} exists; pass --resume or --overwrite")
     output.parent.mkdir(parents=True, exist_ok=True)
-    evaluation_guard = EvaluationGuard.novice_v1()
+    evaluation_guard = EvaluationGuard.all_frozen()
     banned = set(evaluation_guard.entry_points)
     if args.resume:
         state = json.loads(state_path.read_text(encoding="utf-8"))

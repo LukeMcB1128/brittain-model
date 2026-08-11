@@ -144,3 +144,38 @@ def test_report_records_what_it_watched(tmp_path):
     # Generic names must be explicitly excluded from name-based matching.
     assert "add" in report["generic_names_ignored"]
     assert "add" not in report["entry_points_watched"]
+    assert report["tasks_checked"] == 66
+    assert any("novice_v2" in value for value in report["task_suites"])
+
+
+def test_v2_verbatim_assertion_is_removed(tmp_path):
+    tasks = read_jsonl(PROJECT_ROOT / "benchmarks" / "novice_v2" / "tasks.jsonl")
+    task = next(row for row in tasks if row["id"] == "javascript/functions/days_in_month")
+    _, kept, report = run_filter(
+        tmp_path, [row("function helper() {}\n" + task["tests"][0], "v2.js")],
+        ["--max-drop-fraction", "1.0"],
+    )
+    assert kept == []
+    assert report["removed_by_rule"]["verbatim_assertion"] == 1
+
+
+def test_javascript_definition_with_v2_evidence_is_removed(tmp_path):
+    text = (
+        "function daysInMonth(year, month) { return 30; }\n"
+        "if (daysInMonth(2024,2) !== 29) fail();\n"
+        "if (daysInMonth(2023,11) !== 30) fail();\n"
+    )
+    _, kept, _ = run_filter(
+        tmp_path, [row(text, "calendar.js")], ["--max-drop-fraction", "1.0"],
+    )
+    assert kept == []
+
+
+def test_long_typescript_declaration_is_not_a_description(tmp_path):
+    text = (
+        "function changedSettings(before: Record<string, unknown>, "
+        "after: Record<string, unknown>): string[] {\n  return [];\n}\n"
+    )
+    _, kept, report = run_filter(tmp_path, [row(text, "settings.ts")])
+    assert len(kept) == 1
+    assert report["documents_removed"] == 0

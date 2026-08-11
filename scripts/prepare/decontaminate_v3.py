@@ -41,12 +41,15 @@ import json
 import re
 import sys
 from collections import Counter
+from dataclasses import dataclass, field
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_TASKS = PROJECT_ROOT / "benchmarks" / "novice" / "tasks.jsonl"
 DEFAULT_REFERENCE = PROJECT_ROOT / "benchmarks" / "novice" / "reference.jsonl"
+DEFAULT_V2_TASKS = PROJECT_ROOT / "benchmarks" / "novice_v2" / "tasks.jsonl"
+DEFAULT_V2_REFERENCE = PROJECT_ROOT / "benchmarks" / "novice_v2" / "reference.jsonl"
 
 # Entry points common enough in ordinary code that the name alone proves nothing.
 GENERIC_NAMES = {
@@ -78,8 +81,12 @@ def parse_args():
     parser.add_argument("--input", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--report", default=None)
-    parser.add_argument("--tasks", default=str(DEFAULT_TASKS))
-    parser.add_argument("--reference", default=str(DEFAULT_REFERENCE))
+    parser.add_argument(
+        "--tasks", nargs="+", default=[str(DEFAULT_TASKS), str(DEFAULT_V2_TASKS)]
+    )
+    parser.add_argument(
+        "--reference", nargs="+", default=[str(DEFAULT_REFERENCE), str(DEFAULT_V2_REFERENCE)]
+    )
     parser.add_argument("--text-field", default="text")
     parser.add_argument("--generic-names", default=None,
                         help="comma-separated names that must not trigger rule 3 "
@@ -131,10 +138,16 @@ def build_signatures(tasks: list[dict], references: dict[str, str]) -> dict:
             if len(cleaned) >= 20:          # short asserts collide with real code
                 assertions.add(cleaned)
 
-        # The `#` description lines are full English sentences written for this
-        # suite. A repository file containing one verbatim is the benchmark.
+        # Comment description lines are full English sentences written for this
+        # suite. Code declarations and type signatures are not descriptions.
         for line in prompt.splitlines():
-            stripped = line.lstrip("#").strip()
+            stripped = line.strip()
+            if stripped.startswith("#"):
+                stripped = stripped.lstrip("#").strip()
+            elif stripped.startswith("//"):
+                stripped = stripped[2:].strip()
+            else:
+                continue
             if len(stripped) >= MINIMUM_DESCRIPTION_LENGTH:
                 descriptions.add(stripped)
 
@@ -156,7 +169,54 @@ def build_signatures(tasks: list[dict], references: dict[str, str]) -> dict:
 
 
 def definition_pattern(name: str) -> re.Pattern:
-    return re.compile(rf"^\s*(?:def|class)\s+{re.escape(name)}\b", re.MULTILINE)
+    return re.compile(rf"^\s*(?:def|class|function)\s+{re.escape(name)}\b", re.MULTILINE)
+
+
+def literal_pattern(values: set[str]) -> re.Pattern | None:
+    """Compile one literal search instead of scanning every value per document."""
+    if not values:
+        return None
+    alternatives = "|".join(re.escape(value) for value in sorted(values, key=len, reverse=True))
+    return re.compile(alternatives)
+
+
+@dataclass
+class DecontaminationGuard:
+    signatures: dict
+    generic_names: set[str]
+    watched: dict[str, set[str]] = field(init=False)
+    assertion_pattern: re.Pattern | None = field(init=False)
+    description_pattern: re.Pattern | None = field(init=False)
+    watched_names: re.Pattern | None = field(init=False)
+
+    def __post_init__(self) -> None:
+        self.watched = {
+            name: literals for name, literals in self.signatures["per_name"].items()
+            if name not in self.generic_names and literals
+        }
+        self.assertion_pattern = literal_pattern(self.signatures["assertions"])
+        self.description_pattern = literal_pattern(self.signatures["descriptions"])
+        self.watched_names = re.compile(
+            r"^\s*(?:def|class|function)\s+(" +
+            "|".join(
+                re.escape(name) for name in sorted(self.watched, key=len, reverse=True)
+            ) + r")\b",
+            re.MULTILINE,
+        ) if self.watched else None
+
+    def reason(self, text: str) -> str | None:
+        if digest(text) in self.signatures["hashes"] or digest(normalized(text)) in self.signatures["hashes"]:
+            return "document_hash"
+        if self.assertion_pattern and self.assertion_pattern.search(text):
+            return "verbatim_assertion"
+        if self.description_pattern and self.description_pattern.search(text):
+            return "verbatim_description"
+        if self.watched_names:
+            for name in set(self.watched_names.findall(text)):
+                hits = sum(1 for literal in self.watched[name] if literal in text)
+                if hits >= 2:
+                    return f"entry_point:{name}"
+        return None
 
 
 def main() -> int:
@@ -168,24 +228,28 @@ def main() -> int:
     if target.exists() and not args.overwrite:
         raise SystemExit(f"{target} exists; pass --overwrite")
 
-    tasks = read_jsonl(Path(args.tasks))
-    references = {row["id"]: row["body"] for row in read_jsonl(Path(args.reference))}
+    if len(args.tasks) != len(args.reference):
+        raise SystemExit("--tasks and --reference must name the same number of suites")
+    tasks = []
+    references = {}
+    for tasks_path, reference_path in zip(args.tasks, args.reference):
+        tasks.extend(read_jsonl(Path(tasks_path)))
+        references.update({
+            row["id"]: row["body"] for row in read_jsonl(Path(reference_path))
+        })
     signatures = build_signatures(tasks, references)
 
     generic = (set(args.generic_names.split(",")) if args.generic_names
                else set(GENERIC_NAMES))
-    watched = {
-        name: literals for name, literals in signatures["per_name"].items()
-        if name not in generic and literals
-    }
-    patterns = {name: definition_pattern(name) for name in watched}
+    guard = DecontaminationGuard(signatures, generic)
 
     kept = removed = 0
     reasons = Counter()
     examples: dict[str, str] = {}
 
     target.parent.mkdir(parents=True, exist_ok=True)
-    with source.open(encoding="utf-8") as handle, target.open("w", encoding="utf-8") as out:
+    temporary = target.with_name(target.name + ".partial")
+    with source.open(encoding="utf-8") as handle, temporary.open("w", encoding="utf-8") as out:
         for number, line in enumerate(handle, 1):
             if not line.strip():
                 continue
@@ -197,27 +261,7 @@ def main() -> int:
             if not isinstance(text, str):
                 raise SystemExit(f"row {number} has no string {args.text_field!r}")
 
-            reason = None
-            if digest(text) in signatures["hashes"] or digest(normalized(text)) in signatures["hashes"]:
-                reason = "document_hash"
-            if reason is None:
-                for assertion in signatures["assertions"]:
-                    if assertion in text:
-                        reason = "verbatim_assertion"
-                        break
-            if reason is None:
-                for description in signatures["descriptions"]:
-                    if description in text:
-                        reason = "verbatim_description"
-                        break
-            if reason is None:
-                for name, literals in watched.items():
-                    if not patterns[name].search(text):
-                        continue
-                    hits = sum(1 for literal in literals if literal in text)
-                    if hits >= 2:
-                        reason = f"entry_point:{name}"
-                        break
+            reason = guard.reason(text)
 
             if reason:
                 removed += 1
@@ -226,6 +270,8 @@ def main() -> int:
                 continue
             out.write(line if line.endswith("\n") else line + "\n")
             kept += 1
+
+    temporary.replace(target)
 
     total = kept + removed
     fraction = removed / total if total else 0.0
@@ -240,7 +286,8 @@ def main() -> int:
         "removed_by_rule": dict(reasons),
         "example_paths": examples,
         "tasks_checked": len(tasks),
-        "entry_points_watched": sorted(watched),
+        "task_suites": list(args.tasks),
+        "entry_points_watched": sorted(guard.watched),
         "generic_names_ignored": sorted(generic),
     }
     print(json.dumps(report, indent=2))

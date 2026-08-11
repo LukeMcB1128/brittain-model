@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import re
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -67,8 +68,14 @@ def read_documents(path: Path) -> list[Document]:
                     is_code = bool(row["is_code"])
                 else:
                     is_code = row["category"] in FIM_CATEGORIES
+                repository = str(row["repository"])
+                # Older curriculum builds named each teacher replay as a new
+                # repository. Normalize it so exact copies cannot cross the
+                # repository-level train and validation split.
+                if str(row.get("source", "")) == "verified_teacher":
+                    repository = re.sub(r"/replay-\d+$", "", repository)
                 documents.append(Document(
-                    repository=str(row["repository"]),
+                    repository=repository,
                     path=str(row["path"]),
                     text=str(row["text"]),
                     source=str(row["source"]),
@@ -108,6 +115,7 @@ def prepare_split(name, documents, tokenizer, args, settings, weights):
     inputs, labels, spans = pack_segments_streaming(
         segments, args.block_size, tokenizer.pad, keep_spans=args.keep_spans,
     )
+    valid_labels = int((labels != -100).sum())
     output = Path(args.output_dir) / f"{name}_{args.block_size}.npz"
     metadata = {
         "format": "brittain3-packed-v1",
@@ -123,6 +131,8 @@ def prepare_split(name, documents, tokenizer, args, settings, weights):
         "documents": len(documents),
         "rows": len(inputs),
         "tokens": int(inputs.size),
+        "valid_labels": valid_labels,
+        "valid_label_fraction": valid_labels / max(1, int(inputs.size)),
         "spans": spans if args.keep_spans else [],
         "spans_recorded": bool(args.keep_spans),
     }
