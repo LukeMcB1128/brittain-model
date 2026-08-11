@@ -164,7 +164,24 @@ class Loaded:
 # DIRECTORY, so the old one-level glob missed them entirely, and naming by file
 # stem would have served them as "weights" and "best" — useless in a model picker
 # and ambiguous the moment there are two runs.
-RUN_DIR_FILES = ("weights.pt", "best.pt")
+# latest.pt only: mid-run it duplicates best.pt, after a run it duplicates the
+# final weights. Everything else in a run directory is offered.
+RUN_DIR_SKIP = {"latest.pt"}
+
+
+def run_dir_label(run_name, stem):
+    """Name a checkpoint found inside a per-run directory.
+
+    Training writes weights.pt/best.pt, but a finished model is often renamed to
+    something meaningful like `brittain3-xs-coder:49m-pilot.pt` — which is
+    already a good served name and should be used as-is. Only the generic
+    training filenames need the directory to disambiguate them.
+    """
+    if stem == "weights":
+        return run_name
+    if stem == "best":
+        return f"{run_name}-best"
+    return stem
 
 
 def discover():
@@ -175,14 +192,10 @@ def discover():
                        key=lambda p: p.stat().st_mtime, reverse=True):
         named.append(str(path))
     for run in sorted(CHECKPOINT_DIR.glob("*/"), key=lambda p: p.name):
-        for filename in RUN_DIR_FILES:
-            candidate = (run / filename).resolve()
-            if not candidate.is_file():
+        for candidate in sorted(run.glob("*.pt")):
+            if candidate.name in RUN_DIR_SKIP:
                 continue
-            # latest.pt is deliberately skipped: mid-run it is a partial view of
-            # the same run as best.pt, and after a run it duplicates weights.pt.
-            label = run.name if filename == "weights.pt" else f"{run.name}-{filename[:-3]}"
-            named.append(f"{candidate}={label}")
+            named.append(f"{candidate.resolve()}={run_dir_label(run.name, candidate.stem)}")
     return named
 
 
