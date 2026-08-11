@@ -16,9 +16,11 @@ not a pass for coding ability.
   This sample is too small for a strong relative conclusion.
 - Its absolute novice pass@1 is 0.8%. This is not useful coding ability.
 
-Use `checkpoints/brittain3_49m_pilot/weights.pt` as the source. It contains the
-final weights. Keep `best.pt` as a fallback, but do not use it as the default:
-the final weights have slightly better BPB and novice pass@1.
+Use
+`checkpoints/brittain3_49m_pilot/brittain3-xs-coder:49m-pilot.pt` as the
+source. It contains the final weights without the old optimizer. Keep `best.pt`
+as a fallback, but do not use it as the default: the final weights have slightly
+better BPB and novice pass@1.
 
 ## Frozen evaluation policy
 
@@ -173,7 +175,7 @@ Do not train until the corpus and packed-data reports pass validation.
 ```bash
 python3 -u scripts/train/pretrain_v3.py \
   --config configs/training/brittain3_49m_curriculum_probe.json \
-  --init-from checkpoints/brittain3_49m_pilot/weights.pt \
+  --init-from 'checkpoints/brittain3_49m_pilot/brittain3-xs-coder:49m-pilot.pt' \
   --device auto
 ```
 
