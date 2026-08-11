@@ -321,21 +321,33 @@ def normalize_fim(prompt, canonical=("<fim_prefix>", "<fim_suffix>", "<fim_middl
 
 
 def prepare_raw_completion(prompt, request_suffix, supports_fim, canonical=None):
-    """Normalize wrapped FIM or Ollama's separate prompt/suffix form."""
-    if supports_fim:
-        prepared, embedded_suffix = normalize_fim(
-            prompt, canonical or ("<fim_prefix>", "<fim_suffix>", "<fim_middle>")
-        )
-    else:
-        prepared, embedded_suffix = strip_fim(prompt)
-    if embedded_suffix is not None:
-        return prepared, embedded_suffix
-    if request_suffix is None:
-        return prepared, None
-    if supports_fim:
-        markers = canonical or ("<fim_prefix>", "<fim_suffix>", "<fim_middle>")
-        return f"{markers[0]}{prepared}{markers[1]}{request_suffix}{markers[2]}", request_suffix
-    return prepared, request_suffix
+    """Normalize wrapped FIM or Ollama's separate prompt/suffix form.
+
+    AN EMPTY SUFFIX IS NOT A SUFFIX. Wrapping a prompt as
+    <fim_prefix>...<fim_suffix><fim_middle> asserts "the file ends at the cursor",
+    which is a rare shape in training. These are base models with FIM as an added
+    capability — the pilot corpus is ~40% FIM and ~60% ordinary causal documents —
+    so with nothing after the cursor, plain left-to-right continuation is both
+    what the caller means and what the model saw most of.
+
+    A client that omits `suffix` and one that sends "" want the same thing, and
+    web forms produce "" for an untouched textarea.
+    """
+    if not request_suffix:
+        request_suffix = None
+
+    # Read the prompt as bare text first, so an empty embedded suffix can be
+    # discarded without having already committed to FIM framing.
+    bare_prefix, embedded_suffix = strip_fim(prompt)
+    if not embedded_suffix:
+        embedded_suffix = None
+
+    suffix = embedded_suffix if embedded_suffix is not None else request_suffix
+    if suffix is None or not supports_fim:
+        return bare_prefix, suffix
+
+    pre, suf, mid = canonical or ("<fim_prefix>", "<fim_suffix>", "<fim_middle>")
+    return f"{pre}{bare_prefix}{suf}{suffix}{mid}", suffix
 
 
 def suffix_stop(suffix):
@@ -488,20 +500,27 @@ def stream_pieces(M, prompt, raw, opts):
 def describe(m):
     """What a model is and how it wants to be talked to.
 
-    A client picks its input shape from `mode`, so checkpoints can be swapped
-    behind this without the client changing: 235m-fim -> 235m-fim-2k, 50m-bs ->
-    50m-bs-4b, or a new *-instruct appearing, all show up correctly on their own.
-    `fim` is derived from the tokenizer (vocab 32003) and `instruct` from the
-    filename, so neither needs configuring.
+    MODE IS THE INTERACTION, supports_fim IS A CAPABILITY. They are deliberately
+    separate fields:
 
-      fim       prefix AND suffix; the model writes the middle
-      raw       a prefix; the model continues it
-      instruct  an instruction; the server applies the Alpaca template
+      mode=raw       send `prompt`; the model continues it
+      mode=instruct  send an instruction; the server applies the Alpaca template
+      supports_fim   `suffix` MAY also be sent, and the model will fill the gap
+
+    There is no mode=fim. These are base models that additionally understand
+    infilling — the pilot corpus is ~40% FIM and ~60% ordinary causal documents —
+    so forcing every request through the FIM wrapper misrepresents them and puts
+    the model in its rarer training shape. A client shows a prefix box always, and
+    an optional "infill" suffix box when supports_fim is true.
+
+    Both fields are derived, not configured: supports_fim from the tokenizer
+    (the three sentinels), instruct from the filename. Checkpoints can be swapped
+    behind this without the client changing.
     """
-    # An instruct fine-tune can keep the FIM tokenizer from its base model.
-    # It must still use the Alpaca prompt format. Report instruct first so the
-    # browser sends an instruction instead of a prefix and suffix.
-    mode = "instruct" if not m.raw_default else ("fim" if m.supports_fim else "raw")
+    # An instruct fine-tune keeps the FIM tokenizer inherited from its base, so
+    # supports_fim stays true and would otherwise win. The prompt FORMAT is what
+    # matters for how a client talks to it, so raw_default decides the mode.
+    mode = "raw" if m.raw_default else "instruct"
     return {
         "name": m.name, "model": m.name, "modified_at": now(), "size": 0,
         "digest": m.name, "context": str(m.block),
@@ -509,7 +528,10 @@ def describe(m):
         # This is the public client capability, not merely the tokenizer
         # capability. An instruct model may retain FIM tokens but must not be
         # called as a FIM model.
-        "supports_fim": mode == "fim",
+        # From the tokenizer, NOT from mode — mode no longer has a "fim" value,
+        # and the two are deliberately independent: an instruct model can carry
+        # the FIM sentinels it inherited from its base.
+        "supports_fim": m.supports_fim,
         "max_tokens": MAX_NEW_TOKENS,
         "defaults": ({"temperature": 0.2, "num_predict": 64}
                      if m.raw_default else
@@ -700,8 +722,7 @@ if __name__ == "__main__":
     print(f"BRITTAIN serving {len(MODELS)} model(s) on http://localhost:{args.port}"
           f"  [device {device}]")
     for m in MODELS.values():
-        mode = ("instruct" if not m.raw_default
-                else ("fim" if m.supports_fim else "raw"))
+        mode = "raw" if m.raw_default else "instruct"
         print(f"  {m.name:<30} {m.params/1e6:6.0f}M  ctx {m.block:<5} "
-              f"{m.enc.name:<9} {mode}")
+              f"{m.enc.name:<9} {mode}{'  +fim' if m.supports_fim else ''}")
     uvicorn.run(app, host=args.host, port=args.port)
