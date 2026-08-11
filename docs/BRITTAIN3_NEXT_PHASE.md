@@ -129,6 +129,16 @@ python3 -u scripts/prepare/build_teacher_seeds_v3.py \
   --overwrite
 ```
 
+After each production generation batch, re-run all tests and write the clean
+bank. Corpus packing must use `teacher-seeds.clean.jsonl`, not the raw model
+output:
+
+```bash
+python3 -u scripts/prepare/audit_teacher_seeds_v3.py --overwrite
+```
+
+The audit keeps the raw bank and its rejection details for diagnosis.
+
 ## Start command
 
 Do not run this command until the curriculum NPZ files exist and their report

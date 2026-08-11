@@ -56,8 +56,8 @@ HELD_OUT_BEHAVIOR_RULES: tuple[tuple[str, tuple[re.Pattern[str], ...]], ...] = (
     ("extract_digits", (
         re.compile(
             r"\b(?:(?:extract|filter|keep)\w*(?:\W+\w+){0,5}\W+digits?"
-            r"|only(?:\W+\w+){0,3}\W+digits?"
-            r"|digits?(?:\W+\w+){0,3}\W+only)\b"
+            r"|(?:return|produce|output)\w*(?:\W+\w+){0,4}\W+only"
+            r"(?:\W+\w+){0,3}\W+digits?)\b"
         ),
         re.compile(r"\b(?:string|text|character|input)\w*\b"),
     )),

@@ -28,6 +28,10 @@ def test_evaluation_guard_accepts_an_unrelated_task():
         "validate_iso_date_format", ["unrelated source"],
         "Validate an input string that contains digits in ISO date format",
     ) is None
+    assert guard.reason(
+        "validate_password_strength", ["unrelated source"],
+        "Validate password strength. Reject a password that contains only digits",
+    ) is None
 
 
 def test_evaluation_guard_rejects_renamed_or_translated_held_out_behaviors():
@@ -37,6 +41,7 @@ def test_evaluation_guard_rejects_renamed_or_translated_held_out_behaviors():
         "Clamp an i32 value between minimum and maximum bounds",
         "Count the frequency of each word and return a dictionary mapping words to counts",
         "Filter a C string and return only digit characters from the input",
+        "clamp_range Write a function that limits a number to min_val and max_val",
     ]
     for semantic_text in cases:
         assert guard.reason("new_name", ["unrelated source"], semantic_text).startswith(

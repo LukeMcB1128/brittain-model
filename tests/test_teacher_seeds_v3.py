@@ -46,6 +46,14 @@ def test_task_digest_is_stable_and_language_specific():
     assert module.task_digest("python", brief) != module.task_digest("javascript", brief)
 
 
+def test_semantic_text_includes_slug_for_behavior_guards():
+    brief = {
+        "slug": "clamp_range", "goal": "Limit a number", "input_contract": "three numbers",
+        "output_contract": "one number", "edge_cases": ["equal limits"],
+    }
+    assert module.semantic_text(brief).startswith("clamp_range ")
+
+
 def test_atomic_json_and_jsonl_writes_do_not_leave_temporary_files(tmp_path):
     json_path = tmp_path / "state.json"
     jsonl_path = tmp_path / "rows.jsonl"

@@ -182,7 +182,7 @@ def load_banned_entry_points() -> set[str]:
 
 def semantic_text(brief: dict) -> str:
     return " ".join([
-        brief["goal"], brief["input_contract"], brief["output_contract"],
+        brief["slug"], brief["goal"], brief["input_contract"], brief["output_contract"],
         *brief["edge_cases"],
     ])
 
@@ -682,6 +682,14 @@ def main() -> int:
     accepted = []
     duplicate_guard = DuplicateGuard()
     for brief, authored, reviewed, digest in verified:
+        contamination = evaluation_guard.reason(
+            authored["entry_point"],
+            [authored["prompt"], authored["solution"], authored["tests"], reviewed["tests"]],
+            semantic_text(brief),
+        )
+        if contamination:
+            reject(contamination, brief, "matched the frozen novice-v1 suite", authored, reviewed)
+            continue
         duplicate = duplicate_guard.reason(
             brief["language"], semantic_text(brief), authored["solution"]
         )
