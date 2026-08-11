@@ -200,6 +200,7 @@ function App() {
         <p>{selectedModel?.context} token context</p>
         <p>Languages supported: {selectedModel?.details.languages ?? "unknown"}</p>
         <p>Mode: {mode}</p>
+        <p>Supports fim: {selectedModel?.details?.supports_fim ? "Yes" : "No"}</p>
         <p>Note: these models are not all Brittain models, just our current best models.</p>
       </div>
     </main>
