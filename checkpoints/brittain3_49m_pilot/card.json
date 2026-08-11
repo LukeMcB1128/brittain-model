@@ -1,0 +1,98 @@
+{
+  "_comment": [
+    "Descriptive metadata for the Brittain3 49M pilot, served via /api/show.",
+    "",
+    "These are BUILD numbers, not plan numbers. Where the pilot brief and the",
+    "actual build disagree, this file records the build. A card that repeats the",
+    "plan is worse than no card at all.",
+    "",
+    "This lives beside the checkpoint because the pilot was trained before the",
+    "checkpoint payload carried a corpus block. Anything trained from here on",
+    "should embed this in the checkpoint instead, where it cannot drift from the",
+    "weights. serve.py prefers an embedded block over this file."
+  ],
+
+  "model": "brittain3-49m-pilot",
+  "purpose": "go/no-go pilot for the 181M coding agent; not a release model",
+  "parameters": 49558592,
+  "trained_context": 2048,
+  "max_context": 16384,
+
+  "prompt_framing": "<|repo_start|>{repository}<|file_start|>{path}\n",
+  "framing_required": true,
+  "_framing_note": [
+    "NOT optional. Measured on this checkpoint: an unframed prompt returns",
+    "'<|file_end|><|repo_end|>' and stops after two tokens, every sample. Every",
+    "pretraining document was wrapped this way. serve.py applies it server-side,",
+    "so a client that ignores this field still gets working completions."
+  ],
+
+  "primary_languages": ["python", "typescript", "javascript"],
+  "languages": {
+    "python": 0.35,
+    "typescript": 0.25,
+    "javascript": 0.20,
+    "go": 0.05,
+    "rust": 0.05,
+    "java_kotlin": 0.04,
+    "c_cpp": 0.04,
+    "shell": 0.02
+  },
+  "_languages_note": "Share of the code category by collected bytes. Hit exactly; the build report shows zero shortfall on every language.",
+
+  "mixture": {
+    "code": 0.6528,
+    "documentation": 0.1559,
+    "english": 0.1295,
+    "structured": 0.0502,
+    "exercises": 0.0109,
+    "tool": 0.0008
+  },
+  "_mixture_note": [
+    "Share of COLLECTED bytes across a 4.94GB corpus. Two honest caveats.",
+    "",
+    "1. This is not the brief's 60/15/10/10/5. The four remote categories were",
+    "   scaled 2.25x after measuring that packing keeps only one ~1000-token",
+    "   window per document and discards about half of what is collected; the",
+    "   generated exercises were not scaled with them.",
+    "2. Exercises are 1.09% of collected bytes but a larger share of tokens the",
+    "   model actually trained on, because exercise documents are short enough to",
+    "   survive windowing whole while large source files are truncated."
+  ],
+
+  "corpus_tokens": 927110144,
+  "training_tokens": 707788800,
+  "epochs": 0.68,
+  "_epochs_note": "Stage 1 drew 629,145,600 tokens from a 927,110,144-token pool. Under one epoch, so effectively no repetition.",
+
+  "tokenizer": "brittain3-code-24k",
+  "vocab_size": 24576,
+  "tokenizer_sha256": "40defb2b987470b2c14dcaee234a2ff95d2c8eaddbb89037980338d6708602a8",
+
+  "evaluation": {
+    "bpb_code_at_512": 1.020,
+    "bpb_prose_at_512": 1.622,
+    "bpb_code_at_2048": 0.907,
+    "syntax_validity": 0.45,
+    "repetition_collapse": 0.016,
+    "novice_pass_at_1": 0.008,
+    "novice_pass_at_10": 0.056,
+    "novice_solved": "2/36"
+  },
+  "_evaluation_note": [
+    "BPB is measured WITH framing and with the framing targets masked, at a",
+    "512-token window matched to the Brittain2 XS baselines. Unframed, the same",
+    "checkpoint reads 1.342 on code — that number measures the prompt format, not",
+    "the model.",
+    "",
+    "Novice pass@1 rests on 3 correct generations out of 360 and is not a",
+    "reliable figure at that sample size."
+  ],
+
+  "known_limitations": [
+    "Solves 2 of 36 novice coding tasks. This is not a usable coding assistant.",
+    "Requires document framing; a bare prompt returns nothing.",
+    "English costs about 5.9% more tokens than the Brittain2 32k tokenizer.",
+    "<|system|> received zero occurrences in pretraining, so its embedding is untrained."
+  ]
+}
