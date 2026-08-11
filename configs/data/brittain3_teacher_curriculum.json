@@ -1,0 +1,27 @@
+{
+  "format": "brittain3-teacher-curriculum-v1",
+  "seed": 2053,
+  "planner_model": "qwen3.6:35b-a3b",
+  "author_model": "qwen3-coder:30b",
+  "reviewer_model": "glm-4.7-flash:latest",
+  "language_shares": {
+    "python": 0.30,
+    "typescript": 0.20,
+    "javascript": 0.15,
+    "rust": 0.12,
+    "cpp": 0.10,
+    "c": 0.08,
+    "go": 0.05
+  },
+  "categories": [
+    "functions",
+    "collections",
+    "objects_and_state",
+    "parsing",
+    "validation",
+    "error_handling",
+    "small_algorithms",
+    "data_transforms",
+    "bug_fixes"
+  ]
+}

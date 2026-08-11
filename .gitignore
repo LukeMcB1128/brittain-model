@@ -37,6 +37,7 @@ __pycache__/
 .venv/
 venv/
 .ipynb_checkpoints/
+tools/typescript/node_modules/
 
 # OS / editor
 .DS_Store

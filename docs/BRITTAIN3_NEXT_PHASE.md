@@ -84,8 +84,9 @@ The first 100M-token corpus target is:
 | Code documentation and clear English | 10% |
 | Brittain tool protocol and structured data | 5% |
 
-The verified slice targets Python 45%, TypeScript 30%, and JavaScript 25%. Every
-solution must pass generated tests. Each semantic task family has a strict cap.
+The verified slice targets Python 30%, TypeScript 20%, JavaScript 15%, Rust 12%,
+C++ 10%, C 8%, and Go 5%. Every solution must pass generated tests. Each
+semantic task family has a strict cap.
 Near-duplicates are removed by normalized syntax and token fingerprints. The
 corpus must also pass secret, license, and evaluation-contamination checks.
 
@@ -93,6 +94,27 @@ Do not repeat the current 42-template exercise set until it fills 50M tokens.
 Its report shows that a small number of templates produce most of its unique
 documents. Repeating that distribution can improve a narrow test without
 creating general coding ability.
+
+Teacher seed generation uses three local models in grouped stages:
+
+1. `qwen3.6:35b-a3b` plans diverse task briefs.
+2. `qwen3-coder:30b` writes the solution and first tests.
+3. `glm-4.7-flash:latest` reviews it and writes independent edge-case tests.
+
+An item is accepted only when its solution passes both test sets. All three
+models passed the corrected seven-language compiler bake-off. Qwen Coder was
+the fastest at about 71 output tokens per second. The pipeline is
+`scripts/prepare/build_teacher_seeds_v3.py`.
+
+Run a small seven-language pipeline check before a production seed build:
+
+```bash
+python3 -u scripts/prepare/build_teacher_seeds_v3.py \
+  --count 7 --balanced-smoke \
+  --output /tmp/brittain3-teacher-smoke.jsonl \
+  --report /tmp/brittain3-teacher-smoke.report.json \
+  --overwrite
+```
 
 ## Start command
 
