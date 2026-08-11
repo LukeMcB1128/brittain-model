@@ -130,7 +130,7 @@ function App() {
 
   return (
     <main className="app">
-      <h1>Brittain Chat API</h1>
+      <h1>Brittain API Chat</h1>
 
       <form onSubmit={generate}>
         <label htmlFor="model">Model</label>
