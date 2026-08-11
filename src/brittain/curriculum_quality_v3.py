@@ -34,6 +34,50 @@ KEYWORDS = {
 }
 
 
+# These rules describe behavior held out by novice-v1. Each tuple contains
+# fragments that must all occur in a generated task brief. The rules are
+# intentionally language-independent: translating a held-out Python task to
+# Rust is still evaluation contamination.
+HELD_OUT_BEHAVIOR_RULES: tuple[tuple[str, tuple[re.Pattern[str], ...]], ...] = (
+    ("clamp_value", (
+        re.compile(r"\bclamp\w*\b"),
+        re.compile(r"\b(?:minimum|maximum|min|max|lower|upper|bound|range)\w*\b"),
+    )),
+    ("unique_preserve_order", (
+        re.compile(r"\b(?:unique|duplicate|deduplicat)\w*\b"),
+        re.compile(r"\b(?:preserv|first[- ]seen|original)\w*\b"),
+        re.compile(r"\border\w*\b"),
+    )),
+    ("count_words", (
+        re.compile(r"\bword\w*\b"),
+        re.compile(r"\b(?:count|frequency|frequencies)\w*\b"),
+        re.compile(r"\b(?:dict|dictionary|map|mapping|object)\w*\b"),
+    )),
+    ("extract_digits", (
+        re.compile(
+            r"\b(?:(?:extract|filter|keep)\w*(?:\W+\w+){0,5}\W+digits?"
+            r"|only(?:\W+\w+){0,3}\W+digits?"
+            r"|digits?(?:\W+\w+){0,3}\W+only)\b"
+        ),
+        re.compile(r"\b(?:string|text|character|input)\w*\b"),
+    )),
+    ("running_total", (
+        re.compile(r"\b(?:running|cumulative)\w*\b"),
+        re.compile(r"\b(?:sum|total)\w*\b"),
+        re.compile(r"\b(?:list|array|sequence|value)\w*\b"),
+    )),
+    ("count_vowels", (
+        re.compile(r"\bvowel\w*\b"),
+        re.compile(r"\bcount\w*\b"),
+    )),
+    ("parse_boolean", (
+        re.compile(r"\b(?:parse|convert)\w*\b"),
+        re.compile(r"\b(?:bool|boolean|true|false)\w*\b"),
+    )),
+    ("factorial", (re.compile(r"\bfactorial\w*\b"),)),
+)
+
+
 def normalized_text(text: str) -> str:
     return " ".join(text.lower().split())
 
@@ -90,6 +134,7 @@ class EvaluationGuard:
     assertions: tuple[str, ...]
     descriptions: tuple[str, ...]
     task_words: tuple[set[str], ...]
+    behavior_summaries: tuple[str, ...]
 
     @classmethod
     def novice_v1(cls) -> "EvaluationGuard":
@@ -101,6 +146,7 @@ class EvaluationGuard:
         assertions: set[str] = set()
         descriptions: set[str] = set()
         task_words = []
+        behavior_summaries = []
         for task in tasks:
             prompt = task["prompt"]
             body = references[task["id"]]
@@ -114,6 +160,8 @@ class EvaluationGuard:
                 if len(value) >= 30:
                     descriptions.add(normalized_text(value))
                     prose.append(value)
+                if value and "->" not in value and not value.startswith(("def ", "class ")):
+                    behavior_summaries.append(value)
             task_words.append(word_set(" ".join(prose)))
         return cls(
             entry_points=frozenset(task["entry_point"] for task in tasks),
@@ -121,6 +169,7 @@ class EvaluationGuard:
             assertions=tuple(sorted(assertions)),
             descriptions=tuple(sorted(descriptions)),
             task_words=tuple(task_words),
+            behavior_summaries=tuple(dict.fromkeys(behavior_summaries)),
         )
 
     def reason(self, entry_point: str, texts: list[str], semantic_text: str) -> str | None:
@@ -135,6 +184,10 @@ class EvaluationGuard:
             return "evaluation_assertion"
         if any(description in normalized for description in self.descriptions):
             return "evaluation_description"
+        semantic_normalized = normalized_text(semantic_text)
+        for name, fragments in HELD_OUT_BEHAVIOR_RULES:
+            if all(fragment.search(semantic_normalized) for fragment in fragments):
+                return f"evaluation_behavior_{name}"
         candidate_words = word_set(semantic_text)
         if len(candidate_words) >= 6 and any(jaccard(candidate_words, held) >= 0.82 for held in self.task_words):
             return "evaluation_semantic_near_duplicate"

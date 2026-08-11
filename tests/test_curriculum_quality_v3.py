@@ -24,6 +24,30 @@ def test_evaluation_guard_accepts_an_unrelated_task():
         "measure_packet_delay", ["def measure_packet_delay(samples):\n    return max(samples)"],
         "Measure the largest packet delay from numeric samples",
     ) is None
+    assert guard.reason(
+        "validate_iso_date_format", ["unrelated source"],
+        "Validate an input string that contains digits in ISO date format",
+    ) is None
+
+
+def test_evaluation_guard_rejects_renamed_or_translated_held_out_behaviors():
+    guard = EvaluationGuard.novice_v1()
+    cases = [
+        "Remove duplicate elements from a list while preserving the original order",
+        "Clamp an i32 value between minimum and maximum bounds",
+        "Count the frequency of each word and return a dictionary mapping words to counts",
+        "Filter a C string and return only digit characters from the input",
+    ]
+    for semantic_text in cases:
+        assert guard.reason("new_name", ["unrelated source"], semantic_text).startswith(
+            "evaluation_behavior_"
+        )
+
+
+def test_evaluation_guard_exposes_behavior_only_planner_exclusions():
+    guard = EvaluationGuard.novice_v1()
+    assert "Return the sum of a and b." in guard.behavior_summaries
+    assert all("assert " not in value and "->" not in value for value in guard.behavior_summaries)
 
 
 def test_structural_fingerprint_ignores_names_and_literals():

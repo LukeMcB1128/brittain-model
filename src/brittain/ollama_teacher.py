@@ -66,7 +66,7 @@ def chat_json(
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             row = json.load(response)
-    except urllib.error.URLError as exc:
+    except (urllib.error.URLError, TimeoutError) as exc:
         raise RuntimeError(f"Ollama request failed: {exc}") from exc
     elapsed = time.monotonic() - started
     raw_content = row.get("message", {}).get("content", "")

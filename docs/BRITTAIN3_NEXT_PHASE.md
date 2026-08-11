@@ -113,6 +113,12 @@ Before output, the builder rejects novice-suite contamination, secret patterns,
 exact duplicates, same-language semantic near-duplicates, and code with an
 already accepted structural fingerprint.
 
+The builder writes atomic recovery state after each author or reviewer record.
+If a run stops, repeat the same command with `--resume` instead of
+`--overwrite`. The default recovery path is the output path plus
+`.state.json`. The run refuses recovery when a model or generation setting does
+not match the saved state.
+
 Run a small seven-language pipeline check before a production seed build:
 
 ```bash

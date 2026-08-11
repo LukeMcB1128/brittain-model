@@ -51,7 +51,9 @@ REVIEWER_SYSTEM = """You are an independent code-test reviewer. Return JSON
 that follows the schema. Review the specification and solution for correctness.
 Write a new test set that does not copy the supplied tests. It must be source
 code that can be appended to the solution and run by itself. Test edge cases
-and input mutation when relevant. Reject ambiguous or internally inconsistent
+and input mutation when relevant. The tests must compile in the named language.
+Use only imports that the solution already provides. Do not test behavior that
+the task contract does not require. Reject ambiguous or internally inconsistent
 tasks. Do not use Markdown fences."""
 
 
@@ -119,7 +121,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--endpoint", default="http://127.0.0.1:11434")
     parser.add_argument("--output", default="data/generated/brittain3-curriculum/teacher-seeds.jsonl")
     parser.add_argument("--report", default="runs/brittain3-teacher-seeds.report.json")
+    parser.add_argument("--state", default=None,
+                        help="atomic recovery state; defaults to OUTPUT.state.json")
+    parser.add_argument("--resume", action="store_true",
+                        help="continue from the recovery state")
     parser.add_argument("--timeout", type=float, default=600.0)
+    parser.add_argument("--review-timeout", type=float, default=240.0)
+    parser.add_argument("--review-num-predict", type=int, default=2560)
     parser.add_argument("--verify-timeout", type=float, default=15.0)
     parser.add_argument("--tsc", default=str(DEFAULT_TSC))
     parser.add_argument("--balanced-smoke", action="store_true",
@@ -210,7 +218,10 @@ def language_rules(language: str) -> str:
     return rules[language]
 
 
-def plan_tasks(config: dict, counts: dict[str, int], args, banned: set[str]) -> list[dict]:
+def plan_tasks(
+    config: dict, counts: dict[str, int], args, banned: set[str],
+    held_out_behaviors: tuple[str, ...],
+) -> list[dict]:
     planned = []
     for language, count in counts.items():
         if count == 0:
@@ -219,6 +230,10 @@ def plan_tasks(config: dict, counts: dict[str, int], args, banned: set[str]) -> 
             f"Create exactly {count} task briefs for {language}.\n"
             f"Allowed categories: {', '.join(config['categories'])}.\n"
             f"Do not use these held-out entry-point names: {', '.join(sorted(banned))}.\n"
+            "Do not create the same behavior as any held-out task below, even with a "
+            "new name or programming language:\n- "
+            + "\n- ".join(held_out_behaviors)
+            + "\n"
             "Use unique snake_case slugs. Cover different categories and edge cases."
         )
         reply = None
@@ -288,7 +303,8 @@ def review_task(config: dict, brief: dict, authored: dict, args, seed: int) -> d
     )
     return chat_json(
         args.endpoint, config["reviewer_model"], REVIEWER_SYSTEM, prompt,
-        schema=REVIEWER_SCHEMA, seed=seed, timeout=args.timeout, num_predict=4096,
+        schema=REVIEWER_SCHEMA, seed=seed, timeout=args.review_timeout,
+        num_predict=args.review_num_predict,
     ).content
 
 
@@ -307,8 +323,48 @@ def repair_review_tests(
     )
     return chat_json(
         args.endpoint, config["reviewer_model"], REVIEWER_SYSTEM, prompt,
-        schema=REVIEWER_SCHEMA, seed=seed, timeout=args.timeout, num_predict=4096,
+        schema=REVIEWER_SCHEMA, seed=seed, timeout=args.review_timeout,
+        num_predict=args.review_num_predict,
     ).content
+
+
+def atomic_write_json(path: Path, value: dict) -> None:
+    """Replace a JSON file only after the complete new value is on disk."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(path.name + ".tmp")
+    temporary.write_text(json.dumps(value, indent=2), encoding="utf-8")
+    temporary.replace(path)
+
+
+def atomic_write_jsonl(path: Path, rows: list[dict]) -> None:
+    """Replace a JSONL file only after all rows are written."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(path.name + ".tmp")
+    with temporary.open("w", encoding="utf-8") as handle:
+        for row in rows:
+            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+    temporary.replace(path)
+
+
+def recovery_signature(config: dict, counts: dict[str, int], args) -> str:
+    """Identify arguments that must stay equal across a resumed run."""
+    value = {
+        "config": config,
+        "counts": counts,
+        "endpoint": args.endpoint,
+        "output": str(Path(args.output).resolve()),
+        "report": str(Path(args.report).resolve()),
+        "timeout": args.timeout,
+        "review_timeout": args.review_timeout,
+        "verify_timeout": args.verify_timeout,
+        "tsc": str(Path(args.tsc).resolve()),
+        "author_repairs": args.author_repairs,
+        "reviewer_repairs": args.reviewer_repairs,
+        "json_retries": args.json_retries,
+        "review_num_predict": args.review_num_predict,
+    }
+    encoded = json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def make_row(
@@ -365,18 +421,101 @@ def main() -> int:
         raise SystemExit(f"missing verification toolchains: {missing}")
 
     output = Path(args.output)
-    if output.exists() and not args.overwrite:
+    state_path = Path(args.state) if args.state else Path(str(output) + ".state.json")
+    signature = recovery_signature(config, counts, args)
+    if args.resume and not state_path.exists():
+        raise SystemExit(f"recovery state does not exist: {state_path}")
+    if not args.resume and output.exists() and not args.overwrite:
         raise SystemExit(f"{output} exists; pass --overwrite")
+    if not args.resume and state_path.exists() and not args.overwrite:
+        raise SystemExit(f"{state_path} exists; pass --resume or --overwrite")
     output.parent.mkdir(parents=True, exist_ok=True)
     evaluation_guard = EvaluationGuard.novice_v1()
     banned = set(evaluation_guard.entry_points)
-    planned = plan_tasks(config, counts, args, banned)
+    if args.resume:
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        if state.get("format") != "brittain3-teacher-seeds-state-v1":
+            raise SystemExit("unsupported teacher seed recovery state")
+        if state.get("signature") != signature:
+            raise SystemExit("recovery state does not match the current run arguments")
+        if state.get("stage") == "complete":
+            print(f"run is already complete: {output}")
+            return int(state.get("exit_code", 0))
+        planned = state.get("planned", [])
+        unique = set(state.get("unique", []))
+        authored_candidates = [
+            (row["brief"], row["authored"], row["digest"])
+            for row in state.get("authored_candidates", [])
+        ]
+        verified = [
+            (row["brief"], row["authored"], row["reviewed"], row["digest"])
+            for row in state.get("verified", [])
+        ]
+        rejected = Counter(state.get("rejected", {}))
+        rejection_details = state.get("rejection_details", [])
+        repair_counts = Counter(state.get("repair_counts", {}))
+        author_next = int(state.get("author_next", 0))
+        review_next = int(state.get("review_next", 0))
+        print(
+            f"resuming at author {author_next}/{len(planned)}, "
+            f"review {review_next}/{len(authored_candidates)}",
+            flush=True,
+        )
+    else:
+        planned = []
+        unique = set()
+        authored_candidates = []
+        verified = []
+        rejected = Counter()
+        rejection_details = []
+        repair_counts = Counter()
+        author_next = 0
+        review_next = 0
+        atomic_write_json(state_path, {
+            "format": "brittain3-teacher-seeds-state-v1",
+            "signature": signature,
+            "stage": "planning",
+            "planned": [],
+            "unique": [],
+            "authored_candidates": [],
+            "verified": [],
+            "rejected": {},
+            "rejection_details": [],
+            "repair_counts": {},
+            "author_next": 0,
+            "review_next": 0,
+        })
 
-    unique = set()
-    authored_candidates = []
-    rejected = Counter()
-    rejection_details = []
-    repair_counts = Counter()
+    def save_state(stage: str, exit_code: int | None = None) -> None:
+        value = {
+            "format": "brittain3-teacher-seeds-state-v1",
+            "signature": signature,
+            "stage": stage,
+            "planned": planned,
+            "unique": sorted(unique),
+            "authored_candidates": [
+                {"brief": brief, "authored": authored, "digest": digest}
+                for brief, authored, digest in authored_candidates
+            ],
+            "verified": [
+                {"brief": brief, "authored": authored, "reviewed": reviewed, "digest": digest}
+                for brief, authored, reviewed, digest in verified
+            ],
+            "rejected": dict(rejected),
+            "rejection_details": rejection_details,
+            "repair_counts": dict(repair_counts),
+            "author_next": author_next,
+            "review_next": review_next,
+        }
+        if exit_code is not None:
+            value["exit_code"] = exit_code
+        atomic_write_json(state_path, value)
+
+    if not planned:
+        planned = plan_tasks(
+            config, counts, args, banned, evaluation_guard.behavior_summaries
+        )
+        save_state("author")
 
     def reject(
         reason: str, brief: dict, detail: str, authored: dict | None = None,
@@ -396,128 +535,147 @@ def main() -> int:
         })
         print(f"rejected {brief.get('language')}/{brief.get('slug')}: {reason}", flush=True)
 
-    for index, brief in enumerate(planned):
-        digest = task_digest(brief["language"], brief)
-        if digest in unique or not brief["slug"]:
-            reject("duplicate_or_invalid_brief", brief, "duplicate digest or empty slug")
-            continue
-        unique.add(digest)
-        authored = None
-        author_error = ""
-        for request_attempt in range(args.json_retries + 1):
-            try:
-                authored = author_task(
-                    config, brief, args,
-                    int(config["seed"]) + 10_000 + index + request_attempt * 100_000,
-                )
-                break
-            except (RuntimeError, ValueError) as exc:
-                author_error = str(exc)
-                repair_counts["author_json_retries"] += request_attempt < args.json_retries
-        if authored is None:
-            reject("author_error", brief, author_error)
-            continue
-        checked = verify_program(
-            brief["language"], authored.get("solution", ""), authored.get("tests", ""),
-            timeout=args.verify_timeout, tsc=args.tsc,
-        )
-        for repair_index in range(args.author_repairs):
-            if checked.ok:
-                break
-            repair_counts["author_attempted"] += 1
-            try:
-                authored = repair_author_task(
-                    config, brief, authored, checked.phase, checked.detail, args,
-                    int(config["seed"]) + 30_000 + index * 10 + repair_index,
-                )
-            except (RuntimeError, ValueError):
-                break
+    for index in range(author_next, len(planned)):
+        brief = planned[index]
+        interrupted = False
+        try:
+            digest = task_digest(brief["language"], brief)
+            if digest in unique or not brief["slug"]:
+                reject("duplicate_or_invalid_brief", brief, "duplicate digest or empty slug")
+                continue
+            unique.add(digest)
+            authored = None
+            author_error = ""
+            for request_attempt in range(args.json_retries + 1):
+                try:
+                    authored = author_task(
+                        config, brief, args,
+                        int(config["seed"]) + 10_000 + index + request_attempt * 100_000,
+                    )
+                    break
+                except (RuntimeError, ValueError) as exc:
+                    author_error = str(exc)
+                    repair_counts["author_json_retries"] += request_attempt < args.json_retries
+            if authored is None:
+                reject("author_error", brief, author_error)
+                continue
             checked = verify_program(
                 brief["language"], authored.get("solution", ""), authored.get("tests", ""),
                 timeout=args.verify_timeout, tsc=args.tsc,
             )
-            if checked.ok:
-                repair_counts["author_succeeded"] += 1
-        if not checked.ok:
-            reject(f"author_{checked.phase}", brief, checked.detail, authored)
-            continue
-        contamination = evaluation_guard.reason(
-            authored.get("entry_point", ""),
-            [authored.get("prompt", ""), authored.get("solution", ""), authored.get("tests", "")],
-            semantic_text(brief),
-        )
-        if contamination:
-            reject(contamination, brief, "matched the frozen novice-v1 suite", authored)
-            continue
-        generated_text = "\n".join(
-            [authored.get("prompt", ""), authored.get("solution", ""), authored.get("tests", "")]
-        )
-        if any(pattern.search(generated_text) for pattern in SECRET_PATTERNS):
-            reject("secret", brief, "generated text matched a secret pattern", authored)
-            continue
-        authored_candidates.append((brief, authored, digest))
-        print(f"authored {brief['language']}/{brief['slug']}: PASS", flush=True)
+            for repair_index in range(args.author_repairs):
+                if checked.ok:
+                    break
+                repair_counts["author_attempted"] += 1
+                try:
+                    authored = repair_author_task(
+                        config, brief, authored, checked.phase, checked.detail, args,
+                        int(config["seed"]) + 30_000 + index * 10 + repair_index,
+                    )
+                except (RuntimeError, ValueError):
+                    break
+                checked = verify_program(
+                    brief["language"], authored.get("solution", ""), authored.get("tests", ""),
+                    timeout=args.verify_timeout, tsc=args.tsc,
+                )
+                if checked.ok:
+                    repair_counts["author_succeeded"] += 1
+            if not checked.ok:
+                reject(f"author_{checked.phase}", brief, checked.detail, authored)
+                continue
+            contamination = evaluation_guard.reason(
+                authored.get("entry_point", ""),
+                [authored.get("prompt", ""), authored.get("solution", ""), authored.get("tests", "")],
+                semantic_text(brief),
+            )
+            if contamination:
+                reject(contamination, brief, "matched the frozen novice-v1 suite", authored)
+                continue
+            generated_text = "\n".join(
+                [authored.get("prompt", ""), authored.get("solution", ""), authored.get("tests", "")]
+            )
+            if any(pattern.search(generated_text) for pattern in SECRET_PATTERNS):
+                reject("secret", brief, "generated text matched a secret pattern", authored)
+                continue
+            authored_candidates.append((brief, authored, digest))
+            print(f"authored {brief['language']}/{brief['slug']}: PASS", flush=True)
+        except BaseException:
+            interrupted = True
+            raise
+        finally:
+            if not interrupted:
+                author_next = index + 1
+                save_state("author")
 
-    verified = []
-    for index, (brief, authored, digest) in enumerate(authored_candidates):
+    for index in range(review_next, len(authored_candidates)):
+        brief, authored, digest = authored_candidates[index]
         reviewed = None
         reviewer_error = ""
-        for request_attempt in range(args.json_retries + 1):
-            try:
-                reviewed = review_task(
-                    config, brief, authored, args,
-                    int(config["seed"]) + 20_000 + index + request_attempt * 100_000,
-                )
-                break
-            except (RuntimeError, ValueError) as exc:
-                reviewer_error = str(exc)
-                repair_counts["reviewer_json_retries"] += request_attempt < args.json_retries
-        if reviewed is None:
-            reject("reviewer_error", brief, reviewer_error, authored)
-            continue
-        if not reviewed.get("approved"):
-            reject("reviewer_rejected", brief, str(reviewed.get("reason", "")), authored, reviewed)
-            continue
-        checked = verify_program(
-            brief["language"], authored["solution"], reviewed.get("tests", ""),
-            timeout=args.verify_timeout, tsc=args.tsc,
-        )
-        for repair_index in range(args.reviewer_repairs):
-            if checked.ok or checked.phase != "compile":
-                break
-            repair_counts["reviewer_attempted"] += 1
-            try:
-                reviewed = repair_review_tests(
-                    config, brief, authored, reviewed, checked.detail, args,
-                    int(config["seed"]) + 40_000 + index * 10 + repair_index,
-                )
-            except (RuntimeError, ValueError):
-                break
+        interrupted = False
+        try:
+            for request_attempt in range(args.json_retries + 1):
+                try:
+                    reviewed = review_task(
+                        config, brief, authored, args,
+                        int(config["seed"]) + 20_000 + index + request_attempt * 100_000,
+                    )
+                    break
+                except (RuntimeError, ValueError) as exc:
+                    reviewer_error = str(exc)
+                    repair_counts["reviewer_json_retries"] += request_attempt < args.json_retries
+            if reviewed is None:
+                reject("reviewer_error", brief, reviewer_error, authored)
+                continue
+            if not reviewed.get("approved"):
+                reject("reviewer_rejected", brief, str(reviewed.get("reason", "")), authored, reviewed)
+                continue
             checked = verify_program(
                 brief["language"], authored["solution"], reviewed.get("tests", ""),
                 timeout=args.verify_timeout, tsc=args.tsc,
             )
-            if checked.ok:
-                repair_counts["reviewer_succeeded"] += 1
-        if not checked.ok:
-            reject(f"review_{checked.phase}", brief, checked.detail, authored, reviewed)
-            continue
-        contamination = evaluation_guard.reason(
-            authored["entry_point"],
-            [authored["prompt"], authored["solution"], authored["tests"], reviewed["tests"]],
-            semantic_text(brief),
-        )
-        if contamination:
-            reject(contamination, brief, "matched the frozen novice-v1 suite", authored, reviewed)
-            continue
-        generated_text = "\n".join(
-            [authored["prompt"], authored["solution"], authored["tests"], reviewed["tests"]]
-        )
-        if any(pattern.search(generated_text) for pattern in SECRET_PATTERNS):
-            reject("secret", brief, "generated text matched a secret pattern", authored, reviewed)
-            continue
-        verified.append((brief, authored, reviewed, digest))
-        print(f"reviewed {brief['language']}/{brief['slug']}: PASS", flush=True)
+            for repair_index in range(args.reviewer_repairs):
+                if checked.ok or checked.phase != "compile":
+                    break
+                repair_counts["reviewer_attempted"] += 1
+                try:
+                    reviewed = repair_review_tests(
+                        config, brief, authored, reviewed, checked.detail, args,
+                        int(config["seed"]) + 40_000 + index * 10 + repair_index,
+                    )
+                except (RuntimeError, ValueError):
+                    break
+                checked = verify_program(
+                    brief["language"], authored["solution"], reviewed.get("tests", ""),
+                    timeout=args.verify_timeout, tsc=args.tsc,
+                )
+                if checked.ok:
+                    repair_counts["reviewer_succeeded"] += 1
+            if not checked.ok:
+                reject(f"review_{checked.phase}", brief, checked.detail, authored, reviewed)
+                continue
+            contamination = evaluation_guard.reason(
+                authored["entry_point"],
+                [authored["prompt"], authored["solution"], authored["tests"], reviewed["tests"]],
+                semantic_text(brief),
+            )
+            if contamination:
+                reject(contamination, brief, "matched the frozen novice-v1 suite", authored, reviewed)
+                continue
+            generated_text = "\n".join(
+                [authored["prompt"], authored["solution"], authored["tests"], reviewed["tests"]]
+            )
+            if any(pattern.search(generated_text) for pattern in SECRET_PATTERNS):
+                reject("secret", brief, "generated text matched a secret pattern", authored, reviewed)
+                continue
+            verified.append((brief, authored, reviewed, digest))
+            print(f"reviewed {brief['language']}/{brief['slug']}: PASS", flush=True)
+        except BaseException:
+            interrupted = True
+            raise
+        finally:
+            if not interrupted:
+                review_next = index + 1
+                save_state("review")
 
     # Duplicate checks happen after execution checks so rejected code cannot
     # reserve a fingerprint and block a later correct task.
@@ -536,9 +694,7 @@ def main() -> int:
         accepted.append(make_row(config, brief, authored, reviewed, digest, fingerprints))
         print(f"accepted {brief['language']}/{brief['slug']}: PASS", flush=True)
 
-    with output.open("w", encoding="utf-8") as handle:
-        for row in accepted:
-            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+    atomic_write_jsonl(output, accepted)
     report = {
         "format": "brittain3-teacher-seeds-report-v1",
         "config": args.config,
@@ -555,12 +711,11 @@ def main() -> int:
         "output": str(output),
     }
     report_path = Path(args.report)
-    report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    atomic_write_json(report_path, report)
+    exit_code = 0 if accepted else 1
+    save_state("complete", exit_code)
     print(json.dumps(report, indent=2))
-    if not accepted:
-        return 1
-    return 0
+    return exit_code
 
 
 if __name__ == "__main__":
