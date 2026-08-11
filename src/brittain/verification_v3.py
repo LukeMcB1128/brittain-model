@@ -152,5 +152,9 @@ def verify_program(
             ], executable, workdir, timeout)
 
         path = workdir / "candidate.go"
+        executable = workdir / "candidate"
         path.write_text(source, encoding="utf-8")
-        return _run([str(command), "run", str(path)], workdir, timeout)
+        return _compile_then_run(
+            [str(command), "build", "-o", str(executable), str(path)],
+            executable, workdir, timeout,
+        )

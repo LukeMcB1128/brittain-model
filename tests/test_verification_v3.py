@@ -63,6 +63,17 @@ def test_rust_test_module_when_compiler_is_available():
     assert result.ok
 
 
+def test_go_compile_failure_is_separate_from_test_failure():
+    if backend_status()["go"] is None:
+        return
+    result = verify_program(
+        "go", 'package main\nimport "math"\nfunc twice(value int) int { return value * 2 }',
+        'func main() { if twice(4) != 8 { panic("bad") } }',
+    )
+    assert not result.ok
+    assert result.phase == "compile"
+
+
 def test_missing_toolchain_is_reported():
     result = verify_program(
         "typescript", "function twice(value: number): number { return value * 2; }",

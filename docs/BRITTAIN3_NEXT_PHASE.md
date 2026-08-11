@@ -106,6 +106,13 @@ models passed the corrected seven-language compiler bake-off. Qwen Coder was
 the fastest at about 71 output tokens per second. The pipeline is
 `scripts/prepare/build_teacher_seeds_v3.py`.
 
+The seed builder permits one repair when author code fails. It permits a repair
+of reviewer tests only when those tests do not compile. A reviewer assertion
+failure stays rejected because it can mean that the task or solution is wrong.
+Before output, the builder rejects novice-suite contamination, secret patterns,
+exact duplicates, same-language semantic near-duplicates, and code with an
+already accepted structural fingerprint.
+
 Run a small seven-language pipeline check before a production seed build:
 
 ```bash

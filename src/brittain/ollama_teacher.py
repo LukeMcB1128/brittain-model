@@ -36,6 +36,7 @@ def chat_json(
     seed: int,
     timeout: float,
     keep_alive: str = "10m",
+    num_predict: int = 1536,
 ) -> OllamaReply:
     """Request one non-streaming JSON response from Ollama."""
     payload = {
@@ -52,7 +53,7 @@ def chat_json(
             "temperature": 0.2,
             "top_p": 0.9,
             "seed": seed,
-            "num_predict": 1536,
+            "num_predict": num_predict,
         },
     }
     request = urllib.request.Request(
