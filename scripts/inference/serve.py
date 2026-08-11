@@ -57,6 +57,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from brittain.model import Brittain, GPTConfig
 from brittain.model_v3 import Brittain3, Brittain3Config
 from brittain import model_bs
+from brittain.loading import document_prefix
 from brittain.paths import CHECKPOINT_DIR
 from brittain.prompts import format_prompt
 from brittain.tokenizer import load_tokenizer
@@ -83,6 +84,42 @@ device = (torch.device("cuda") if torch.cuda.is_available()
           else torch.device("cpu"))
 
 
+def load_card(path, checkpoint):
+    """Descriptive metadata for a checkpoint: languages, mixture, provenance.
+
+    Two sources, most authoritative first.
+
+    1. A `corpus` block inside the checkpoint itself. This travels with the
+       weights and cannot drift from them, which is why the tokenizer identity
+       and the full training plan already live there.
+    2. `card.json` beside the checkpoint, or `<name>.card.json` next to a
+       loose .pt. Convenient for checkpoints trained before the payload carried
+       a corpus block — like the 49M pilot — but it is a separate file, so it can
+       be lost or go stale. Prefer (1) for anything trained from here on.
+
+    Returns {} when neither exists. A model with no card still serves; it just
+    reports nothing beyond what is derivable from the weights.
+    """
+    embedded = {}
+    if isinstance(checkpoint, dict):
+        embedded = checkpoint.get("corpus") or {}
+        meta = checkpoint.get("metadata")
+        if isinstance(meta, dict) and isinstance(meta.get("corpus"), dict):
+            embedded = {**meta["corpus"], **embedded}
+    candidates = [Path(path).parent / "card.json",
+                  Path(str(path)[:-3] + ".card.json") if str(path).endswith(".pt") else None]
+    for candidate in candidates:
+        if candidate and candidate.is_file():
+            try:
+                on_disk = json.loads(candidate.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                print(f"  [warn] unreadable card {candidate}: {exc}")
+                continue
+            # The embedded block wins: it cannot have drifted from the weights.
+            return {**on_disk, **embedded}
+    return embedded
+
+
 class Loaded:
     def __init__(self, path, name):
         ck = torch.load(path, map_location=device, weights_only=False)
@@ -104,6 +141,14 @@ class Loaded:
             self.enc = load_tokenizer(ck)
         self.name = name
         self.params = self.model.num_params()
+        # Brittain3 saw every pretraining document wrapped as
+        # <|repo_start|>repo<|file_start|>path, so an unframed prompt is out of
+        # distribution: the model emits <|file_end|><|repo_end|> and stops. The
+        # server must supply the framing or every completion comes back empty.
+        # Brittain1/2 have no such tokens and correctly get "".
+        self.frame = document_prefix(self.enc, "workspace/project", "main.py")
+        self.frame_ids = self.enc.encode(self.frame) if self.frame else []
+        self.card = load_card(path, ck if isinstance(ck, dict) else {})
         self.is_brittain = isinstance(self.model, (Brittain, Brittain3))
         self.supports_fim = bool(getattr(self.enc, "has_fim", False))
         low = os.path.basename(path).lower()
@@ -115,12 +160,30 @@ class Loaded:
             self.raw_default = not ("sft" in low or "instruct" in low)
 
 
+# Brittain3 training writes weights.pt/best.pt/latest.pt into a per-run
+# DIRECTORY, so the old one-level glob missed them entirely, and naming by file
+# stem would have served them as "weights" and "best" — useless in a model picker
+# and ambiguous the moment there are two runs.
+RUN_DIR_FILES = ("weights.pt", "best.pt")
+
+
 def discover():
-    """Find every filed checkpoint plus any active checkpoint in the repo root."""
+    """Find filed checkpoints, repo-root checkpoints, and Brittain3 run dirs."""
+    named = []
     found = list(CHECKPOINT_DIR.glob("*.pt")) + list(PROJECT_ROOT.glob("*.pt"))
-    found = {p.resolve() for p in found if "model_backup" not in p.name}
-    return [str(p) for p in sorted(found, key=lambda p: p.stat().st_mtime,
-                                   reverse=True)]
+    for path in sorted({p.resolve() for p in found if "model_backup" not in p.name},
+                       key=lambda p: p.stat().st_mtime, reverse=True):
+        named.append(str(path))
+    for run in sorted(CHECKPOINT_DIR.glob("*/"), key=lambda p: p.name):
+        for filename in RUN_DIR_FILES:
+            candidate = (run / filename).resolve()
+            if not candidate.is_file():
+                continue
+            # latest.pt is deliberately skipped: mid-run it is a partial view of
+            # the same run as best.pt, and after a run it duplicates weights.pt.
+            label = run.name if filename == "weights.pt" else f"{run.name}-{filename[:-3]}"
+            named.append(f"{candidate}={label}")
+    return named
 
 
 specs = args.checkpoints or discover()
@@ -320,10 +383,17 @@ def stream_pieces(M, prompt, raw, opts):
     # crashes on [:, -1, :] ("index -1 is out of bounds for dimension 1 with size
     # 0"). Seed with end-of-text instead, which is exactly the start-of-document
     # state these models saw between every training document.
-    if not token_ids:
+    if not token_ids and not M.frame_ids:
         token_ids = [M.enc.eot]
+    # Framing goes in FRONT and survives truncation. Trimming the combined
+    # sequence with [:, -block:] would drop the <|repo_start|> prefix on any
+    # prompt near the context limit — silently reintroducing the empty-completion
+    # bug for exactly the long files where autocomplete matters most. For a framed
+    # model an empty prompt needs no EOT seed: the frame IS the start-of-document
+    # state, and it is what the model was trained to continue from.
+    room = M.block - len(M.frame_ids)
+    token_ids = M.frame_ids + token_ids[-room:]
     ids = torch.tensor([token_ids], dtype=torch.long, device=device)
-    ids = ids[:, -M.block:]
     utf8 = codecs.getincrementaldecoder("utf-8")("replace")
     acc = ""
     def token_stream():
@@ -431,10 +501,18 @@ def describe(m):
         "defaults": ({"temperature": 0.2, "num_predict": 64}
                      if m.raw_default else
                      {"temperature": 0.5, "num_predict": 256}),
+        # A client cannot use a framed model correctly without knowing this.
+        # It is applied server-side too, so a client that ignores it still works.
+        "prompt_framing": m.frame or None,
+        "languages": (m.card.get("primary_languages")
+                      or sorted(m.card.get("languages", {}), key=lambda k: -m.card["languages"][k])[:3]
+                      or None),
         "details": {"family": "brittain",
                     "parameter_size": f"{m.params/1e6:.0f}M",
                     "tokenizer": m.enc.name,
-                    "mode": mode},
+                    "mode": mode,
+                    **({"languages": ", ".join(m.card["primary_languages"])}
+                       if m.card.get("primary_languages") else {})},
     }
 
 
@@ -451,15 +529,32 @@ def version():
 @app.post("/api/show")
 async def show(req: Request):
     M = pick(await req.json())
+    card = M.card
+    info = {
+        "general.architecture": "brittain",
+        "general.parameter_count": M.params,
+        "brittain.context_length": M.block,
+        "brittain.tokenizer": M.enc.name,
+        "brittain.vocab_size": M.enc.vocab_size,
+    }
+    # Dotted namespaced keys are Ollama's own convention for architecture facts,
+    # so unknown ones are ignored by clients rather than rejected.
+    if M.frame:
+        info["brittain.prompt_framing"] = M.frame
+    for key in ("languages", "primary_languages", "mixture", "corpus_tokens",
+                "corpus_config_sha256", "training_tokens", "epochs", "notes"):
+        if key in card:
+            info[f"brittain.{key}"] = card[key]
+    capabilities = ["completion"]
+    if M.supports_fim and M.raw_default:
+        capabilities.append("infill")
+    if M.frame:
+        capabilities.append("document-framing")
     result = {"details": {"family": "brittain",
                           "parameter_size": f"{M.params/1e6:.0f}M"},
-              "capabilities": ["completion"],
+              "capabilities": capabilities,
               "parameters": f"num_ctx {M.block}",
-              "model_info": {
-                  "general.architecture": "brittain",
-                  "general.parameter_count": M.params,
-                  "brittain.context_length": M.block,
-              },
+              "model_info": info,
               "context_length": M.block}
     if M.supports_fim and M.raw_default:
         # Continue's Ollama provider detects native FIM support by looking for
