@@ -185,8 +185,18 @@ def main():
         optimizer.load_state_dict(checkpoint["optimizer"])
         move_optimizer_state(optimizer, device)
     if training.get("compile") and device.type == "cuda":
+        # torch.compile is lazy: it returns a wrapper immediately and compiles on
+        # the first forward, which happens inside the training loop and outside
+        # this guard. A bare try around the call therefore catches nothing, and a
+        # backend that cannot work here — Inductor needs Triton, which has no
+        # Windows build — took the run down after the data was already loaded.
+        # Force compilation now so the documented eager fallback is real.
         try:
-            model = torch.compile(model)
+            candidate = torch.compile(model)
+            with torch.no_grad():
+                probe = torch.zeros((1, 8), dtype=torch.long, device=device)
+                candidate(probe, probe, return_logits=False)
+            model = candidate
         except Exception as exc:
             print(f"torch.compile failed: {exc}; using eager mode")
 
