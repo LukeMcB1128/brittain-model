@@ -153,7 +153,13 @@ def parse_request(text: str) -> dict[str, str]:
         name, separator, value = chunk.partition(":")
         if not separator:
             raise ValueError(f"tag is missing a value: {chunk!r}")
-        tags[name.strip()] = value.strip()
+        name = name.strip()
+        # Reject duplicates rather than letting the last one win. Writing
+        # "Tone: Past" when Tense was meant should be an error, not a silently
+        # discarded tag.
+        if name in tags:
+            raise ValueError(f"duplicate tag: {name!r}")
+        tags[name] = value.strip()
     validate(tags)
     return tags
 

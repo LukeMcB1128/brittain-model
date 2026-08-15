@@ -559,3 +559,10 @@ def test_third_limited_is_found_from_pronoun_interiority():
         "down to the water and he watched the boats and he wondered about her. "
     ) * 6
     assert story_tagger.point_of_view(passage) == "Third-Limited"
+
+
+def test_parse_request_rejects_a_duplicate_tag():
+    # "Tone: Past" when Tense was meant used to be silently overwritten by a
+    # later Tone, so the user got no error and no tag.
+    with pytest.raises(ValueError):
+        parse_request("POV: First, Tone: Past, Tone: Dark")
