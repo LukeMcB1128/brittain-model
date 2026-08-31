@@ -28,6 +28,7 @@ from brittain.data_story import (
     StorySettings, encode_story, pack_story_segments, window_text,
 )
 from brittain.data_v3 import repository_in_validation
+from brittain.keep_awake import keep_awake
 from brittain.story_tagger import extract
 from brittain.tags import TagPolicy
 from brittain.tokenizer_story import STORY_TOKENIZER, StoryTokenizer
@@ -182,4 +183,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    with keep_awake("brittain-shakespeare corpus preparation"):
+        main()

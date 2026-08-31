@@ -22,6 +22,7 @@ import torch
 
 from brittain.checkpoint_v3 import atomic_torch_save, checkpoint_payload, restore_rng_state, validate_checkpoint
 from brittain.model_v3 import Brittain3, Brittain3Config
+from brittain.keep_awake import keep_awake
 from brittain.training_v3 import (
     PackedBatchStream,
     StageConfig,
@@ -292,4 +293,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # A training run takes no keyboard input, and neither Windows nor macOS
+    # counts GPU load as activity, so the machine sleeps mid-run at whatever
+    # the timeout happens to be. Hold it awake only while training.
+    with keep_awake("brittain3 pretraining"):
+        main()
