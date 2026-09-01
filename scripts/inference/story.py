@@ -7,6 +7,7 @@ Inside the prompt:
     /tags Tense: Present, Setting: Sea     set the tag block
     /tags                                  show the current tags
     /clear                                 drop all tags (unconditional)
+    /continue                              carry on from the last output
     /temp 0.8    /top_p 0.95   /tokens 400 sampling controls
     /help  /quit
     anything else                          an opening line for the model to continue
@@ -60,18 +61,48 @@ def project_path(value):
     return path if path.is_absolute() else (PROJECT_ROOT / path).resolve()
 
 
-def build_prompt(tokenizer, tags: dict[str, str], opening: str) -> list[int]:
-    """Frame a request the way training framed every document."""
-    ids = [tokenizer.special_ids["<|story_start|>"]]
+def build_prompt(
+    tokenizer, tags: dict[str, str], opening: str,
+    previous: str = "", block: int = 4096,
+) -> list[int]:
+    """Frame a request the way training framed the matching kind of document.
+
+    A fresh story opens with ``<|story_start|>``. A continuation deliberately
+    does not: in training, windows after the first in a book omit that marker,
+    so its absence is the signal that what precedes is context to carry rather
+    than something to ignore. Mirroring the training frame is the whole point;
+    emitting story_start here would ask for a new story instead.
+    """
+    block_ids = []
     if tags:
-        ids += [
+        block_ids = [
             tokenizer.tags_start,
             *tokenizer.encode(render(tags)),
             tokenizer.tags_end,
         ]
-    if opening:
-        ids += tokenizer.encode(opening)
-    return ids
+    opening_ids = tokenizer.encode(opening) if opening else []
+
+    if previous:
+        tail = tokenizer.encode(previous)
+        # Keep the most recent context that fits, leaving room for the tag
+        # block, the sentinels, and something to actually generate into.
+        room = block - len(block_ids) - len(opening_ids) - 256
+        if room < 1:
+            raise SystemExit("the tag block leaves no room for context")
+        tail = tail[-room:]
+        return [
+            *tail,
+            tokenizer.story_end,
+            tokenizer.eot,
+            *block_ids,
+            *opening_ids,
+        ]
+
+    return [
+        tokenizer.special_ids["<|story_start|>"],
+        *block_ids,
+        *opening_ids,
+    ]
 
 
 _SENTENCE_END = tuple('.!?"”’')
@@ -134,6 +165,7 @@ def show_tags(tags: dict[str, str]) -> None:
 def help_text() -> str:
     lines = ["  /tags NAME: VALUE, ...   set tags", "  /tags                    show tags",
              "  /clear                   drop all tags",
+             "  /continue                carry on from the last output",
              "  /temp X  /top_p X  /tokens N", "  /help  /quit", "", "  known tags:"]
     for name in TAG_ORDER:
         lines.append(f"    {name:9} {', '.join(TAG_VALUES[name])}")
@@ -164,13 +196,19 @@ def main():
     except ValueError as exc:
         raise SystemExit(f"bad --tags: {exc}")
 
+    block = model.cfg.max_seq_len
+
     if args.once:
         show_tags(tags)
-        stream(model, tokenizer, device, build_prompt(tokenizer, tags, args.prompt), args)
+        stream(model, tokenizer, device,
+               build_prompt(tokenizer, tags, args.prompt, block=block), args)
         return
 
     print(help_text())
     show_tags(tags)
+    # Everything generated since the last fresh start, so /continue can hand it
+    # back as context.
+    story_so_far = ""
     while True:
         try:
             line = input(f"\n{BOLD}> {RESET}").strip()
@@ -180,7 +218,10 @@ def main():
         if not line:
             # Empty line: generate from the tags alone, which is the pure test of
             # whether the conditioning works without a prose hint to lean on.
-            stream(model, tokenizer, device, build_prompt(tokenizer, tags, ""), args)
+            story_so_far = stream(
+                model, tokenizer, device,
+                build_prompt(tokenizer, tags, "", block=block), args,
+            )
             continue
         if line in ("/quit", "/exit", "/q"):
             return
@@ -190,6 +231,17 @@ def main():
         if line == "/clear":
             tags = {}
             show_tags(tags)
+            continue
+        if line in ("/continue", "/cont"):
+            if not story_so_far.strip():
+                print(f"{DIM}nothing to continue yet{RESET}")
+                continue
+            more = stream(
+                model, tokenizer, device,
+                build_prompt(tokenizer, tags, "", previous=story_so_far, block=block),
+                args,
+            )
+            story_so_far = (story_so_far + "\n\n" + more).strip()
             continue
         if line.startswith("/tags"):
             rest = line[len("/tags"):].strip()
@@ -219,7 +271,11 @@ def main():
                 print(f"{DIM}unknown command; /help{RESET}")
                 continue
             print(f"{DIM}{line}{RESET}", end="")
-            stream(model, tokenizer, device, build_prompt(tokenizer, tags, line), args)
+            generated = stream(
+                model, tokenizer, device,
+                build_prompt(tokenizer, tags, line, block=block), args,
+            )
+            story_so_far = (line + generated).strip()
 
 
 if __name__ == "__main__":

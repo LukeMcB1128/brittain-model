@@ -419,3 +419,46 @@ def test_continuation_is_recorded_in_the_packed_spans(tokenizer):
     _, _, spans = pack_story_segments(segments, settings.block_size, tokenizer.pad)
     flags = [span["continues"] for row in spans for span in row]
     assert flags == [False, True, True]
+
+
+# --------------------------------------------------------------------------- #
+# Inference framing
+# --------------------------------------------------------------------------- #
+
+def _story_module():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "story", PROJECT_ROOT / "scripts/inference/story.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_a_fresh_request_opens_with_story_start(tokenizer):
+    story = _story_module()
+    ids = story.build_prompt(tokenizer, {"Genre": "Tragedy"}, "", block=1024)
+    assert ids[0] == tokenizer.story_start
+
+
+def test_a_continuation_omits_story_start_like_training_does(tokenizer):
+    # Training marks a continuation by the absence of story_start. Inference has
+    # to frame it the same way or it is asking for a new story instead.
+    story = _story_module()
+    ids = story.build_prompt(
+        tokenizer, {"Genre": "Tragedy"}, "", previous="He waited by the door.",
+        block=1024,
+    )
+    assert ids[0] != tokenizer.story_start
+    assert tokenizer.story_end in ids and tokenizer.eot in ids
+    assert ids[-1] == tokenizer.tags_end
+
+
+def test_a_continuation_trims_context_to_the_block(tokenizer):
+    story = _story_module()
+    ids = story.build_prompt(
+        tokenizer, {"Genre": "Tragedy"}, "",
+        previous=" ".join(["word"] * 5000), block=1024,
+    )
+    assert len(ids) <= 1024
