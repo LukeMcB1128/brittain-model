@@ -37,7 +37,7 @@ WEIGHTED_VALUES: dict[str, dict[str, float]] = {
     "Setting": {"Tavern": 1.5, "Castle": 1.5, "Sea": 0.6, "Forest": 1.5,
                 "City": 1.4, "Household": 1.5, "Court": 0.7, "Road": 1.4,
                 "Battlefield": 0.9},
-    "POV": {"First": 1.0, "Third-Limited": 1.0, "Third-Omniscient": 1.6},
+    "POV": {"First": 1.0, "Third-Limited": 1.0, "Third-Omniscient": 0.5},
     "Cast": {"Solo": 0.7, "Pair": 1.4, "Ensemble": 1.5},
     "Genre": {name: 1.0 for name in TAG_VALUES["Genre"]},
     "Tense": {"Past": 1.0, "Present": 1.1},
@@ -188,7 +188,16 @@ def sample_tags(rng: random.Random) -> dict[str, str]:
         weights = WEIGHTED_VALUES[name]
         values = [value for value, weight in weights.items() if weight > 0]
         tags[name] = rng.choices(values, weights=[weights[v] for v in values])[0]
-    count = {"Solo": 1, "Pair": 2, "Ensemble": 3}[tags["Cast"]]
+    # Omniscient narration means several minds on the page, which needs both a
+    # cast to hold them and the length to reach them. Sampled independently it
+    # was mostly requested for solo flash fiction and could never be produced.
+    if tags["POV"] == "Third-Omniscient":
+        tags["Cast"] = "Ensemble"
+        tags["Length"] = "Short"
+    # cast() treats exactly three names as undecidable and reports Ensemble only
+    # at four or more, so asking for three made Ensemble unreachable: it could
+    # come back Pair, Solo or nothing, but never what was requested.
+    count = {"Solo": 1, "Pair": 2, "Ensemble": 4}[tags["Cast"]]
     tags["Characters"] = "; ".join(rng.sample(NAME_POOL, count))
     return tags
 
@@ -196,10 +205,23 @@ def sample_tags(rng: random.Random) -> dict[str, str]:
 def _request(tags: dict[str, str]) -> str:
     low, high = LENGTH_WORDS[tags["Length"]]
     names = tags["Characters"].replace(";", " and")
-    return (
-        f"{render(tags)}\n\n"
-        f"Write a complete story of about {low} to {high} words, using {names}."
-    )
+    lines = [
+        render(tags),
+        "",
+        f"Write a complete story of about {low} to {high} words, using {names}.",
+    ]
+    # The two tags every model quietly ignores. Past tense and a single
+    # viewpoint are the defaults they fall back into, so they get said twice.
+    if tags["Tense"] == "Present":
+        lines.append(
+            "Write it in the PRESENT tense throughout: 'she walks', not 'she walked'."
+        )
+    if tags["POV"] == "Third-Omniscient":
+        lines.append(
+            "Narrate from OUTSIDE all of them, entering the thoughts of at least "
+            "three of the named characters by name."
+        )
+    return "\n".join(lines)
 
 
 def build_messages(tags: dict[str, str]) -> list[dict[str, str]]:

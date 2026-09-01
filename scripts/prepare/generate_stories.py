@@ -297,7 +297,7 @@ def main():
         "rejected": dict(rejected.most_common(20)),
         "transport": dict(attempt_log),
     }
-    report_path = project_path(args.report or output.with_name("stories.report.json"))
+    report_path = project_path(args.report or output.with_name(output.stem + ".report.json"))
     report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(f"\naccepted {stories:,} stories, ~{tokens:,} tokens")
     for reason, count in rejected.most_common(10):

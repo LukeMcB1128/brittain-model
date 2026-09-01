@@ -74,12 +74,46 @@ def test_sampling_never_asks_for_long():
 
 
 def test_character_count_matches_the_cast_bucket():
+    # Four for Ensemble, not three: cast() calls exactly three undecidable and
+    # only reports Ensemble at four, so three could never verify as requested.
     rng = random.Random(3)
-    expected = {"Solo": 1, "Pair": 2, "Ensemble": 3}
+    expected = {"Solo": 1, "Pair": 2, "Ensemble": 4}
     for _ in range(200):
         tags = synthetic.sample_tags(rng)
         names = [n for n in tags["Characters"].split(";") if n.strip()]
         assert len(names) == expected[tags["Cast"]]
+
+
+def test_ensemble_requests_can_actually_verify_as_ensemble():
+    from brittain import story_tagger
+
+    names = ["Alder", "Bramwell", "Calder", "Dorian"]
+    text = " ".join(f"{n} went out. {n} spoke once. {n} waited there." for n in names)
+    text = text * 8  # cast() needs at least 150 words before it will decide
+    assert story_tagger.cast(text) == "Ensemble"
+
+
+def test_omniscient_requests_get_the_cast_and_length_they_need():
+    # Three named minds do not fit in three hundred words, so an omniscient
+    # request sampled alongside Solo and Flash could never be produced.
+    rng = random.Random(11)
+    seen = 0
+    for _ in range(600):
+        tags = synthetic.sample_tags(rng)
+        if tags["POV"] == "Third-Omniscient":
+            seen += 1
+            assert tags["Cast"] == "Ensemble"
+            assert tags["Length"] == "Short"
+    assert seen > 20
+
+
+def test_the_ignored_tags_are_restated_in_the_request():
+    tags = dict(synthetic.EXEMPLARS[0]["tags"])
+    tags.update({"Tense": "Present", "POV": "Third-Omniscient", "Cast": "Ensemble",
+                 "Characters": "Thea; Orrin; Esme; Calder", "Length": "Short"})
+    request = synthetic._request(tags)
+    assert "PRESENT tense" in request
+    assert "OUTSIDE" in request
 
 
 def test_thin_values_are_sampled_more_often_than_common_ones():
