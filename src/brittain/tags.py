@@ -11,6 +11,7 @@ value such as ``[Setting: Lighthouse]`` still composes at inference.
 from __future__ import annotations
 
 import random
+import re
 from dataclasses import dataclass
 
 TAGS_START = "<|tags|>"
@@ -25,6 +26,7 @@ TAG_ORDER = (
     "Setting",
     "Tone",
     "Cast",
+    "Characters",
     "Length",
     "Twist",
 )
@@ -56,11 +58,23 @@ TAG_VALUES: dict[str, tuple[str, ...]] = {
     ),
     "Tone": ("Dark", "Wry", "Tender", "Bleak", "Rousing", "Uneasy"),
     "Cast": ("Solo", "Pair", "Ensemble"),
+    # Open vocabulary: the value is the actual character names, so there is no
+    # closed set to validate against. See OPEN_VALUE_TAGS.
+    "Characters": (),
     "Length": ("Flash", "Short", "Long"),
     "Twist": ("Betrayal", "Revelation", "Reversal", "Death", "Reunion", "None"),
 }
 
 assert set(TAG_ORDER) == set(TAG_VALUES), "TAG_ORDER and TAG_VALUES must agree"
+
+# Tags whose value is free text rather than one of a closed set. Character names
+# cannot be enumerated in advance, so these are validated for shape instead: the
+# separator is a semicolon, not a comma, so that the relaxed command-line parser
+# can still split tags on commas.
+OPEN_VALUE_TAGS = frozenset({"Characters"})
+CHARACTER_SEPARATOR = ";"
+MAX_CHARACTERS = 5
+_CHARACTER_NAME = re.compile(r"^[A-Z][A-Za-z'’.\- ]{0,30}$")
 
 # Tags a deterministic extractor scores exactly on generated text. The adherence
 # evaluation reports these separately from the interpretive tags.
@@ -91,12 +105,32 @@ class TagPolicy:
 
 
 def validate(tags: dict[str, str]) -> None:
-    """Raise if any tag name or value falls outside the closed vocabulary."""
+    """Raise if any tag name or value falls outside its vocabulary."""
     for name, value in tags.items():
         if name not in TAG_VALUES:
             raise ValueError(f"unknown tag name: {name!r}")
+        if name in OPEN_VALUE_TAGS:
+            validate_open_value(name, value)
+            continue
         if value not in TAG_VALUES[name]:
             raise ValueError(f"unknown value for {name}: {value!r}")
+
+
+def validate_open_value(name: str, value: str) -> None:
+    """Check the shape of a free-text tag value."""
+    names = [part.strip() for part in value.split(CHARACTER_SEPARATOR)]
+    names = [part for part in names if part]
+    if not names:
+        raise ValueError(f"{name} must list at least one name")
+    if len(names) > MAX_CHARACTERS:
+        raise ValueError(f"{name} lists {len(names)} names, limit is {MAX_CHARACTERS}")
+    for part in names:
+        if not _CHARACTER_NAME.match(part):
+            raise ValueError(f"{name} contains an implausible name: {part!r}")
+        if "," in part:
+            raise ValueError(
+                f"{name} must separate names with {CHARACTER_SEPARATOR!r}, not a comma"
+            )
 
 
 def render(tags: dict[str, str], *, order: tuple[str, ...] | None = None) -> str:

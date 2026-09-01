@@ -365,3 +365,57 @@ def test_policy_produces_a_mix_of_presentations(tokenizer):
     assert any(story.tags_masked for story in stories)
     assert any(story.tags_reversed for story in stories)
     assert any(not story.tags for story in stories)
+
+
+# --------------------------------------------------------------------------- #
+# Continuation windows
+# --------------------------------------------------------------------------- #
+
+def test_a_continuation_window_omits_the_story_start_marker(tokenizer):
+    # Consecutive windows of one book are packed contiguously and in order, so
+    # the previous text really is in the context. Stamping story_start on every
+    # window told the model to treat it as a fresh start and ignore that.
+    rng = random.Random(0)
+    first = encode_story(PARAGRAPH, {"Genre": "Tragedy"}, tokenizer,
+                         settings_with(DETERMINISTIC), rng)
+    rng = random.Random(0)
+    later = encode_story(PARAGRAPH, {"Genre": "Tragedy"}, tokenizer,
+                         settings_with(DETERMINISTIC), rng, continues=True)
+    assert first.ids[0] == tokenizer.story_start
+    assert later.ids[0] != tokenizer.story_start
+    assert later.continues and not first.continues
+    # Only the opening marker differs.
+    assert later.ids == first.ids[1:]
+
+
+def test_a_continuation_window_still_closes_normally(tokenizer):
+    rng = random.Random(0)
+    story = encode_story(PARAGRAPH, {"Genre": "Tragedy"}, tokenizer,
+                         settings_with(DETERMINISTIC), rng, continues=True)
+    assert story.ids[-2] == tokenizer.story_end
+    assert story.ids[-1] == tokenizer.eot
+
+
+def test_continuation_masking_still_lands_on_the_tag_block(tokenizer):
+    rng = random.Random(0)
+    policy = TagPolicy(tag_dropout=0.0, block_dropout=0.0, shuffle_rate=0.0,
+                       mask_rate=1.0, reverse_rate=0.0)
+    story = encode_story(PARAGRAPH, {"Genre": "Tragedy"}, tokenizer,
+                         settings_with(policy), rng, continues=True)
+    start = story.ids.index(tokenizer.tags_start)
+    end = story.ids.index(tokenizer.tags_end)
+    assert not any(story.supervised[start: end + 1])
+    assert all(story.supervised[end + 1:])
+
+
+def test_continuation_is_recorded_in_the_packed_spans(tokenizer):
+    rng = random.Random(0)
+    settings = settings_with(DETERMINISTIC)
+    segments = [
+        encode_story(PARAGRAPH, {"Genre": "Tragedy"}, tokenizer, settings, rng,
+                     repository="gutenberg/345", continues=index > 0)
+        for index in range(3)
+    ]
+    _, _, spans = pack_story_segments(segments, settings.block_size, tokenizer.pad)
+    flags = [span["continues"] for row in spans for span in row]
+    assert flags == [False, True, True]

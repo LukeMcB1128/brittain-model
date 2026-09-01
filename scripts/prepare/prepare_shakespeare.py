@@ -121,7 +121,7 @@ def main():
             )
             books += 1
 
-            for window in window_text(text, tokenizer, settings):
+            for position, window in enumerate(window_text(text, tokenizer, settings)):
                 token_count = len(tokenizer.encode(window))
                 tags = extract(
                     window,
@@ -136,6 +136,7 @@ def main():
                     repository=repository,
                     path=row.get("path", ""),
                     source=row.get("source", ""),
+                    continues=position > 0,
                 )
                 segments[split].append(story)
                 tokens[split] += len(story.ids)

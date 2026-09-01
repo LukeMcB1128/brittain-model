@@ -78,7 +78,14 @@ def test_render_rejects_an_explicit_order_that_does_not_match_the_tags():
 # --------------------------------------------------------------------------- #
 
 def _full_tags():
-    return {name: TAG_VALUES[name][0] for name in TAG_ORDER}
+    # Characters is open-vocabulary and has no enumerated values, so it needs a
+    # representative value rather than the first of a closed set.
+    from brittain.tags import OPEN_VALUE_TAGS
+
+    return {
+        name: ("Harker; Mina" if name in OPEN_VALUE_TAGS else TAG_VALUES[name][0])
+        for name in TAG_ORDER
+    }
 
 
 def test_tag_policy_rejects_probabilities_outside_the_unit_interval():
@@ -124,8 +131,8 @@ def test_policy_shuffles_only_sometimes():
         _, order, _, _ = apply_policy(tags, policy, rng)
         if order == TAG_ORDER:
             canonical += 1
-    # Canonical order also turns up by chance inside the shuffled share, but with
-    # nine tags that probability is negligible.
+    # Canonical order also turns up by chance inside the shuffled share, but
+    # with ten tags that probability is negligible.
     assert canonical / trials == pytest.approx(1 - policy.shuffle_rate, abs=0.02)
 
 
@@ -566,3 +573,56 @@ def test_parse_request_rejects_a_duplicate_tag():
     # later Tone, so the user got no error and no tag.
     with pytest.raises(ValueError):
         parse_request("POV: First, Tone: Past, Tone: Dark")
+
+
+# --------------------------------------------------------------------------- #
+# Characters, the one open-vocabulary tag
+# --------------------------------------------------------------------------- #
+
+def test_characters_round_trips():
+    tags = {"Genre": "Tragedy", "Characters": "Harker; Mina"}
+    assert parse(render(tags)) == tags
+
+
+def test_characters_uses_semicolons_so_the_relaxed_parser_still_splits_on_commas():
+    # parse_request splits tags on commas, so a comma-separated name list would
+    # be torn in half and reported as a tag with no value.
+    assert parse_request("Genre: Tragedy, Characters: Harker; Mina") == {
+        "Genre": "Tragedy",
+        "Characters": "Harker; Mina",
+    }
+
+
+def test_characters_rejects_implausible_names():
+    for bad in ("harker", "", "   ", "Harker, Mina"):
+        with pytest.raises(ValueError):
+            parse(f"[Characters: {bad}]")
+
+
+def test_characters_enforces_a_limit():
+    from brittain.tags import MAX_CHARACTERS
+
+    too_many = "; ".join(f"Name{index}" for index in range(MAX_CHARACTERS + 1))
+    with pytest.raises(ValueError):
+        parse(f"[Characters: {too_many}]")
+
+
+def test_closed_tags_are_still_validated_strictly():
+    # Adding an open tag must not loosen the others.
+    with pytest.raises(ValueError):
+        parse("[Genre: Cyberpunk]")
+
+
+def test_character_names_are_the_repeated_ones():
+    assert story_tagger.character_names(THIRD_PAST) == ["Harker"]
+
+
+def test_character_names_need_enough_text():
+    assert story_tagger.character_names("Harker went out.") == []
+
+
+def test_extract_emits_characters():
+    tags = story_tagger.extract(THIRD_PAST, token_count=250, birth_year=1847,
+                                death_year=1912)
+    assert tags["Characters"] == "Harker"
+    validate(tags)

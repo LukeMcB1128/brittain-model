@@ -485,6 +485,27 @@ _NOT_A_NAME = frozenset(
 _CAPITALIZED = re.compile(r"\b([A-Z][a-z]{2,})\b")
 
 
+def character_names(text: str, limit: int = 5) -> list[str]:
+    """Return the repeatedly named characters, most mentioned first.
+
+    ``cast`` already computes this and then throws it away to return a bucket.
+    Keeping the names lets them become a conditioning tag, so character identity
+    is trained rather than hoped for.
+    """
+    tokens = words(text)
+    if len(tokens) < 150:
+        return []
+    lowercase_seen = {token.lower() for token in tokens if token[0].islower()}
+    candidates: Counter[str] = Counter()
+    for match in _CAPITALIZED.finditer(text):
+        word = match.group(1)
+        folded = word.lower()
+        if folded in _NOT_A_NAME or folded in lowercase_seen:
+            continue
+        candidates[word] += 1
+    return [name for name, count in candidates.most_common(limit) if count >= 3]
+
+
 def cast(text: str) -> str | None:
     """Estimate how many people carry the story."""
     tokens = words(text)
@@ -573,6 +594,10 @@ def extract(
     ):
         if value is not None:
             tags[name] = value
+
+    names = character_names(text)
+    if names:
+        tags["Characters"] = "; ".join(names)
 
     if token_count is not None:
         tags["Length"] = length_from_tokens(token_count)

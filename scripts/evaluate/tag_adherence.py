@@ -76,7 +76,6 @@ def score(text: str, token_count: int) -> dict[str, str]:
     """Run every deterministic extractor over generated text."""
     found = {}
     for name, value in (
-        ("Voice", story_tagger.voice_from_text(text)),
         ("POV", story_tagger.point_of_view(text)),
         ("Tense", story_tagger.tense(text)),
         ("Setting", story_tagger.setting(text)),
@@ -85,10 +84,29 @@ def score(text: str, token_count: int) -> dict[str, str]:
     ):
         if value is not None:
             found[name] = value
-    # voice_from_text only ever detects the archaic register. Absence of archaic
-    # morphology is genuine evidence of a non-Shakespearean voice, but it cannot
-    # tell Victorian from Modern, so those two are unscorable here.
     return found
+
+
+def score_voice(text: str, requested: str) -> bool | None:
+    """Score the register as a binary, because the extractor is one.
+
+    ``voice_from_text`` returns "Shakespearean" or nothing: it detects archaic
+    morphology and cannot separate Victorian from Modern. Scoring it against
+    three values made every request unwinnable except Shakespearean, whose
+    baseline was then 100% by construction and whose real failures were hidden
+    in the undetermined column.
+
+    Absence of archaic morphology is real evidence, not missing evidence. So a
+    Shakespearean request is a hit when the text reads archaic and a miss when
+    it does not; the other two registers invert that. Victorian against Modern
+    stays genuinely unscorable and is reported as such.
+    """
+    archaic = story_tagger.voice_from_text(text) == "Shakespearean"
+    if requested == "Shakespearean":
+        return archaic
+    # Victorian and Modern are both non-archaic; this only catches the model
+    # wrongly reaching for the archaic register.
+    return not archaic
 
 
 def main():
@@ -124,6 +142,11 @@ def main():
         for name, value in found.items():
             baseline[name][value] += 1
             baseline_seen[name] += 1
+        # The unconditional archaic rate, which is what a Shakespearean request
+        # has to beat to have done anything.
+        archaic = story_tagger.voice_from_text(text) == "Shakespearean"
+        baseline["Voice"]["Shakespearean" if archaic else "not-archaic"] += 1
+        baseline_seen["Voice"] += 1
         if (index + 1) % 24 == 0:
             print(f"  {index + 1}/{args.baseline_samples}", flush=True)
 
@@ -138,14 +161,19 @@ def main():
                       tokenizer.tags_end]
             for index in range(args.samples):
                 text = generate(model, tokenizer, device, prompt, args)
-                found = score(text, len(tokenizer.encode(text)))
-                got = found.get(name)
-                if got is None:
-                    undetermined += 1
-                elif got == value:
-                    hits += 1
+                if name == "Voice":
+                    correct = score_voice(text, value)
+                    got = "Shakespearean" if story_tagger.voice_from_text(text) else "not-archaic"
+                    hits, misses = (hits + 1, misses) if correct else (hits, misses + 1)
                 else:
-                    misses += 1
+                    found = score(text, len(tokenizer.encode(text)))
+                    got = found.get(name)
+                    if got is None:
+                        undetermined += 1
+                    elif got == value:
+                        hits += 1
+                    else:
+                        misses += 1
                 if index == 0:
                     samples_kept.append(
                         {"tag": name, "requested": value, "got": got,
@@ -153,7 +181,16 @@ def main():
                     )
             decided = hits + misses
             base_total = baseline_seen[name]
-            base_rate = (baseline[name][value] / base_total) if base_total else None
+            if name == "Voice":
+                archaic_rate = (
+                    baseline["Voice"]["Shakespearean"] / base_total if base_total else None
+                )
+                base_rate = (
+                    archaic_rate if value == "Shakespearean"
+                    else (1 - archaic_rate) if archaic_rate is not None else None
+                )
+            else:
+                base_rate = (baseline[name][value] / base_total) if base_total else None
             adherence = (hits / decided) if decided else None
             per_value[value] = {
                 "hits": hits, "misses": misses, "undetermined": undetermined,

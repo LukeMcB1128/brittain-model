@@ -65,6 +65,7 @@ class EncodedStory:
     tags: dict[str, str]
     tags_masked: bool
     tags_reversed: bool
+    continues: bool = False
 
     def __post_init__(self) -> None:
         if len(self.ids) != len(self.supervised):
@@ -216,12 +217,20 @@ def encode_story(
     repository: str = "",
     path: str = "",
     source: str = "",
+    continues: bool = False,
 ) -> EncodedStory:
     """Encode one window with its tag block, applying the randomization policy.
 
     ``Length`` is recomputed here rather than taken from the caller. It describes
     the window, and the window is only known after windowing, so a value carried
     over from the whole book would be wrong.
+
+    ``continues`` marks a window that follows another from the same book. Those
+    windows are packed contiguously and in order, so the preceding text is
+    genuinely in the context; stamping every window with ``<|story_start|>``
+    told the model to treat it as a fresh start and ignore what came before,
+    which is the opposite of what long-range character tracking needs. A
+    continuation window omits the marker instead.
     """
     text_ids = tokenizer.encode(window)
     tags = dict(tags)
@@ -243,18 +252,19 @@ def encode_story(
 
     # Trim the story, never the tag block: a truncated tag block would be a
     # malformed condition, while a shorter story is merely a shorter story.
-    budget = settings.block_size + 1 - len(block_ids) - 3
+    budget = settings.block_size + 1 - len(block_ids) - (2 if continues else 3)
     if budget < 16:
         raise ValueError("tag block leaves no room for a story")
     if len(text_ids) > budget:
         text_ids = text_ids[:budget]
 
+    opening = [] if continues else [story_start]
     if reversed_block and block_ids:
-        ids = [story_start, *text_ids, *block_ids, story_end, eot]
-        block_at = 1 + len(text_ids)
+        ids = [*opening, *text_ids, *block_ids, story_end, eot]
+        block_at = len(opening) + len(text_ids)
     else:
-        ids = [story_start, *block_ids, *text_ids, story_end, eot]
-        block_at = 1
+        ids = [*opening, *block_ids, *text_ids, story_end, eot]
+        block_at = len(opening)
 
     supervised = [True] * len(ids)
     if masked and block_ids:
@@ -274,6 +284,7 @@ def encode_story(
         tags=kept,
         tags_masked=bool(masked and block_ids),
         tags_reversed=bool(reversed_block and block_ids),
+        continues=continues,
     )
 
 
@@ -317,6 +328,7 @@ def pack_story_segments(
             "tags": segment.tags,
             "tags_masked": segment.tags_masked,
             "tags_reversed": segment.tags_reversed,
+            "continues": segment.continues,
         })
     if current_ids:
         rows.append(current_ids)
