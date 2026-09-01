@@ -59,6 +59,8 @@ def parse_args():
     parser.add_argument("--timeout", type=float, default=180.0)
     parser.add_argument("--max-retries", type=int, default=5)
     parser.add_argument("--seed", type=int, default=1337)
+    parser.add_argument("--verbose", action="store_true",
+                        help="report every story and every backoff as it happens")
     parser.add_argument("--dry-run", action="store_true",
                         help="print one built prompt and exit without calling the API")
     return parser.parse_args()
@@ -121,9 +123,16 @@ def request_story(client, args, key, tags, attempt_log):
         if response.status_code == 200:
             body = response.json()
             try:
-                return body["choices"][0]["message"]["content"].strip(), None
+                choice = body["choices"][0]
+                content = choice["message"]["content"].strip()
             except (KeyError, IndexError, AttributeError):
                 return None, f"malformed response: {str(body)[:160]}"
+            # A response the API cut short is a story with no ending. Only a
+            # natural stop is a finished story.
+            reason = choice.get("finish_reason") or choice.get("native_finish_reason")
+            if reason not in (None, "stop", "end_turn", "eos"):
+                return None, f"truncated by api ({reason})"
+            return content, None
         if response.status_code in (408, 409, 429) or response.status_code >= 500:
             attempt_log[f"http_{response.status_code}"] += 1
             # Honour Retry-After when the server sends one; free tiers do.
@@ -132,7 +141,11 @@ def request_story(client, args, key, tags, attempt_log):
                 pause = float(wait) if wait else delay
             except ValueError:
                 pause = delay
-            time.sleep(min(pause, 120))
+            pause = min(pause, 120)
+            if args.verbose:
+                print(f"    http {response.status_code}, waiting {pause:.0f}s",
+                      flush=True)
+            time.sleep(pause)
             delay = min(delay * 2, 60)
             continue
         return None, f"http {response.status_code}: {response.text[:160]}"
@@ -231,13 +244,17 @@ def main():
                 if status == "accepted":
                     stories += 1
                     tokens += approximate_tokens(payload)
-                    if stories % 50 == 0:
-                        rate = stories / max(1e-9, (time.time() - started) / 3600)
-                        print(f"  {stories:,} stories  ~{tokens:,} tokens  "
-                              f"{rate:,.0f}/h  rejected {sum(rejected.values()):,}",
-                              flush=True)
                 else:
                     rejected[payload or status] += 1
+                attempts = stories + sum(rejected.values())
+                every = 1 if args.verbose else 10
+                if attempts % every == 0:
+                    elapsed = max(1e-9, time.time() - started)
+                    print(f"  {stories:,} kept / {attempts:,} tried  "
+                          f"~{tokens:,} tokens  {stories / (elapsed / 3600):,.0f}/h  "
+                          f"{elapsed / attempts:.1f}s per try", flush=True)
+                    if args.verbose and status != "accepted":
+                        print(f"    rejected: {payload}", flush=True)
     except KeyboardInterrupt:
         print("\ninterrupted; the output file is complete up to this point",
               flush=True)

@@ -225,6 +225,10 @@ def verify(story: str, tags: dict[str, str]) -> tuple[bool, str]:
         return False, "too short"
     if len(words) > 1600:
         return False, "too long"
+    # A story that stops mid-sentence teaches exactly the failure this whole set
+    # exists to fix, so it is worse than no story at all.
+    if story.rstrip()[-1:] not in tuple('.!?"”’—'):
+        return False, "does not end on a sentence"
 
     for name, value in (
         ("POV", story_tagger.point_of_view(story)),
