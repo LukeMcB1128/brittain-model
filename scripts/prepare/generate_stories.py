@@ -42,6 +42,16 @@ from brittain.tags import validate
 
 API_KEY_VARIABLE = "BRITTAIN_API_KEY"
 
+# Set on Ctrl+C. Workers check it while sleeping through a backoff, because a
+# worker parked in a two minute retry wait would otherwise hold the whole
+# process open long after the interrupt, making Ctrl+C look broken.
+STOP = threading.Event()
+
+
+def interruptible_sleep(seconds: float) -> None:
+    """Sleep, but wake immediately once the run has been interrupted."""
+    STOP.wait(timeout=seconds)
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -113,11 +123,13 @@ def request_story(client, args, key, tags, attempt_log):
     headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
     delay = 2.0
     for attempt in range(args.max_retries):
+        if STOP.is_set():
+            return None, "interrupted"
         try:
             response = client.post("/chat/completions", json=payload, headers=headers)
         except httpx.HTTPError as exc:
             attempt_log["network"] += 1
-            time.sleep(delay)
+            interruptible_sleep(delay)
             delay = min(delay * 2, 60)
             continue
         if response.status_code == 200:
@@ -145,7 +157,7 @@ def request_story(client, args, key, tags, attempt_log):
             if args.verbose:
                 print(f"    http {response.status_code}, waiting {pause:.0f}s",
                       flush=True)
-            time.sleep(pause)
+            interruptible_sleep(pause)
             delay = min(delay * 2, 60)
             continue
         return None, f"http {response.status_code}: {response.text[:160]}"
@@ -227,38 +239,44 @@ def main():
             handle.flush()
         return "accepted", story
 
+    pool = ThreadPoolExecutor(max_workers=args.concurrency)
     try:
-        with ThreadPoolExecutor(max_workers=args.concurrency) as pool:
-            index = stories
-            pending = set()
-            while tokens < args.target_tokens:
-                if args.max_stories is not None and stories >= args.max_stories:
-                    break
-                while len(pending) < args.concurrency:
-                    tags = sample_tags(rng)
-                    pending.add(pool.submit(one_story, index, tags))
-                    index += 1
-                done = next(as_completed(pending))
-                pending.discard(done)
-                status, payload = done.result()
-                if status == "accepted":
-                    stories += 1
-                    tokens += approximate_tokens(payload)
-                else:
-                    rejected[payload or status] += 1
-                attempts = stories + sum(rejected.values())
-                every = 1 if args.verbose else 10
-                if attempts % every == 0:
-                    elapsed = max(1e-9, time.time() - started)
-                    print(f"  {stories:,} kept / {attempts:,} tried  "
-                          f"~{tokens:,} tokens  {stories / (elapsed / 3600):,.0f}/h  "
-                          f"{elapsed / attempts:.1f}s per try", flush=True)
-                    if args.verbose and status != "accepted":
-                        print(f"    rejected: {payload}", flush=True)
+        index = stories
+        pending = set()
+        while tokens < args.target_tokens:
+            if args.max_stories is not None and stories >= args.max_stories:
+                break
+            while len(pending) < args.concurrency:
+                tags = sample_tags(rng)
+                pending.add(pool.submit(one_story, index, tags))
+                index += 1
+            done = next(as_completed(pending))
+            pending.discard(done)
+            status, payload = done.result()
+            if status == "accepted":
+                stories += 1
+                tokens += approximate_tokens(payload)
+            else:
+                rejected[payload or status] += 1
+            attempts = stories + sum(rejected.values())
+            every = 1 if args.verbose else 10
+            if attempts % every == 0:
+                elapsed = max(1e-9, time.time() - started)
+                print(f"  {stories:,} kept / {attempts:,} tried  "
+                      f"~{tokens:,} tokens  {stories / (elapsed / 3600):,.0f}/h  "
+                      f"{elapsed / attempts:.1f}s per try", flush=True)
+                if args.verbose and status != "accepted":
+                    print(f"    rejected: {payload}", flush=True)
     except KeyboardInterrupt:
+        STOP.set()
         print("\ninterrupted; the output file is complete up to this point",
               flush=True)
     finally:
+        STOP.set()
+        # Do not wait for workers parked in a backoff. A worker sleeping through
+        # a two minute retry wait would otherwise hold the process open long
+        # after the interrupt, which makes Ctrl+C look broken.
+        pool.shutdown(wait=False, cancel_futures=True)
         handle.close()
         client.close()
 
