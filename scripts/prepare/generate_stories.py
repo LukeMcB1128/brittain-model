@@ -69,6 +69,10 @@ def parse_args():
     parser.add_argument("--timeout", type=float, default=180.0)
     parser.add_argument("--max-retries", type=int, default=5)
     parser.add_argument("--seed", type=int, default=1337)
+    parser.add_argument("--reasoning-off", action="store_true",
+                        help="ask the provider to skip chain-of-thought. Reasoning "
+                             "models bill thinking as output and are far slower, "
+                             "which is the wrong trade for bulk creative writing")
     parser.add_argument("--verbose", action="store_true",
                         help="report every story and every backoff as it happens")
     parser.add_argument("--dry-run", action="store_true",
@@ -120,6 +124,9 @@ def request_story(client, args, key, tags, attempt_log):
         "max_tokens": args.max_output_tokens,
         "temperature": args.temperature,
     }
+    if args.reasoning_off:
+        # OpenRouter's shape. Providers that do not understand it ignore it.
+        payload["reasoning"] = {"enabled": False}
     headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
     delay = 2.0
     for attempt in range(args.max_retries):
