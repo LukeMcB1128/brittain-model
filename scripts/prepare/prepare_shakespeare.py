@@ -30,7 +30,7 @@ from brittain.data_story import (
 from brittain.data_v3 import repository_in_validation
 from brittain.keep_awake import keep_awake
 from brittain.story_tagger import extract
-from brittain.tags import TagPolicy
+from brittain.tags import CARRIED_TAGS, TagPolicy
 from brittain.tokenizer_story import STORY_TOKENIZER, StoryTokenizer
 
 
@@ -123,14 +123,26 @@ def main():
 
             for position, window in enumerate(window_text(text, tokenizer, settings)):
                 token_count = len(tokenizer.encode(window))
-                tags = extract(
-                    window,
-                    token_count=token_count,
-                    birth_year=row.get("birth_year"),
-                    death_year=row.get("death_year"),
-                    subjects=row.get("subjects"),
-                    bookshelves=row.get("bookshelves"),
-                )
+                # Twist has no extractor and Genre and Voice come from
+                # metadata, so those three are carried from the document. Every
+                # other tag is re-derived from this window, so a tag the source
+                # claimed but the text does not support never reaches training.
+                carried = {
+                    name: value
+                    for name, value in (row.get("book_tags") or {}).items()
+                    if name in CARRIED_TAGS
+                }
+                tags = {
+                    **carried,
+                    **extract(
+                        window,
+                        token_count=token_count,
+                        birth_year=row.get("birth_year"),
+                        death_year=row.get("death_year"),
+                        subjects=row.get("subjects"),
+                        bookshelves=row.get("bookshelves"),
+                    ),
+                }
                 story = encode_story(
                     window, tags, tokenizer, settings, rng,
                     repository=repository,

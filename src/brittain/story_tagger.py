@@ -482,6 +482,16 @@ _NOT_A_NAME = frozenset(
     march april may june july august september october november december
     yes oh ah well come go let""".split()
 )
+# Early Modern openers repeat, sit at the start of a line, and often never
+# appear lowercase in a short passage, so without this "Thou" and "Hast" are
+# counted as characters and every Shakespeare window reads as an Ensemble.
+_NOT_A_NAME = _NOT_A_NAME | _ARCHAIC | frozenset(
+    """hark alas fie lo behold marry sirrah wherein whereof whereto
+    henceforth thereupon perchance verily
+    tis twas oer eer neer
+    give take tell look hear stay speak keep put set turn leave stand
+    remember forget listen wait""".split()
+)
 _CAPITALIZED = re.compile(r"\b([A-Z][a-z]{2,})\b")
 
 

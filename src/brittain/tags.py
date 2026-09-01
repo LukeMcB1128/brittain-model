@@ -79,6 +79,12 @@ _CHARACTER_NAME = re.compile(r"^[A-Z][A-Za-z'’.\- ]{0,30}$")
 # Tags a deterministic extractor scores exactly on generated text. The adherence
 # evaluation reports these separately from the interpretive tags.
 OBJECTIVE_TAGS = ("Voice", "POV", "Tense", "Setting", "Cast", "Length")
+
+# Tags no extractor can derive from the text alone, so they must be carried from
+# the document's metadata. Everything else is re-derived from the text at
+# preparation time, which is what stops a claimed tag the text does not support
+# from reaching training.
+CARRIED_TAGS = frozenset({"Twist", "Genre", "Voice"})
 INTERPRETIVE_TAGS = ("Genre", "Tone", "Twist")
 
 
