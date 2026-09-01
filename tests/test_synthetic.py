@@ -209,3 +209,24 @@ def test_twist_is_carried_because_nothing_can_extract_it():
 
     tags = extract(synthetic.EXEMPLARS[0]["story"], token_count=400)
     assert "Twist" not in tags
+
+
+def test_exemplar_order_is_shuffled_per_request():
+    # Fixed order put the one present-tense exemplar last every time, and the
+    # model copied the nearest thing it had seen: past-tense requests came back
+    # in the present.
+    rng = random.Random(0)
+    tags = synthetic.sample_tags(rng)
+    lasts = {
+        synthetic.build_messages(tags, rng)[-2]["content"][:60]
+        for _ in range(60)
+    }
+    assert len(lasts) == len(synthetic.EXEMPLARS)
+
+
+def test_request_states_the_exact_cast_and_setting():
+    tags = dict(synthetic.EXEMPLARS[0]["tags"])
+    request = synthetic._request(tags)
+    assert "exactly 2 named people" in request
+    assert "Give no one else a name" in request
+    assert "setting: Tavern" in request

@@ -116,11 +116,11 @@ def load_existing(path: Path) -> tuple[int, int, set[str]]:
     return stories, tokens, seen
 
 
-def request_story(client, args, key, tags, attempt_log):
+def request_story(client, args, key, tags, attempt_log, rng):
     """One chat completion, with backoff on rate limits and transient failures."""
     payload = {
         "model": args.model,
-        "messages": build_messages(tags),
+        "messages": build_messages(tags, rng),
         "max_tokens": args.max_output_tokens,
         "temperature": args.temperature,
     }
@@ -231,7 +231,11 @@ def main():
     handle = output.open("a", encoding="utf-8")
 
     def one_story(index: int, tags: dict[str, str]):
-        story, error = request_story(client, args, key, tags, attempt_log)
+        # Each worker gets its own generator: random.Random is not thread
+        # safe, and a shared one would make the shuffle non-reproducible.
+        story, error = request_story(
+            client, args, key, tags, attempt_log, random.Random(index)
+        )
         if story is None:
             return "error", error
         ok, why = verify(story, tags)

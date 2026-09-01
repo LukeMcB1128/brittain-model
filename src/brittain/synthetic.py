@@ -205,10 +205,14 @@ def sample_tags(rng: random.Random) -> dict[str, str]:
 def _request(tags: dict[str, str]) -> str:
     low, high = LENGTH_WORDS[tags["Length"]]
     names = tags["Characters"].replace(";", " and")
+    count = len([n for n in tags["Characters"].split(";") if n.strip()])
+    people = "one named person" if count == 1 else f"exactly {count} named people"
     lines = [
         render(tags),
         "",
         f"Write a complete story of about {low} to {high} words, using {names}.",
+        f"There must be {people} in the story: {names}. Give no one else a name.",
+        f"The whole story happens in this setting: {tags['Setting']}.",
     ]
     # The two tags every model quietly ignores. Past tense and a single
     # viewpoint are the defaults they fall back into, so they get said twice.
@@ -224,10 +228,20 @@ def _request(tags: dict[str, str]) -> str:
     return "\n".join(lines)
 
 
-def build_messages(tags: dict[str, str]) -> list[dict[str, str]]:
-    """Build the chat messages for one story request."""
+def build_messages(
+    tags: dict[str, str], rng: random.Random | None = None
+) -> list[dict[str, str]]:
+    """Build the chat messages for one story request.
+
+    The exemplars are shuffled per request. Fixed order put the one present
+    tense example last every time, and the model copied the nearest thing it had
+    seen: past-tense requests came back in the present. Order is a confound, so
+    it is randomized rather than tuned.
+    """
+    order = list(EXEMPLARS)
+    (rng or random).shuffle(order)
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    for exemplar in EXEMPLARS:
+    for exemplar in order:
         messages.append({"role": "user", "content": _request(exemplar["tags"])})
         messages.append({"role": "assistant", "content": exemplar["story"]})
     messages.append({"role": "user", "content": _request(tags)})
