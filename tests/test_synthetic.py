@@ -230,3 +230,26 @@ def test_request_states_the_exact_cast_and_setting():
     assert "exactly 2 named people" in request
     assert "Give no one else a name" in request
     assert "setting: Tavern" in request
+
+
+def test_story_ids_come_from_content_not_a_counter():
+    # Indices are handed out per attempt, so accepted rows carry sparse ids.
+    # Resuming from the accepted count renumbered into a range already used and
+    # produced six collisions. A content hash cannot collide on a resume.
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "generate_stories", PROJECT_ROOT / "scripts/prepare/generate_stories.py"
+    )
+    generate = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(generate)
+
+    tags = dict(synthetic.EXEMPLARS[0]["tags"])
+    first = generate.corpus_row(0, "A story that ends here.", tags)
+    # The same text at a different index keeps the same identity...
+    again = generate.corpus_row(999, "A story that ends here.", tags)
+    assert first["repository"] == again["repository"]
+    # ...and different text never shares one.
+    other = generate.corpus_row(0, "A different story entirely.", tags)
+    assert other["repository"] != first["repository"]
+    assert first["repository"].startswith("synthetic/")

@@ -174,14 +174,22 @@ def request_story(client, args, key, tags, attempt_log, rng):
 def corpus_row(index: int, story: str, tags: dict[str, str]) -> dict:
     """A row shaped like the ones build_story_corpus writes.
 
+    The identifier comes from the story's own content rather than a counter.
+    Counters do not survive a resume: indices are handed out per attempt, so
+    accepted rows carry sparse ids, and restarting from the accepted *count*
+    began renumbering partway through the range already used. Six ids collided
+    that way. A content hash cannot collide and does not care how often the run
+    is restarted.
+
     ``book_tags`` carries the requested tags. Preparation reuses only the ones no
     extractor can verify from the text; everything else is re-derived from the
     story itself, so a tag the generator claimed but did not deliver cannot leak
     into training.
     """
+    mark = fingerprint(story)[:12]
     return {
-        "repository": f"synthetic/{index:06d}",
-        "path": f"story-{index:06d}",
+        "repository": f"synthetic/{mark}",
+        "path": f"story-{mark}",
         "text": story,
         "source": "synthetic",
         "is_code": False,
