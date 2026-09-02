@@ -462,3 +462,31 @@ def test_a_continuation_trims_context_to_the_block(tokenizer):
         previous=" ".join(["word"] * 5000), block=1024,
     )
     assert len(ids) <= 1024
+
+
+def test_segments_are_stored_compactly(tokenizer):
+    # Preparation holds every segment of the corpus before packing. As Python
+    # lists that is about 44 bytes a token, which survived a 220M-token pilot
+    # and would have needed 75GB at full scale on a 32GB machine.
+    import sys
+    from array import array
+
+    rng = random.Random(0)
+    story = encode_story(PARAGRAPH * 12, {"Genre": "Tragedy"}, tokenizer,
+                         settings_with(DETERMINISTIC), rng)
+    assert isinstance(story.ids, array)
+    assert isinstance(story.supervised, bytearray)
+    per_token = (sys.getsizeof(story.ids) + sys.getsizeof(story.supervised)) / len(story.ids)
+    assert per_token < 8, per_token
+
+
+def test_lists_are_still_accepted_and_converted(tokenizer):
+    from array import array
+
+    story = EncodedStory(
+        ids=[1, 2, 3], supervised=[True, False, True], repository="r", path="p",
+        source="s", tags={}, tags_masked=False, tags_reversed=False,
+    )
+    assert isinstance(story.ids, array) and isinstance(story.supervised, bytearray)
+    assert list(story.ids) == [1, 2, 3]
+    assert list(story.supervised) == [1, 0, 1]

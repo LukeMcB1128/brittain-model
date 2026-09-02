@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import random
 import re
+from array import array
 from dataclasses import dataclass, field
 from typing import Sequence
 
@@ -54,11 +55,20 @@ class StorySettings:
 
 @dataclass
 class EncodedStory:
-    """One packable story segment and its per-token loss mask."""
+    """One packable story segment and its per-token loss mask.
 
-    ids: list[int]
-    # supervised[i] is False where token i must not contribute to the loss.
-    supervised: list[bool]
+    Preparation holds every segment of the corpus in memory before packing, so
+    the storage type is not a detail. A Python list costs about 44 bytes per
+    token once the int objects are counted, which is fine for a 220M-token pilot
+    and fatal at 1.7B: roughly 75GB. Held as a typed array and a bytearray the
+    same corpus is about 5GB.
+
+    Callers may pass ordinary lists; they are converted on construction.
+    """
+
+    ids: array
+    # supervised[i] is 0 where token i must not contribute to the loss.
+    supervised: bytearray
     repository: str
     path: str
     source: str
@@ -68,6 +78,10 @@ class EncodedStory:
     continues: bool = False
 
     def __post_init__(self) -> None:
+        if not isinstance(self.ids, array):
+            self.ids = array("H", self.ids)
+        if not isinstance(self.supervised, (bytearray, bytes)):
+            self.supervised = bytearray(1 if value else 0 for value in self.supervised)
         if len(self.ids) != len(self.supervised):
             raise ValueError("ids and supervised must be the same length")
 
