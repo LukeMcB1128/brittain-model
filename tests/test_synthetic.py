@@ -253,3 +253,44 @@ def test_story_ids_come_from_content_not_a_counter():
     other = generate.corpus_row(0, "A different story entirely.", tags)
     assert other["repository"] != first["repository"]
     assert first["repository"].startswith("synthetic/")
+
+
+def test_genre_is_not_carried_from_an_unverifiable_source():
+    # Real books get Genre from their Gutenberg bookshelves, which extract()
+    # reads directly. Synthetic stories have none, so carrying it meant trusting
+    # the generator: one story tagged Ghost is a darts match with no ghost.
+    from brittain.story_tagger import extract
+
+    assert "Genre" not in CARRIED_TAGS
+    real = extract("word " * 400, token_count=400, birth_year=1847,
+                   death_year=1912, bookshelves=["Horror"])
+    assert real["Genre"] == "Ghost"
+    synthetic_story = extract("word " * 400, token_count=400)
+    assert "Genre" not in synthetic_story
+
+
+def test_twist_and_voice_are_still_carried():
+    # Twist has no extractor at all. Voice is checked a different way: verify()
+    # rejects any synthetic story that reads archaic, so Modern is not a bare
+    # claim.
+    assert CARRIED_TAGS == {"Twist", "Voice"}
+
+
+def test_the_generator_treats_hopeless_statuses_as_fatal():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "generate_stories", PROJECT_ROOT / "scripts/prepare/generate_stories.py"
+    )
+    generate = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(generate)
+
+    # An exhausted balance produced 2,320,998 wasted attempts because the loop
+    # only asked whether the target was met, never why an attempt failed.
+    assert 402 in generate.FATAL_STATUS
+    for status in (400, 401, 403, 404):
+        assert status in generate.FATAL_STATUS
+    # Rate limits and server faults stay retryable.
+    for status in (429, 500, 503):
+        assert status not in generate.FATAL_STATUS
+    assert generate.CONSECUTIVE_FAILURE_LIMIT > 0

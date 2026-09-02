@@ -47,6 +47,20 @@ API_KEY_VARIABLE = "BRITTAIN_API_KEY"
 # process open long after the interrupt, making Ctrl+C look broken.
 STOP = threading.Event()
 
+# Set when the API returns something no amount of retrying will fix. An
+# exhausted balance turned into 2,320,998 wasted attempts at thousands a second,
+# because the loop only ever asked whether the token target was met, never why
+# an attempt had failed.
+FATAL = threading.Event()
+
+# Statuses where the request itself is the problem: bad key, no credit, no
+# permission, wrong model id. Retrying any of them is pure spin.
+FATAL_STATUS = frozenset({400, 401, 402, 403, 404})
+
+# Stop if this many attempts in a row fail for any reason at all. Catches the
+# causes not enumerated above.
+CONSECUTIVE_FAILURE_LIMIT = 250
+
 
 def interruptible_sleep(seconds: float) -> None:
     """Sleep, but wake immediately once the run has been interrupted."""
@@ -130,7 +144,7 @@ def request_story(client, args, key, tags, attempt_log, rng):
     headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
     delay = 2.0
     for attempt in range(args.max_retries):
-        if STOP.is_set():
+        if STOP.is_set() or FATAL.is_set():
             return None, "interrupted"
         try:
             response = client.post("/chat/completions", json=payload, headers=headers)
@@ -167,6 +181,10 @@ def request_story(client, args, key, tags, attempt_log, rng):
             interruptible_sleep(pause)
             delay = min(delay * 2, 60)
             continue
+        if response.status_code in FATAL_STATUS:
+            FATAL.set()
+            return None, (f"fatal http {response.status_code}: "
+                          f"{response.text[:200]}")
         return None, f"http {response.status_code}: {response.text[:160]}"
     return None, "gave up after retries"
 
@@ -232,6 +250,8 @@ def main():
 
     rejected: Counter[str] = Counter()
     attempt_log: Counter[str] = Counter()
+    consecutive_failures = 0
+    aborted = None
     lock = threading.Lock()
     started = time.time()
 
@@ -265,6 +285,13 @@ def main():
         while tokens < args.target_tokens:
             if args.max_stories is not None and stories >= args.max_stories:
                 break
+            if FATAL.is_set():
+                aborted = "the API returned a status retrying cannot fix"
+                break
+            if consecutive_failures >= CONSECUTIVE_FAILURE_LIMIT:
+                aborted = (f"{consecutive_failures} attempts in a row failed; "
+                           f"something is wrong upstream")
+                break
             while len(pending) < args.concurrency:
                 tags = sample_tags(rng)
                 pending.add(pool.submit(one_story, index, tags))
@@ -275,8 +302,10 @@ def main():
             if status == "accepted":
                 stories += 1
                 tokens += approximate_tokens(payload)
+                consecutive_failures = 0
             else:
                 rejected[payload or status] += 1
+                consecutive_failures += 1
             attempts = stories + sum(rejected.values())
             every = 1 if args.verbose else 10
             if attempts % every == 0:
@@ -299,8 +328,14 @@ def main():
         handle.close()
         client.close()
 
+    if aborted:
+        print(f"\nSTOPPED: {aborted}", flush=True)
+        for reason, count in rejected.most_common(3):
+            print(f"  most recent failures: {reason[:120]} ({count})", flush=True)
+
     report = {
         "format": "brittain-shakespeare-synthetic-report-v1",
+        "aborted": aborted,
         "model": args.model,
         "base_url": args.base_url,
         "accepted_stories": stories,

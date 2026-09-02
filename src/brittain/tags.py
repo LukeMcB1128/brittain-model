@@ -84,7 +84,17 @@ OBJECTIVE_TAGS = ("Voice", "POV", "Tense", "Setting", "Cast", "Length")
 # the document's metadata. Everything else is re-derived from the text at
 # preparation time, which is what stops a claimed tag the text does not support
 # from reaching training.
-CARRIED_TAGS = frozenset({"Twist", "Genre", "Voice"})
+#
+# Genre is deliberately absent. Real books get it from their Gutenberg
+# bookshelves, which extract() reads directly, so carrying it changes nothing
+# there. Synthetic stories have no bookshelves, so carrying it meant trusting
+# the generator's claim: one story tagged Ghost is a darts match in a pub with
+# no ghost in it. An unverified label teaches the lever wrong, and 11,813 real
+# books already carry genuine genre metadata.
+#
+# Voice stays. Synthetic prose is Modern by construction, and verify() rejects
+# any generated story that reads archaic, so the claim is checked.
+CARRIED_TAGS = frozenset({"Twist", "Voice"})
 INTERPRETIVE_TAGS = ("Genre", "Tone", "Twist")
 
 
