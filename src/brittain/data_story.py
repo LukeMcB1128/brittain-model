@@ -115,14 +115,41 @@ def split_chapters(text: str) -> list[str]:
     return chunks
 
 
-def _split_long_paragraph(paragraph: str, tokenizer, limit: int) -> list[str]:
+class TokenLengths:
+    """Memoized token counts for one document.
+
+    Windowing asks for the length of the same text many times over: once per
+    paragraph, again for every buffer it rebuilds after a flush, again when
+    merging trailing scraps, and again when filtering by the minimum. Measured
+    over real books, six characters went through the tokenizer for every one in
+    the corpus, and tokenizing is the whole cost of the preparation pass.
+
+    The cache is per document and thrown away with it, so it holds counts for one
+    book rather than for the corpus.
+    """
+
+    __slots__ = ("tokenizer", "_cache")
+
+    def __init__(self, tokenizer):
+        self.tokenizer = tokenizer
+        self._cache: dict[str, int] = {}
+
+    def __call__(self, text: str) -> int:
+        length = self._cache.get(text)
+        if length is None:
+            length = len(self.tokenizer.encode(text))
+            self._cache[text] = length
+        return length
+
+
+def _split_long_paragraph(paragraph: str, lengths: TokenLengths, limit: int) -> list[str]:
     """Break one oversized paragraph at sentence boundaries, never mid-sentence."""
     sentences = _SENTENCE_SPLIT.split(paragraph)
     pieces: list[str] = []
     current: list[str] = []
     for sentence in sentences:
         candidate = " ".join([*current, sentence])
-        if current and len(tokenizer.encode(candidate)) > limit:
+        if current and lengths(candidate) > limit:
             pieces.append(" ".join(current))
             current = [sentence]
         else:
@@ -132,7 +159,7 @@ def _split_long_paragraph(paragraph: str, tokenizer, limit: int) -> list[str]:
     return pieces
 
 
-def _flush(buffer: list[str], tokenizer, settings: StorySettings,
+def _flush(buffer: list[str], lengths: TokenLengths, settings: StorySettings,
            windows: list[str]) -> list[str]:
     """Emit the buffer as one window, returning whatever did not fit.
 
@@ -144,24 +171,32 @@ def _flush(buffer: list[str], tokenizer, settings: StorySettings,
     leftover: list[str] = []
     while buffer:
         text = "\n\n".join(buffer)
-        if len(tokenizer.encode(text)) <= settings.maximum_tokens:
+        if lengths(text) <= settings.maximum_tokens:
             windows.append(text)
             break
         if len(buffer) == 1:
             windows.extend(
-                _split_long_paragraph(buffer[0], tokenizer, settings.maximum_tokens)
+                _split_long_paragraph(buffer[0], lengths, settings.maximum_tokens)
             )
             break
         leftover.insert(0, buffer.pop())
     return leftover
 
 
-def window_text(text: str, tokenizer, settings: StorySettings) -> list[str]:
+def window_text(
+    text: str, tokenizer, settings: StorySettings,
+    lengths: TokenLengths | None = None,
+) -> list[str]:
     """Cut a book into story-sized windows.
 
     Chapter boundaries are preferred, paragraph boundaries are the fallback, and
     a sentence boundary is the last resort. A window is never cut mid-sentence.
+
+    A caller that also needs the token count of each window should pass its own
+    ``TokenLengths`` so the count it asks for afterwards is already cached.
     """
+    if lengths is None:
+        lengths = TokenLengths(tokenizer)
     sources = split_chapters(text) if settings.prefer_chapter_boundaries else [text]
 
     windows: list[str] = []
@@ -176,25 +211,25 @@ def window_text(text: str, tokenizer, settings: StorySettings) -> list[str]:
             return sum(counts)
 
         for paragraph in paragraphs:
-            count = len(tokenizer.encode(paragraph))
+            count = lengths(paragraph)
             if count > settings.maximum_tokens:
                 if buffer:
-                    buffer = _flush(buffer, tokenizer, settings, windows)
-                    counts = [len(tokenizer.encode(item)) for item in buffer]
+                    buffer = _flush(buffer, lengths, settings, windows)
+                    counts = [lengths(item) for item in buffer]
                 windows.extend(
-                    _split_long_paragraph(paragraph, tokenizer, settings.maximum_tokens)
+                    _split_long_paragraph(paragraph, lengths, settings.maximum_tokens)
                 )
                 continue
             if buffer and buffered() + count > settings.maximum_tokens:
-                buffer = _flush(buffer, tokenizer, settings, windows)
-                counts = [len(tokenizer.encode(item)) for item in buffer]
+                buffer = _flush(buffer, lengths, settings, windows)
+                counts = [lengths(item) for item in buffer]
             buffer.append(paragraph)
             counts.append(count)
             if buffered() >= settings.target_tokens:
-                buffer = _flush(buffer, tokenizer, settings, windows)
-                counts = [len(tokenizer.encode(item)) for item in buffer]
+                buffer = _flush(buffer, lengths, settings, windows)
+                counts = [lengths(item) for item in buffer]
         while buffer:
-            buffer = _flush(buffer, tokenizer, settings, windows)
+            buffer = _flush(buffer, lengths, settings, windows)
 
     # A trailing scrap is merged backwards rather than dropped, so the last
     # paragraphs of a chapter are not silently lost.
@@ -202,9 +237,8 @@ def window_text(text: str, tokenizer, settings: StorySettings) -> list[str]:
     for window in windows:
         if (
             merged
-            and len(tokenizer.encode(window)) < settings.minimum_tokens
-            and len(tokenizer.encode(merged[-1] + "\n\n" + window))
-            <= settings.maximum_tokens
+            and lengths(window) < settings.minimum_tokens
+            and lengths(merged[-1] + "\n\n" + window) <= settings.maximum_tokens
         ):
             merged[-1] = merged[-1] + "\n\n" + window
         else:
@@ -212,7 +246,7 @@ def window_text(text: str, tokenizer, settings: StorySettings) -> list[str]:
     return [
         window
         for window in merged
-        if len(tokenizer.encode(window)) >= settings.minimum_tokens
+        if lengths(window) >= settings.minimum_tokens
     ]
 
 

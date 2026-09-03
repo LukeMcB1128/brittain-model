@@ -19,17 +19,19 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import random
 import sys
 import time
 from collections import Counter
+from multiprocessing import Pool, freeze_support
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from brittain.data_story import (
-    StorySettings, encode_story, window_text, write_packed_stories,
+    StorySettings, TokenLengths, encode_story, window_text, write_packed_stories,
 )
 from brittain.data_v3 import repository_in_validation
 from brittain.keep_awake import keep_awake
@@ -72,6 +74,11 @@ def parse_args():
              "limit would spend itself on the first corpus and never reach the "
              "second, which is exactly the mix a smoke test needs to check.",
     )
+    parser.add_argument(
+        "--workers", type=int, default=max(1, (os.cpu_count() or 2) - 1),
+        help="processes encoding documents; the parent needs one core to "
+             "collect their results",
+    )
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args()
 
@@ -106,17 +113,23 @@ def build_settings(config, block_size):
     )
 
 
-def encode_document(row, tokenizer, settings, rng):
+def encode_document(row, tokenizer, settings, seed):
     """Window and encode one document into an ordered group of segments.
 
     The group is kept together and in order because consecutive windows of a
     book are packed contiguously and marked as continuations. Shuffling them
     would make that marker a lie.
+
+    The tag policy is drawn from a generator seeded per document rather than
+    from one walked across the corpus, so a document's tag presentation depends
+    only on the document and the run seed. That is what lets documents be
+    encoded in parallel and still produce the same output every time.
     """
     text = row.get("text") or ""
     if not text:
         return []
     repository = row["repository"]
+    rng = random.Random(f"{seed}:{repository}")
     # Twist has no extractor, and Genre and Voice come from metadata, so those
     # three are carried from the document. Every other tag is re-derived from
     # the window, so a tag the source claimed but the text does not support
@@ -126,13 +139,18 @@ def encode_document(row, tokenizer, settings, rng):
         for name, value in (row.get("book_tags") or {}).items()
         if name in CARRIED_TAGS
     }
+    # Shared with the windower so the token count below is already cached rather
+    # than a second pass over the same window.
+    lengths = TokenLengths(tokenizer)
     group = []
-    for position, window in enumerate(window_text(text, tokenizer, settings)):
+    for position, window in enumerate(
+        window_text(text, tokenizer, settings, lengths=lengths)
+    ):
         tags = {
             **carried,
             **extract(
                 window,
-                token_count=len(tokenizer.encode(window)),
+                token_count=lengths(window),
                 birth_year=row.get("birth_year"),
                 death_year=row.get("death_year"),
                 subjects=row.get("subjects"),
@@ -145,6 +163,57 @@ def encode_document(row, tokenizer, settings, rng):
             source=row.get("source", ""), continues=position > 0,
         ))
     return group
+
+
+_WORKER: dict = {}
+
+
+def _start_worker(tokenizer_path, config_path, block_size, seed):
+    """Build the per-process tokenizer once, not once per document."""
+    # The tokenizer runs its own thread pool per call, which on a 4-core machine
+    # fights the process pool for the same cores.
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    config = json.loads(Path(config_path).read_text(encoding="utf-8"))
+    _WORKER["tokenizer"] = StoryTokenizer(tokenizer_path)
+    _WORKER["settings"] = build_settings(config, block_size)
+    _WORKER["seed"] = seed
+
+
+def _encode_line(line):
+    """Parse and encode one corpus line in a worker.
+
+    Returns the routing fields alongside the segments so the parent never has to
+    parse the JSON itself; at 85,000 documents that parse is not free either.
+    """
+    try:
+        row = json.loads(line)
+    except json.JSONDecodeError:
+        # The generator appends while this reads, so the final line can be half
+        # written. Skipping it loses one story.
+        return None
+    group = encode_document(row, _WORKER["tokenizer"], _WORKER["settings"],
+                            _WORKER["seed"])
+    if not group:
+        return None
+    return row["repository"], row.get("source", ""), group
+
+
+def iter_corpus_lines(corpora, limit_books):
+    """Yield raw lines from every corpus, honouring the per-corpus limit."""
+    for corpus_name in corpora:
+        corpus = project_path(corpus_name)
+        if not corpus.exists():
+            raise SystemExit(f"corpus not found: {corpus}")
+        print(f"reading {corpus}", flush=True)
+        taken = 0
+        with corpus.open(encoding="utf-8") as handle:
+            for line in handle:
+                if limit_books is not None and taken >= limit_books:
+                    break
+                if not line.strip():
+                    continue
+                taken += 1
+                yield line
 
 
 def group_tokens(group):
@@ -199,8 +268,9 @@ def write_split(name, groups, block_size, pad, output_dir, report):
 def main():
     args = parse_args()
     config = json.loads(project_path(args.config).read_text(encoding="utf-8"))
+    # The parent only needs the pad id; the workers do the encoding, each with
+    # its own tokenizer and settings.
     tokenizer = StoryTokenizer(project_path(args.tokenizer))
-    settings = build_settings(config, args.block_size)
 
     corpora = args.corpus or [config.get("output", "data/raw/brittain-shakespeare/corpus.jsonl")]
     output_dir = project_path(args.output_dir)
@@ -217,44 +287,36 @@ def main():
     tag_counts: Counter[str] = Counter()
     started = time.time()
 
-    for corpus_name in corpora:
-        corpus = project_path(corpus_name)
-        if not corpus.exists():
-            raise SystemExit(f"corpus not found: {corpus}")
-        print(f"reading {corpus}", flush=True)
-        from_this_corpus = 0
-        with corpus.open(encoding="utf-8") as handle:
-            for line in handle:
-                if args.limit_books is not None and from_this_corpus >= args.limit_books:
-                    break
-                if not line.strip():
-                    continue
-                try:
-                    row = json.loads(line)
-                except json.JSONDecodeError:
-                    # The generator appends while this reads, so the final line
-                    # can be half written. Skipping it loses one story.
-                    continue
-                group = encode_document(row, tokenizer, settings, rng)
-                if not group:
-                    continue
-                documents += 1
-                from_this_corpus += 1
-                windows += len(group)
-                for segment in group:
-                    for tag in segment.tags:
-                        tag_counts[tag] += 1
-                if repository_in_validation(
-                    row["repository"], args.validation_fraction, args.seed
-                ):
-                    validation_groups.append(group)
-                elif row.get("source") == SYNTHETIC_SOURCE:
-                    synthetic_groups.append(group)
-                else:
-                    real_groups.append(group)
-                if documents % 500 == 0:
-                    print(f"  {documents:,} documents  {time.time() - started:.0f}s",
-                          flush=True)
+    lines = iter_corpus_lines(corpora, args.limit_books)
+    # Documents are independent, and windowing is pure tokenizer work, so this
+    # is the one place in the pipeline where more cores buy anything. Results
+    # come back in order, so the output does not depend on the worker count.
+    with Pool(
+        args.workers,
+        initializer=_start_worker,
+        initargs=(str(project_path(args.tokenizer)), str(project_path(args.config)),
+                  args.block_size, args.seed),
+    ) as pool:
+        for result in pool.imap(_encode_line, lines, chunksize=8):
+            if result is None:
+                continue
+            repository, source, group = result
+            documents += 1
+            windows += len(group)
+            for segment in group:
+                for tag in segment.tags:
+                    tag_counts[tag] += 1
+            if repository_in_validation(
+                repository, args.validation_fraction, args.seed
+            ):
+                validation_groups.append(group)
+            elif source == SYNTHETIC_SOURCE:
+                synthetic_groups.append(group)
+            else:
+                real_groups.append(group)
+            if documents % 500 == 0:
+                print(f"  {documents:,} documents  {time.time() - started:.0f}s",
+                      flush=True)
 
     print(f"real documents {len(real_groups):,}  synthetic {len(synthetic_groups):,}",
           flush=True)
@@ -300,5 +362,6 @@ def main():
 
 
 if __name__ == "__main__":
+    freeze_support()
     with keep_awake("brittain-shakespeare corpus preparation"):
         main()
