@@ -25,13 +25,11 @@ import time
 from collections import Counter
 from pathlib import Path
 
-import numpy as np
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from brittain.data_story import (
-    StorySettings, encode_story, pack_story_segments, window_text,
+    StorySettings, encode_story, window_text, write_packed_stories,
 )
 from brittain.data_v3 import repository_in_validation
 from brittain.keep_awake import keep_awake
@@ -190,13 +188,12 @@ def write_split(name, groups, block_size, pad, output_dir, report):
     segments = [segment for group in groups for segment in group]
     if not segments:
         raise SystemExit(f"{name} split is empty")
-    inputs, labels, _ = pack_story_segments(segments, block_size, pad)
-    destination = output_dir / f"{name}_{block_size}.npz"
-    np.savez(destination, input_ids=inputs, labels=labels)
-    report[f"{name}_rows"] = int(inputs.shape[0])
-    report[f"{name}_supervised_tokens"] = int((labels != -100).sum())
-    print(f"wrote {destination}  rows={inputs.shape[0]:,}", flush=True)
-    del inputs, labels
+    destination = output_dir / f"{name}_{block_size}"
+    stats = write_packed_stories(segments, block_size, pad, destination)
+    del segments
+    report[f"{name}_rows"] = stats["rows"]
+    report[f"{name}_supervised_tokens"] = stats["supervised_tokens"]
+    print(f"wrote {destination}  rows={stats['rows']:,}", flush=True)
 
 
 def main():
@@ -208,7 +205,7 @@ def main():
     corpora = args.corpus or [config.get("output", "data/raw/brittain-shakespeare/corpus.jsonl")]
     output_dir = project_path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    if (output_dir / f"train_{args.block_size}.npz").exists() and not args.overwrite:
+    if (output_dir / f"train_{args.block_size}").exists() and not args.overwrite:
         raise SystemExit("output exists; pass --overwrite to replace it")
 
     rng = random.Random(args.seed)

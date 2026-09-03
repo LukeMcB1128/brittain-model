@@ -15,6 +15,7 @@ import random
 import re
 from array import array
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Sequence
 
 import numpy as np
@@ -29,6 +30,11 @@ _HEADING = re.compile(
     r"[ \t]+[IVXLCDM\d][IVXLCDM\d\w.\-—:' ]{0,80}$",
     re.MULTILINE,
 )
+# Labels carry token ids (vocab 8,192) and the ignore sentinel, both of which fit
+# int16. At 4K that halves the largest file the pipeline writes.
+LABEL_DTYPE = np.int16
+IGNORE_INDEX = -100
+
 _PARAGRAPH_SPLIT = re.compile(r"\n[ \t]*\n")
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])[ \t]+")
 
@@ -306,61 +312,145 @@ def encode_story(
 # Packing
 # --------------------------------------------------------------------------- #
 
+def assign_rows(segments: Sequence[EncodedStory], limit: int) -> list[tuple[int, int]]:
+    """Greedily group segments into rows, returning half-open index ranges.
+
+    A story is never split across two rows, and packing is sequential, so every
+    row is a contiguous run of segments and one pair of indices describes it.
+    Returning ranges rather than materialized rows is what lets the writer below
+    fill a memory-mapped array without ever holding the corpus twice.
+    """
+    ranges: list[tuple[int, int]] = []
+    start = 0
+    length = 0
+    for index, segment in enumerate(segments):
+        size = len(segment.ids)
+        if size > limit:
+            raise ValueError("a story segment exceeds the packer row limit")
+        if length and length + size > limit:
+            ranges.append((start, index))
+            start, length = index, 0
+        length += size
+    if length:
+        ranges.append((start, len(segments)))
+    return ranges
+
+
+def _fill_row(
+    segments: Sequence[EncodedStory],
+    first: int,
+    last: int,
+    limit: int,
+    pad_id: int,
+    ids_buffer: np.ndarray,
+    mask_buffer: np.ndarray,
+) -> None:
+    """Write one row's token ids and supervision mask into the scratch buffers."""
+    ids_buffer[:] = pad_id
+    mask_buffer[:] = False
+    offset = 0
+    for segment in segments[first:last]:
+        size = len(segment.ids)
+        ids_buffer[offset:offset + size] = np.frombuffer(segment.ids, dtype=np.uint16)
+        mask_buffer[offset:offset + size] = np.frombuffer(
+            segment.supervised, dtype=np.uint8
+        ).astype(bool)
+        offset += size
+    mask_buffer[offset:] = False
+    assert offset <= limit
+
+
+def _span(segment: EncodedStory, start: int) -> dict:
+    return {
+        "start": start,
+        "end": start + len(segment.ids),
+        "repository": segment.repository,
+        "path": segment.path,
+        "source": segment.source,
+        "tags": segment.tags,
+        "tags_masked": segment.tags_masked,
+        "tags_reversed": segment.tags_reversed,
+        "continues": segment.continues,
+    }
+
+
 def pack_story_segments(
     segments: Sequence[EncodedStory], block_size: int, pad_id: int
 ) -> tuple[np.ndarray, np.ndarray, list[list[dict]]]:
     """Pack whole stories into rows, honouring each segment's loss mask.
 
     A story is never split across two rows. Padding and masked spans both become
-    ``-100`` in the labels.
+    ``-100`` in the labels. Everything is held in memory, so this is for tests
+    and small sets; ``write_packed_stories`` is the one to use on a real corpus.
     """
     limit = block_size + 1
-    rows: list[list[int]] = []
-    row_masks: list[list[bool]] = []
+    ranges = assign_rows(segments, limit)
+    inputs = np.empty((len(ranges), block_size), dtype=np.uint16)
+    labels = np.empty((len(ranges), block_size), dtype=LABEL_DTYPE)
+    ids_buffer = np.empty(limit, dtype=np.uint16)
+    mask_buffer = np.empty(limit, dtype=bool)
     spans: list[list[dict]] = []
-    current_ids: list[int] = []
-    current_mask: list[bool] = []
-    current_spans: list[dict] = []
+    for row, (first, last) in enumerate(ranges):
+        _fill_row(segments, first, last, limit, pad_id, ids_buffer, mask_buffer)
+        inputs[row] = ids_buffer[:-1]
+        labels[row] = np.where(
+            mask_buffer[1:], ids_buffer[1:].astype(LABEL_DTYPE), IGNORE_INDEX
+        )
+        offset = 0
+        row_spans = []
+        for segment in segments[first:last]:
+            row_spans.append(_span(segment, offset))
+            offset += len(segment.ids)
+        spans.append(row_spans)
+    return inputs, labels, spans
 
-    for segment in segments:
-        if len(segment.ids) > limit:
-            raise ValueError("a story segment exceeds the packer row limit")
-        if current_ids and len(current_ids) + len(segment.ids) > limit:
-            rows.append(current_ids)
-            row_masks.append(current_mask)
-            spans.append(current_spans)
-            current_ids, current_mask, current_spans = [], [], []
-        start = len(current_ids)
-        current_ids.extend(segment.ids)
-        current_mask.extend(segment.supervised)
-        current_spans.append({
-            "start": start,
-            "end": len(current_ids),
-            "repository": segment.repository,
-            "path": segment.path,
-            "source": segment.source,
-            "tags": segment.tags,
-            "tags_masked": segment.tags_masked,
-            "tags_reversed": segment.tags_reversed,
-            "continues": segment.continues,
-        })
-    if current_ids:
-        rows.append(current_ids)
-        row_masks.append(current_mask)
-        spans.append(current_spans)
 
-    input_rows, label_rows = [], []
-    for ids, mask in zip(rows, row_masks):
-        padding = limit - len(ids)
-        padded_ids = ids + [pad_id] * padding
-        padded_mask = mask + [False] * padding
-        input_rows.append(padded_ids[:-1])
-        label_rows.append([
-            padded_ids[index + 1] if padded_mask[index + 1] else -100
-            for index in range(block_size)
-        ])
-    return (
-        np.asarray(input_rows, dtype=np.uint16),
-        np.asarray(label_rows, dtype=np.int32),
-        spans,
+def write_packed_stories(
+    segments: Sequence[EncodedStory],
+    block_size: int,
+    pad_id: int,
+    destination: Path | str,
+) -> dict:
+    """Pack segments straight into memory-mapped ``.npy`` files on disk.
+
+    The in-memory packer needs the whole packed corpus resident twice over — once
+    as Python lists and again as the arrays they are converted into — which is
+    tens of gigabytes at 2K and 4K. Writing through ``open_memmap`` keeps the
+    peak cost at one row, and the training loader mmaps the same files back, so
+    a stage no longer has to fit in RAM to be trained on either.
+    """
+    directory = Path(destination)
+    directory.mkdir(parents=True, exist_ok=True)
+    limit = block_size + 1
+    ranges = assign_rows(segments, limit)
+    if not ranges:
+        raise ValueError("no segments to pack")
+
+    inputs = np.lib.format.open_memmap(
+        directory / "input_ids.npy", mode="w+",
+        dtype=np.uint16, shape=(len(ranges), block_size),
     )
+    labels = np.lib.format.open_memmap(
+        directory / "labels.npy", mode="w+",
+        dtype=LABEL_DTYPE, shape=(len(ranges), block_size),
+    )
+    ids_buffer = np.empty(limit, dtype=np.uint16)
+    mask_buffer = np.empty(limit, dtype=bool)
+    supervised = 0
+    try:
+        for row, (first, last) in enumerate(ranges):
+            _fill_row(segments, first, last, limit, pad_id, ids_buffer, mask_buffer)
+            inputs[row] = ids_buffer[:-1]
+            labels[row] = np.where(
+                mask_buffer[1:], ids_buffer[1:].astype(LABEL_DTYPE), IGNORE_INDEX
+            )
+            supervised += int(mask_buffer[1:].sum())
+        inputs.flush()
+        labels.flush()
+    finally:
+        del inputs, labels
+    return {
+        "rows": len(ranges),
+        "supervised_tokens": supervised,
+        "block_size": block_size,
+    }

@@ -141,9 +141,18 @@ class PackedBatchStream:
     """Deterministic shuffled batches with an exact resumable cursor."""
 
     def __init__(self, path: str | Path, batch_size: int, seed: int):
-        loaded = np.load(resolve_project_path(path), mmap_mode="r")
-        self.inputs = loaded["input_ids"]
-        self.labels = loaded["labels"]
+        resolved = resolve_project_path(path)
+        if resolved.is_dir():
+            # A directory of plain .npy files, written by write_packed_stories.
+            # np.load ignores mmap_mode for an .npz, so that form reads the whole
+            # stage into RAM; these are genuinely memory-mapped, which is what
+            # makes a stage larger than RAM trainable.
+            self.inputs = np.load(resolved / "input_ids.npy", mmap_mode="r")
+            self.labels = np.load(resolved / "labels.npy", mmap_mode="r")
+        else:
+            loaded = np.load(resolved, mmap_mode="r")
+            self.inputs = loaded["input_ids"]
+            self.labels = loaded["labels"]
         if self.inputs.shape != self.labels.shape or self.inputs.ndim != 2:
             raise ValueError("packed input_ids and labels must have the same 2D shape")
         if len(self.inputs) < batch_size:

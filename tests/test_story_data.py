@@ -4,6 +4,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import torch
 from tokenizers import Tokenizer, decoders, models, pre_tokenizers, trainers
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -14,6 +15,7 @@ from brittain.data_story import (
     StorySettings,
     encode_story,
     pack_story_segments,
+    write_packed_stories,
     split_chapters,
     window_text,
 )
@@ -323,7 +325,14 @@ def test_packing_is_dtype_compatible_with_the_trainer():
         [make_segment(range(1, 6))], block_size=8, pad_id=0
     )
     assert inputs.dtype == np.uint16
-    assert labels.dtype == np.int32
+    # int16 holds every token id in an 8,192 vocab and the ignore sentinel, and
+    # the trainer casts to int64 on the way to the GPU, so the narrower label
+    # dtype halves the largest file on disk without changing what is trained on.
+    assert labels.dtype == np.int16
+    assert labels.min() == -100
+    assert np.asarray(labels, dtype=np.int64).tolist() == [
+        [2, 3, 4, 5, -100, -100, -100, -100]
+    ]
 
 
 # --------------------------------------------------------------------------- #
@@ -490,3 +499,34 @@ def test_lists_are_still_accepted_and_converted(tokenizer):
     assert isinstance(story.ids, array) and isinstance(story.supervised, bytearray)
     assert list(story.ids) == [1, 2, 3]
     assert list(story.supervised) == [1, 0, 1]
+
+
+def test_streamed_writer_matches_the_in_memory_packer(tmp_path):
+    """The memory-mapped writer is the one a real corpus goes through.
+
+    It exists because the in-memory packer needs the packed corpus resident
+    several times over, so the two have to agree exactly or the tests above stop
+    describing what is actually written to disk.
+    """
+    segments = [make_segment(range(1, 6)), make_segment(range(6, 12)),
+                make_segment(range(12, 28))]
+    inputs, labels, _ = pack_story_segments(segments, block_size=16, pad_id=0)
+    stats = write_packed_stories(segments, 16, 0, tmp_path / "train_16")
+
+    written_inputs = np.load(tmp_path / "train_16" / "input_ids.npy", mmap_mode="r")
+    written_labels = np.load(tmp_path / "train_16" / "labels.npy", mmap_mode="r")
+    assert np.array_equal(written_inputs, inputs)
+    assert np.array_equal(written_labels, labels)
+    assert stats["rows"] == inputs.shape[0]
+    assert stats["supervised_tokens"] == int((labels != -100).sum())
+
+
+def test_trainer_can_stream_batches_from_a_written_directory(tmp_path):
+    from brittain.training_v3 import PackedBatchStream
+
+    segments = [make_segment(range(1, 9)) for _ in range(8)]
+    write_packed_stories(segments, 16, 0, tmp_path / "train_16")
+    stream = PackedBatchStream(tmp_path / "train_16", batch_size=2, seed=0)
+    x, y = stream.next(torch.device("cpu"))
+    assert x.shape == y.shape == (2, 16)
+    assert x.dtype == y.dtype == torch.int64
