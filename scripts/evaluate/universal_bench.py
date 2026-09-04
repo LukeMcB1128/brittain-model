@@ -21,6 +21,10 @@ Usage:
 
     # Validate reference solutions (no models needed)
     python3 scripts/evaluate/universal_bench.py --validate
+
+Every run merges its results into benchmarks/results/universal_benchmark_results.json
+(keyed by checkpoint name) and regenerates benchmarks/results/leaderboard.html.
+Use --no-merge / --no-html / --output / --html to change that.
 """
 from __future__ import annotations
 
@@ -34,6 +38,8 @@ from typing import List
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
+DEFAULT_RESULTS_JSON = Path("benchmarks/results/universal_benchmark_results.json")
+
 from brittain.universal_bench import (
     TRACKS,
     UniversalBenchmarkRunner,
@@ -41,6 +47,9 @@ from brittain.universal_bench import (
     validate_universal_suite,
 )
 from brittain.verification_v3 import DEFAULT_TSC, backend_status
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from generate_html_report import write_report  # noqa: E402
 
 
 def parse_args():
@@ -60,7 +69,14 @@ def parse_args():
                         help="Validate ground-truth reference suite without loading any models")
     parser.add_argument("--quick", action="store_true",
                         help="Quick smoke run (samples=2, max-tokens=64, 3 tasks per track)")
-    parser.add_argument("--output", default=None, help="Save structured results JSON to this path")
+    parser.add_argument("--output", default=str(DEFAULT_RESULTS_JSON),
+                        help=f"Save structured results JSON to this path (default {DEFAULT_RESULTS_JSON})")
+    parser.add_argument("--html", default=None,
+                        help="HTML leaderboard path (default: leaderboard.html beside the results JSON)")
+    parser.add_argument("--no-html", action="store_true",
+                        help="Skip regenerating the HTML leaderboard")
+    parser.add_argument("--no-merge", action="store_true",
+                        help="Overwrite the results JSON instead of merging into existing entries")
     return parser.parse_args()
 
 
@@ -202,6 +218,62 @@ def print_results(reports: List[dict]):
             print(format_table(th, tr, ta))
 
 
+
+def merge_reports(existing: List[dict], new: List[dict]) -> List[dict]:
+    """Merge fresh reports into the stored leaderboard, keyed by checkpoint name.
+
+    A re-run of a checkpoint replaces its old entry in place; checkpoints that
+    were not re-run are preserved so the leaderboard accumulates over time.
+    """
+    merged = list(existing)
+    index = {rep.get("checkpoint"): i for i, rep in enumerate(merged)}
+    for rep in new:
+        key = rep.get("checkpoint")
+        if key in index:
+            merged[index[key]] = rep
+        else:
+            index[key] = len(merged)
+            merged.append(rep)
+    return merged
+
+
+def load_existing_reports(path: Path) -> List[dict]:
+    """Read previously stored reports, tolerating a missing or corrupt file."""
+    if not path.exists():
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError, UnicodeDecodeError) as exc:
+        print(f"[!] Could not read existing results at {path} ({exc}); starting a fresh file.")
+        return []
+    if isinstance(data, dict):
+        data = [data]
+    if not isinstance(data, list):
+        print(f"[!] Unexpected results format in {path}; starting a fresh file.")
+        return []
+    return [rep for rep in data if isinstance(rep, dict) and "checkpoint" in rep]
+
+
+def export_results(reports: List[dict], args) -> None:
+    """Write the results JSON and refresh the HTML leaderboard."""
+    out_path = Path(args.output)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    payload = reports if args.no_merge else merge_reports(load_existing_reports(out_path), reports)
+    out_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    print(f"\n[✓] Results exported to {out_path} ({len(payload)} checkpoint(s) on record)")
+
+    if args.no_html:
+        return
+    html_path = Path(args.html) if args.html else out_path.parent / "leaderboard.html"
+    try:
+        written = write_report(out_path, html_path)
+    except Exception as exc:  # report generation must never lose the JSON results
+        print(f"[!] HTML leaderboard not regenerated: {exc}")
+        return
+    print(f"[✓] HTML leaderboard updated at {written}")
+
+
 def main() -> int:
     args = parse_args()
 
@@ -254,16 +326,19 @@ def main() -> int:
             print(f"[!] Warning: Checkpoint not found, skipping: {ckpt_path}")
             continue
         print(f"\n[*] Evaluating checkpoint: {ckpt_path} ...", flush=True)
-        report = runner.evaluate_checkpoint(
-            ckpt_path,
-            tasks,
-            samples_per_task=args.samples,
-            max_new_tokens=args.max_tokens,
-            temperature=args.temperature,
-            top_p=args.top_p,
-            repetition_penalty=args.repetition_penalty,
-        )
-        reports.append(report)
+        try:
+            report = runner.evaluate_checkpoint(
+                ckpt_path,
+                tasks,
+                samples_per_task=args.samples,
+                max_new_tokens=args.max_tokens,
+                temperature=args.temperature,
+                top_p=args.top_p,
+                repetition_penalty=args.repetition_penalty,
+            )
+            reports.append(report)
+        except Exception as exc:
+            print(f"[!] Error evaluating {ckpt_path}: {exc}")
 
     if not reports:
         print("No valid checkpoints evaluated.")
@@ -271,11 +346,7 @@ def main() -> int:
 
     print_results(reports)
 
-    if args.output:
-        out_path = Path(args.output)
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        out_path.write_text(json.dumps(reports, indent=2), encoding="utf-8")
-        print(f"\n[✓] Results exported to {args.output}")
+    export_results(reports, args)
 
     return 0
 
