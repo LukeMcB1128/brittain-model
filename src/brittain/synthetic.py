@@ -46,6 +46,11 @@ WEIGHTED_VALUES: dict[str, dict[str, float]] = {
     "Length": {"Flash": 1.0, "Short": 1.2, "Long": 0.0},
 }
 
+# Thirty names across 66,219 stories put each one in roughly 7,300 of them,
+# repeated throughout each, which made these the most frequent names in the whole
+# corpus and taught the model to call everyone Ivo. The generated stories were
+# repaired in place by scripts/prepare/rename_synthetic_characters.py; anything
+# generated from here needs a far wider pool than this.
 NAME_POOL = (
     "Alder", "Bramwell", "Calder", "Dunmore", "Elias", "Fenwick", "Greer",
     "Harrow", "Ivo", "Jessamy", "Keziah", "Lark", "Merrick", "Nessa", "Orrin",

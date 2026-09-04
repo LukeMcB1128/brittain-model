@@ -14,7 +14,8 @@
     "gradient_clip": 1.0
   },
   "evaluation": {
-    "interval": 250,
+    "interval": 100,
+    "interval_note": "A crash costs everything since the last evaluation, so this is the resume granularity as much as the reporting one: 13 min at 1K, 22 min at 4K. The trainer reads its config out of the checkpoint on resume, so this cannot be changed once the run has started.",
     "batches": 20,
     "plateau_evaluations": 12,
     "minimum_delta": 0.001
