@@ -26,6 +26,8 @@ TRACK_ABBREV = {"python": "Py", "javascript": "JS", "typescript": "TS", "json": 
 
 CODE_TRACKS = ("python", "javascript", "typescript")
 SCORED_TRACKS = CODE_TRACKS + ("json", "prose")
+HARNESS_VERSION = 2  # keep in step with brittain.universal_bench.HARNESS_VERSION
+
 DEFAULT_RESULTS_DIR = Path("benchmarks/results")
 DEFAULT_OUTPUT = DEFAULT_RESULTS_DIR / "leaderboard.html"
 
@@ -261,6 +263,17 @@ def generate_html(reports: List[Dict[str, Any]]) -> str:
     total_tasks = sum(task_counts.values())
     track_names = ", ".join(TRACK_LABELS.get(t, t) for t in tracks)
 
+    stale = [r.get("checkpoint", "Unknown") for r in reports
+             if int(r.get("harness_version", 1)) < HARNESS_VERSION]
+    stale_banner = ""
+    if stale:
+        listed = ", ".join(html.escape(n) for n in stale)
+        stale_banner = (
+            '<div class="warn"><b>%d of %d rows were produced by an older harness '
+            '(v&lt;%d) and are not comparable to the rest.</b> Re-run these checkpoints: '
+            '<code>%s</code></div>' % (len(stale), len(reports), HARNESS_VERSION, listed)
+        )
+
     best_model, best_score = "N/A", -1.0
     for r in reports:
         score = calculate_composite_score(r, "all")
@@ -300,7 +313,12 @@ def generate_html(reports: List[Dict[str, Any]]) -> str:
     for r in reports:
         td = r.get("tracks", {})
         overall = calculate_composite_score(r, "all")
-        cells = [heat_cell(overall, f"{overall:.1f}%")]
+        style = r.get("prompt_style", "completion")
+        version = int(r.get("harness_version", 1))
+        style_badge = f'<span class="badge">{html.escape(style)}</span>'
+        if version < HARNESS_VERSION:
+            style_badge += ' <span class="badge stale">v%d</span>' % version
+        cells = [f"<td>{style_badge}</td>", heat_cell(overall, f"{overall:.1f}%")]
         for _, extract in columns:
             pct, display = extract(td)
             cells.append(heat_cell(pct, display))
@@ -376,6 +394,8 @@ def generate_html(reports: List[Dict[str, Any]]) -> str:
       --accent: #0969da;
       --accent2: #1a7f37;
       --badge: #8250df;
+      --warn-bg: #fff8c5;
+      --warn-line: #9a6700;
     }}
     @media (prefers-color-scheme: dark) {{
       :root {{
@@ -387,6 +407,8 @@ def generate_html(reports: List[Dict[str, Any]]) -> str:
         --accent: #58a6ff;
         --accent2: #3fb950;
         --badge: #a371f7;
+        --warn-bg: #2d2a12;
+        --warn-line: #d29922;
       }}
     }}
     * {{ box-sizing: border-box; }}
@@ -508,6 +530,20 @@ def generate_html(reports: List[Dict[str, Any]]) -> str:
       font-weight: 700;
       text-transform: uppercase;
     }}
+    .warn {{
+      border: 1px solid var(--warn-line);
+      background: var(--warn-bg);
+      color: var(--fg);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 14px 0 18px;
+      font-size: 13px;
+    }}
+    .warn code {{ overflow-wrap: anywhere; }}
+    .badge.stale {{
+      background: color-mix(in srgb, var(--warn-line) 30%, transparent);
+      color: var(--warn-line);
+    }}
     details.archive > summary {{
       cursor: pointer;
       padding: 14px 18px;
@@ -523,6 +559,7 @@ def generate_html(reports: List[Dict[str, Any]]) -> str:
 </head>
 <body>
   <h1>BRITTAIN Universal Benchmark Leaderboard</h1>
+  {stale_banner}
   <p class="sub">{models_count} model configuration{"s" if models_count != 1 else ""} evaluated · {total_tasks} standardized task{"s" if total_tasks != 1 else ""} across {len(tracks)} generation track{"s" if len(tracks) != 1 else ""}</p>
 
   <div class="summary">
@@ -561,6 +598,7 @@ def generate_html(reports: List[Dict[str, Any]]) -> str:
       <thead>
         <tr>
           <th class="left">Model Checkpoint</th>
+          <th>Prompt</th>
           <th>Overall</th>
           {matrix_head}
           <th>Code BPB</th>

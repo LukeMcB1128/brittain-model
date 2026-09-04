@@ -15,6 +15,7 @@ import math
 import os
 import re
 import sys
+import warnings
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -25,10 +26,23 @@ import torch
 from .loading import document_prefix, generate, load_any, resolve_device, strip_specials
 from .metrics import pass_at_k, repetition_collapse
 from .paths import BENCHMARK_PROMPTS_DIR, PROJECT_ROOT
+from .prompts import format_prompt
 from .verification_v3 import DEFAULT_TSC, backend_status, verify_program, verify_syntax
 
 UNIVERSAL_DIR = PROJECT_ROOT / "benchmarks" / "universal"
 TRACKS = ("python", "javascript", "typescript", "json", "prose")
+
+# Bumped whenever a change alters what a score MEANS, so old rows in a merged
+# results file can be spotted instead of silently compared against new ones.
+#   1 -> original completion-only harness
+#   2 -> instruct/SFT checkpoints prompted with the Alpaca template they were
+#        trained on; prose no longer reports a fake pass@1
+HARNESS_VERSION = 2
+
+PROMPT_STYLES = ("completion", "instruct")
+
+# Same convention serve.py and sample.py use to infer mode, so all three agree.
+INSTRUCT_NAME_TAGS = ("sft", "instruct")
 
 
 @dataclass
@@ -344,6 +358,170 @@ def calculate_bpb(model, tokenizer, block_size: int, text: str, frame: str = "",
     return total_nll / (math.log(2) * n_bytes)
 
 
+
+# ---------------- Prompt style (base vs instruction-tuned) ----------------
+
+
+def infer_prompt_style(checkpoint_name: str) -> str:
+    """Guess whether a checkpoint expects the Alpaca template, by filename.
+
+    Identical convention to serve.py / sample.py so the three never disagree.
+    An instruction-tuned model handed a bare code prefix does not complete it —
+    it answers in prose, or restates the signature, and the harness scores that
+    as broken syntax. That is a measurement of the prompt format, not the model.
+    """
+    lowered = Path(checkpoint_name).name.lower()
+    return "instruct" if any(tag in lowered for tag in INSTRUCT_NAME_TAGS) else "completion"
+
+
+def build_instruction(task: "UniversalTask") -> Tuple[str, str]:
+    """Turn a completion-style task into an (instruction, input) pair.
+
+    The suite is authored as prefixes to continue, so the instruction is
+    synthesized from the task's leading comment plus its signature. This is a
+    different prompt from the completion track by necessity — instruct and base
+    numbers are directionally comparable, not identical measurements.
+    """
+    prompt = task.prompt
+    if task.track in ("python", "javascript", "typescript"):
+        comment_lines, code_lines = [], []
+        for line in prompt.splitlines():
+            stripped = line.strip()
+            is_comment = stripped.startswith("#") or stripped.startswith("//")
+            if is_comment and not code_lines:
+                comment_lines.append(stripped.lstrip("#/ ").strip())
+            elif stripped:
+                code_lines.append(line)
+        described = " ".join(comment_lines).strip()
+        lang = {"python": "Python", "javascript": "JavaScript", "typescript": "TypeScript"}[task.track]
+        name = task.entry_point or "the function"
+        instruction = (
+            f"Write a {lang} function `{name}`. {described}".strip()
+            if described else f"Write a {lang} function `{name}` that completes the following signature."
+        )
+        return instruction, "\n".join(code_lines)
+    if task.track == "json":
+        return "Complete this JSON document. Reply with JSON only.", prompt
+    return "Continue the following passage in the same style.", prompt
+
+
+_FENCE_RE = re.compile(r"```[a-zA-Z0-9_+-]*\n(.*?)(?:```|\Z)", re.DOTALL)
+_TEMPLATE_MARKERS = ("### Instruction:", "### Input:", "### Response:",
+                     "Below is an instruction")
+
+
+def strip_instruct_response(raw: str) -> str:
+    """Cut an Alpaca response at the next template section, then unwrap fences."""
+    for marker in _TEMPLATE_MARKERS:
+        idx = raw.find(marker)
+        if idx != -1:
+            raw = raw[:idx]
+    match = _FENCE_RE.search(raw)
+    if match:
+        return match.group(1)
+    return raw.replace("```", "")
+
+
+def defines_entry_point(track: str, body: str, entry_point: Optional[str]) -> bool:
+    """True if `body` already declares the task's entry point at its own top level."""
+    if not entry_point:
+        return False
+    name = re.escape(entry_point)
+    if track == "python":
+        return re.search(rf"^[ \t]*(?:async\s+)?def\s+{name}\s*\(", body, re.M) is not None
+    return re.search(rf"\b(?:function|class|const|let|var)\s+{name}\b", body) is not None
+
+
+def truncate_python_definition(completion: str, entry_point: Optional[str]) -> str:
+    """Keep one standalone top-level `def` block out of an instruct response.
+
+    truncate_python_completion() assumes an indented continuation and stops at
+    the first column-0 line, so it returns "" for a whole function definition.
+    """
+    lines = completion.splitlines(keepends=True)
+    start = None
+    if entry_point:
+        pattern = re.compile(rf"^[ \t]*(?:async\s+)?def\s+{re.escape(entry_point)}\s*\(")
+        for i, line in enumerate(lines):
+            if pattern.match(line):
+                start = i
+                break
+    if start is None:
+        for i, line in enumerate(lines):
+            if re.match(r"^(?:async\s+)?(?:def|class)\s", line):
+                start = i
+                break
+    if start is None:
+        return ""
+    kept = [lines[start]]
+    for line in lines[start + 1:]:
+        if line.strip() and not line[0].isspace():
+            break
+        kept.append(line)
+    return "".join(kept)
+
+
+def assemble_program(task: "UniversalTask", body: str) -> str:
+    """Full source to compile: the body alone if it is self-contained, else prompt+body."""
+    if defines_entry_point(task.track, body, task.entry_point):
+        return body
+    return task.prompt + body
+
+
+
+def truncate_braced_definition(body: str) -> str:
+    """Balance a standalone braced definition from depth 0 (instruct responses).
+
+    truncate_braced_completion() starts at depth 1 because the completion-track
+    prompt ends with the opening brace. An instruct response contains the whole
+    function, so it must start from the first brace it sees.
+    """
+    start = body.find("{")
+    if start == -1:
+        return body
+    tail = truncate_braced_completion(body[start + 1:])
+    return body[:start + 1] + tail
+
+
+def parse_quiet(source: str) -> None:
+    """ast.parse without leaking the model's own SyntaxWarnings to our stdout."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        ast.parse(source)
+
+
+def longest_parseable_python(task: "UniversalTask", body: str, limit: int = 4000) -> str:
+    """Longest prefix of `body` whose assembled program is valid Python.
+
+    These models emit no stop token. They finish the answer and run straight
+    into the next document of their training data, frequently glued to the final
+    token with no separator at all:
+
+        return lowimport React from 'react';
+
+    Line-based truncation cannot see that boundary — the poison is inside an
+    otherwise well-indented line — so a correct function was scored as a syntax
+    error. This is the same move truncate_braced_completion() already makes for
+    JS/TS, which is why braced tracks were unaffected and Python was not: a
+    closing brace marks the end of the answer, a dedent does not.
+
+    Cutting at the last valid point is generous, but it is generous identically
+    for every checkpoint and both prompt styles, so comparisons stay honest.
+    """
+    if not body.strip():
+        return body
+    candidate = body[:limit]
+    while candidate:
+        try:
+            parse_quiet(assemble_program(task, candidate))
+            return candidate
+        except SyntaxError:
+            candidate = candidate[:-1]
+        except Exception:
+            return ""
+    return ""
+
+
 # ---------------- Model Evaluation Runner ----------------
 
 
@@ -358,11 +536,23 @@ class UniversalBenchmarkRunner:
     def evaluate_checkpoint(self, checkpoint_path: str | Path, tasks: List[UniversalTask],
                             samples_per_task: int = 5, max_new_tokens: int = 128,
                             temperature: float = 0.4, top_p: float = 0.95,
-                            repetition_penalty: float = 1.12, seed: int = 1337) -> Dict[str, Any]:
-        """Run the universal benchmark suite on a loaded checkpoint."""
+                            repetition_penalty: float = 1.12, seed: int = 1337,
+                            prompt_style: str = "auto") -> Dict[str, Any]:
+        """Run the universal benchmark suite on a loaded checkpoint.
+
+        prompt_style: "completion" feeds the task prefix raw; "instruct" wraps it
+        in the Alpaca template the SFT models were trained on; "auto" picks by
+        checkpoint name.
+        """
         torch.manual_seed(seed)
         path = Path(checkpoint_path)
         model, block_size, tokenizer = load_any(path, self.device)
+
+        style = infer_prompt_style(path.name) if prompt_style == "auto" else prompt_style
+        if style not in PROMPT_STYLES:
+            raise ValueError(f"Unknown prompt_style {style!r}; expected one of {PROMPT_STYLES}")
+        if style == "instruct":
+            print(f"    prompt style: instruct (Alpaca template)", flush=True)
 
         # Track-specific framing path
         framing_paths = {
@@ -398,7 +588,11 @@ class UniversalBenchmarkRunner:
             # Prepare prompt framing for Brittain3 if applicable
             subpath = framing_paths.get(track, "file.txt")
             prefix = document_prefix(tokenizer, "universal_bench", subpath)
-            full_prompt = prefix + task.prompt
+            if style == "instruct":
+                instruction, inp = build_instruction(task)
+                full_prompt = prefix + format_prompt(instruction, inp)
+            else:
+                full_prompt = prefix + task.prompt
             prompt_ids = tokenizer.encode(full_prompt)
 
             context = torch.tensor([prompt_ids], dtype=torch.long, device=self.device)
@@ -425,16 +619,24 @@ class UniversalBenchmarkRunner:
                     continue
 
                 if track == "python":
-                    body = normalize_indentation(truncate_python_completion(raw_body))
+                    if style == "instruct":
+                        cleaned = strip_instruct_response(raw_body)
+                        body = normalize_indentation(
+                            truncate_python_definition(cleaned, task.entry_point)
+                        )
+                    else:
+                        body = normalize_indentation(truncate_python_completion(raw_body))
+                    body = longest_parseable_python(task, body)
                     if not body.strip():
                         t_res["empty"] += 1
                         continue
+                    program = assemble_program(task, body)
                     try:
-                        ast.parse(task.prompt + body)
+                        parse_quiet(program)
                         t_res["syntax_ok"] += 1
                         if task.tests:
                             checked = verify_program(
-                                "python", task.prompt + body, "\n".join(task.tests),
+                                "python", program, "\n".join(task.tests),
                                 timeout=self.timeout, tsc=self.tsc_path
                             )
                             if checked.ok:
@@ -443,34 +645,61 @@ class UniversalBenchmarkRunner:
                         pass
 
                 elif track == "javascript":
-                    body = truncate_braced_completion(raw_body)
-                    syntax = verify_syntax("javascript", task.prompt + body, timeout=self.timeout)
+                    if style == "instruct":
+                        body = strip_instruct_response(raw_body)
+                        if defines_entry_point(track, body, task.entry_point):
+                            body = truncate_braced_definition(body)
+                        else:
+                            body = truncate_braced_completion(body)
+                        if not body.strip():
+                            t_res["empty"] += 1
+                            continue
+                    else:
+                        body = truncate_braced_completion(raw_body)
+                    program = assemble_program(task, body)
+                    syntax = verify_syntax("javascript", program, timeout=self.timeout)
                     if syntax.ok:
                         t_res["syntax_ok"] += 1
                         if task.tests:
                             checked = verify_program(
-                                "javascript", task.prompt + body, "\n".join(task.tests),
+                                "javascript", program, "\n".join(task.tests),
                                 timeout=self.timeout, tsc=self.tsc_path
                             )
                             if checked.ok:
                                 correct_count += 1
 
                 elif track == "typescript":
-                    body = truncate_braced_completion(raw_body)
-                    syntax = verify_syntax("typescript", task.prompt + body,
+                    if style == "instruct":
+                        body = strip_instruct_response(raw_body)
+                        if defines_entry_point(track, body, task.entry_point):
+                            body = truncate_braced_definition(body)
+                        else:
+                            body = truncate_braced_completion(body)
+                        if not body.strip():
+                            t_res["empty"] += 1
+                            continue
+                    else:
+                        body = truncate_braced_completion(raw_body)
+                    program = assemble_program(task, body)
+                    syntax = verify_syntax("typescript", program,
                                            timeout=self.timeout, tsc=self.tsc_path)
                     if syntax.ok:
                         t_res["syntax_ok"] += 1
                         if task.tests:
                             checked = verify_program(
-                                "typescript", task.prompt + body, "\n".join(task.tests),
+                                "typescript", program, "\n".join(task.tests),
                                 timeout=self.timeout, tsc=self.tsc_path
                             )
                             if checked.ok:
                                 correct_count += 1
 
                 elif track == "json":
-                    jres = verify_json_completion(task.prompt, raw_body, task.expected_keys, task.schema_type)
+                    if style == "instruct":
+                        # An instruct model returns the whole document, not a tail.
+                        cleaned = strip_instruct_response(raw_body).strip()
+                        jres = verify_json_completion("", cleaned, task.expected_keys, task.schema_type)
+                    else:
+                        jres = verify_json_completion(task.prompt, raw_body, task.expected_keys, task.schema_type)
                     if jres.is_valid_json:
                         t_res["syntax_ok"] += 1
                     if jres.schema_valid:
@@ -478,7 +707,8 @@ class UniversalBenchmarkRunner:
                         correct_count += 1
 
                 elif track == "prose":
-                    pmetrics = evaluate_prose_completion(raw_body)
+                    prose_body = strip_instruct_response(raw_body) if style == "instruct" else raw_body
+                    pmetrics = evaluate_prose_completion(prose_body)
                     t_res["distinct_1_list"].append(pmetrics.distinct_1)
                     t_res["distinct_2_list"].append(pmetrics.distinct_2)
                     if pmetrics.is_repetition_collapse:
@@ -523,6 +753,8 @@ class UniversalBenchmarkRunner:
             "params": model.num_params() if hasattr(model, "num_params") else None,
             "block_size": block_size,
             "tokenizer": getattr(tokenizer, "name", "unknown"),
+            "prompt_style": style,
+            "harness_version": HARNESS_VERSION,
             "bpb_code": bpb_code,
             "bpb_prose": bpb_prose,
             "tracks": {},
@@ -535,11 +767,19 @@ class UniversalBenchmarkRunner:
             summary["tracks"][track] = {
                 "tasks": r["total_tasks"],
                 "syntax_validity": r["syntax_ok"] / gens,
-                "pass@1": sum(r["pass@1_list"]) / tasks_cnt if r["pass@1_list"] else 0.0,
                 "solved_tasks": r["solved"],
                 "repetition_collapse": r["collapses"] / gens,
                 "empty_rate": r["empty"] / gens,
             }
+            rate = sum(r["pass@1_list"]) / tasks_cnt if r["pass@1_list"] else 0.0
+            if track == "prose":
+                # Prose has no execution oracle. What was reported as pass@1 was
+                # "closed a sentence and did not collapse" — a restatement of two
+                # metrics already in this dict, not a capability score. Naming it
+                # pass@1 invited exactly the comparison it cannot support.
+                summary["tracks"][track]["clean_completion_rate"] = rate
+            else:
+                summary["tracks"][track]["pass@1"] = rate
             if track == "json":
                 summary["tracks"][track]["schema_validity"] = r["schema_ok"] / gens
             if track == "prose":

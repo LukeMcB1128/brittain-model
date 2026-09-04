@@ -63,6 +63,8 @@ def parse_args():
     parser.add_argument("--top-p", type=float, default=0.95, help="Nucleus sampling top_p (default 0.95)")
     parser.add_argument("--repetition-penalty", type=float, default=1.12, help="Repetition penalty (default 1.12)")
     parser.add_argument("--device", default=None, help="Device to use: auto, cuda, mps, or cpu")
+    parser.add_argument("--prompt-style", default="auto", choices=["auto", "completion", "instruct"],
+                        help="Prompt framing: auto-detects instruct/SFT checkpoints by name (default auto)")
     parser.add_argument("--timeout", type=float, default=5.0, help="Execution timeout in seconds")
     parser.add_argument("--tsc", default=str(DEFAULT_TSC), help="Path to tsc compiler executable")
     parser.add_argument("--validate", action="store_true",
@@ -75,6 +77,8 @@ def parse_args():
                         help="HTML leaderboard path (default: leaderboard.html beside the results JSON)")
     parser.add_argument("--no-html", action="store_true",
                         help="Skip regenerating the HTML leaderboard")
+    parser.add_argument("--no-live", action="store_true",
+                        help="Only write results once at the end (default: flush after every checkpoint)")
     parser.add_argument("--no-merge", action="store_true",
                         help="Overwrite the results JSON instead of merging into existing entries")
     return parser.parse_args()
@@ -254,14 +258,17 @@ def load_existing_reports(path: Path) -> List[dict]:
     return [rep for rep in data if isinstance(rep, dict) and "checkpoint" in rep]
 
 
-def export_results(reports: List[dict], args) -> None:
+def export_results(reports: List[dict], args, quiet: bool = False) -> None:
     """Write the results JSON and refresh the HTML leaderboard."""
     out_path = Path(args.output)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     payload = reports if args.no_merge else merge_reports(load_existing_reports(out_path), reports)
-    out_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    print(f"\n[✓] Results exported to {out_path} ({len(payload)} checkpoint(s) on record)")
+    tmp = out_path.with_suffix(out_path.suffix + ".tmp")
+    tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    tmp.replace(out_path)  # atomic: a reader never sees a half-written file
+    if not quiet:
+        print(f"\n[✓] Results exported to {out_path} ({len(payload)} checkpoint(s) on record)")
 
     if args.no_html:
         return
@@ -271,7 +278,8 @@ def export_results(reports: List[dict], args) -> None:
     except Exception as exc:  # report generation must never lose the JSON results
         print(f"[!] HTML leaderboard not regenerated: {exc}")
         return
-    print(f"[✓] HTML leaderboard updated at {written}")
+    if not quiet:
+        print(f"[✓] HTML leaderboard updated at {written}")
 
 
 def main() -> int:
@@ -321,11 +329,12 @@ def main() -> int:
     runner = UniversalBenchmarkRunner(tsc_path=Path(args.tsc), timeout=args.timeout, device=args.device)
 
     reports = []
-    for ckpt_path in args.checkpoints:
+    total_ckpts = len(args.checkpoints)
+    for index, ckpt_path in enumerate(args.checkpoints, start=1):
         if not Path(ckpt_path).exists():
             print(f"[!] Warning: Checkpoint not found, skipping: {ckpt_path}")
             continue
-        print(f"\n[*] Evaluating checkpoint: {ckpt_path} ...", flush=True)
+        print(f"\n[*] [{index}/{total_ckpts}] Evaluating checkpoint: {ckpt_path} ...", flush=True)
         try:
             report = runner.evaluate_checkpoint(
                 ckpt_path,
@@ -335,10 +344,19 @@ def main() -> int:
                 temperature=args.temperature,
                 top_p=args.top_p,
                 repetition_penalty=args.repetition_penalty,
+                prompt_style=args.prompt_style,
             )
             reports.append(report)
         except Exception as exc:
             print(f"[!] Error evaluating {ckpt_path}: {exc}")
+            continue
+
+        # Flush after every checkpoint. A long multi-model run that only writes
+        # at the end throws away hours of finished work if the process dies on a
+        # later checkpoint, and gives no way to watch it progress.
+        if not args.no_live:
+            export_results(reports, args, quiet=True)
+            print(f"    [{len(reports)}/{total_ckpts}] written to {args.output}", flush=True)
 
     if not reports:
         print("No valid checkpoints evaluated.")
