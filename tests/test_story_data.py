@@ -451,17 +451,23 @@ def test_a_fresh_request_opens_with_story_start(tokenizer):
     assert ids[0] == tokenizer.story_start
 
 
-def test_a_continuation_omits_story_start_like_training_does(tokenizer):
-    # Training marks a continuation by the absence of story_start. Inference has
-    # to frame it the same way or it is asking for a new story instead.
+def test_a_continuation_extends_the_open_document(tokenizer):
+    # This test previously asserted the opposite, and the behaviour it locked in
+    # was wrong. It framed a continuation the way training frames a continuation
+    # window: end the text so far with story_end + eot, then open a fresh tag
+    # block, and let the absent story_start signal that the same book carries
+    # on. The model read the boundary for what it plainly is and began a new
+    # document from the corpus-wide prior, so continuing a bar-room comedy
+    # produced "SCENE XXII" -- about a fifth of the corpus is drama.
     story = _story_module()
     ids = story.build_prompt(
         tokenizer, {"Genre": "Tragedy"}, "", previous="He waited by the door.",
         block=1024,
     )
-    assert ids[0] != tokenizer.story_start
-    assert tokenizer.story_end in ids and tokenizer.eot in ids
-    assert ids[-1] == tokenizer.tags_end
+    assert tokenizer.story_end not in ids
+    assert tokenizer.eot not in ids
+    assert ids[0] == tokenizer.story_start
+    assert ids[1] == tokenizer.tags_start
 
 
 def test_a_continuation_trims_context_to_the_block(tokenizer):
