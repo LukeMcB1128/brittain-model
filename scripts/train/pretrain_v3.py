@@ -38,6 +38,13 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/training/brittain3_49m_pilot.json")
     parser.add_argument("--resume", default=None)
+    parser.add_argument(
+        "--init-from", default=None,
+        help="start a NEW run from these weights: model only, fresh optimizer "
+             "and schedule, config taken from --config. --resume continues the "
+             "run the checkpoint came from and reads its config instead, which "
+             "is what a later stage like SFT must not do.",
+    )
     parser.add_argument("--device", choices=("auto", "cuda", "mps", "cpu"), default="auto")
     parser.add_argument("--max-updates", type=int, default=None, help="safe local run limit")
     parser.add_argument("--smoke", action="store_true", help="use a tiny model and synthetic data")
@@ -150,6 +157,8 @@ def smoke_configuration(args):
 
 def main():
     args = parse_args()
+    if args.resume and args.init_from:
+        raise SystemExit("--resume continues a run and --init-from starts one; pick one")
     checkpoint = None
     if args.resume:
         checkpoint = torch.load(resolve_project_path(args.resume), map_location="cpu", weights_only=False)
@@ -174,6 +183,20 @@ def main():
     model = Brittain3(cfg).to(device)
     if checkpoint:
         model.load_state_dict(checkpoint["model"])
+    elif args.init_from:
+        # Weights only. The optimizer, the schedule and the data cursor all start
+        # clean, which is the difference between a continued run and a new one
+        # built on an old model.
+        source = torch.load(resolve_project_path(args.init_from), map_location="cpu",
+                            weights_only=False)
+        state = source.get("model", source)
+        missing, unexpected = model.load_state_dict(state, strict=False)
+        if missing or unexpected:
+            raise SystemExit(
+                f"--init-from weights do not match the model: "
+                f"{len(missing)} missing, {len(unexpected)} unexpected"
+            )
+        print(f"initialised from {args.init_from}")
     print(f"Brittain3 {model.num_params():,} parameters | device {device} | max context {cfg.max_seq_len}")
 
     opt_cfg = training["optimizer"]

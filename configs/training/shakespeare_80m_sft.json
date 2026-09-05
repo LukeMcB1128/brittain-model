@@ -1,0 +1,39 @@
+{
+  "format": "brittain3-training-v1",
+  "model_config": "configs/models/shakespeare_80m.json",
+  "tokenizer_path": "tokenizers/brittain-shakespeare-prose-8k/tokenizer.json",
+  "output_dir": "checkpoints/shakespeare_80m_sft",
+  "seed": 1337,
+  "precision": "bf16",
+  "compile": false,
+  "compile_note": "Inductor needs Triton, which has no Windows build.",
+  "optimizer": {
+    "betas": [0.9, 0.95],
+    "epsilon": 1e-8,
+    "weight_decay": 0.1,
+    "gradient_clip": 1.0
+  },
+  "evaluation": {
+    "interval": 100,
+    "interval_note": "A crash costs everything since the last evaluation, and the trainer reads its config out of the checkpoint on resume, so this cannot be changed once the run has started.",
+    "batches": 20,
+    "plateau_evaluations": 8,
+    "minimum_delta": 0.001
+  },
+  "stage_note": "One stage. Started with --init-from on the pretrained weights, so the optimizer and schedule are fresh. The peak LR is 3e-5, a sixteenth of pretraining's 6e-4: SFT teaches the model to take the request in words, and a rate high enough to move the prose is high enough to wreck it. 66M tokens of instruction/response pairs at 131,072 tokens per update is about 500 updates an epoch; 1000 is two epochs, which is where instruction tuning usually stops earning.",
+  "stages": [
+    {
+      "name": "sft",
+      "context": 2048,
+      "microbatch": 4,
+      "accumulation": 16,
+      "updates": 1000,
+      "warmup_updates": 50,
+      "decay_updates": 900,
+      "peak_lr": 0.00003,
+      "min_lr": 0.000003,
+      "train_data": "data/processed/brittain-shakespeare-sft/train_2048",
+      "validation_data": "data/processed/brittain-shakespeare-sft/validation_2048"
+    }
+  ]
+}

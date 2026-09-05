@@ -701,3 +701,13 @@ def duplicate_reference_rate(text: str, limit: int = 8) -> float | None:
     if not counted:
         return None
     return duplicated / counted
+
+# A character_genders() lived here and was removed. Two rules were tried and
+# both were measured against names whose conventional gender is not in doubt:
+# taking gendered pronouns from any sentence naming one character scored 55.5%
+# (chance), because "Clara watched him go" names Clara and contains "him";
+# restricting to reflexives, speech-tag appositives and explicit descriptions
+# scored 36.8% and resolved 0.14 characters per story. Neither is fit to label
+# training data, where a wrong gender teaches the opposite of the intended
+# lesson. Aggregating a name's usage across the whole corpus, rather than within
+# one story, is the approach that has not been tried.
