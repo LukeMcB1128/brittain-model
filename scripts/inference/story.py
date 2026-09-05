@@ -67,11 +67,20 @@ def build_prompt(
 ) -> list[int]:
     """Frame a request the way training framed the matching kind of document.
 
-    A fresh story opens with ``<|story_start|>``. A continuation deliberately
-    does not: in training, windows after the first in a book omit that marker,
-    so its absence is the signal that what precedes is context to carry rather
-    than something to ignore. Mirroring the training frame is the whole point;
-    emitting story_start here would ask for a new story instead.
+    A continuation extends the open document rather than starting a new one.
+    The earlier version mirrored training's continuation-window frame instead,
+    ending the previous text with ``<|story_end|><|endoftext|>`` and opening a
+    fresh tag block, on the theory that the absent ``<|story_start|>`` marked it
+    as the same book carrying on. In training it does. At inference the model
+    read the boundary for what it plainly is and started a new document, drawn
+    from the corpus-wide prior: asking a bar-room comedy to continue produced
+    "SCENE XXII", because roughly a fifth of the corpus is drama.
+
+    The anneal removes the last reason to keep that frame. Its synthetic stories
+    are single windows, so they carry no continuation examples at all, and the
+    signal the old framing depended on is the one the final stage trains away.
+
+    Extending the document needs no signal. It is the same text, longer.
     """
     block_ids = []
     if tags:
@@ -82,27 +91,19 @@ def build_prompt(
         ]
     opening_ids = tokenizer.encode(opening) if opening else []
 
+    story_start = tokenizer.special_ids["<|story_start|>"]
+
     if previous:
         tail = tokenizer.encode(previous)
-        # Keep the most recent context that fits, leaving room for the tag
-        # block, the sentinels, and something to actually generate into.
-        room = block - len(block_ids) - len(opening_ids) - 256
+        # Keep the most recent context that fits, leaving room for the opening
+        # sentinel, the tag block, and something to actually generate into.
+        room = block - len(block_ids) - len(opening_ids) - 257
         if room < 1:
             raise SystemExit("the tag block leaves no room for context")
         tail = tail[-room:]
-        return [
-            *tail,
-            tokenizer.story_end,
-            tokenizer.eot,
-            *block_ids,
-            *opening_ids,
-        ]
+        return [story_start, *block_ids, *tail, *opening_ids]
 
-    return [
-        tokenizer.special_ids["<|story_start|>"],
-        *block_ids,
-        *opening_ids,
-    ]
+    return [story_start, *block_ids, *opening_ids]
 
 
 _SENTENCE_END = tuple('.!?"”’')
