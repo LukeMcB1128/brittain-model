@@ -613,3 +613,91 @@ def extract(
         tags["Length"] = length_from_tokens(token_count)
 
     return tags
+
+
+# --------------------------------------------------------------------------- #
+# Entity coherence
+# --------------------------------------------------------------------------- #
+#
+# Not a tag: nothing requests it and nothing conditions on it. It is here
+# because it is the same kind of thing as the extractors — a property of the
+# text a deterministic rule can check — and because "the model loses track of
+# who people are" needs to be a number before it can be said to be improving.
+#
+# The corpus makes this failure predictable. Almost every training window is cut
+# from the middle of a novel, so a name in it refers to someone introduced
+# hundreds of pages earlier, outside the window. A model trained on that sees
+# names used with no local antecedent and learns that names decorate prose.
+
+_MALE = frozenset("he him his himself".split())
+_FEMALE = frozenset("she her hers herself".split())
+_SENTENCE = re.compile(r"[^.!?]+[.!?]*")
+# Plain letters, so "John's" yields "John" rather than a token that matches no
+# name. Splitting "don't" into two pieces costs nothing here.
+_WORD = re.compile(r"[A-Za-z]+")
+
+
+def pronoun_consistency(text: str, limit: int = 8) -> float | None:
+    """Share of named characters whose gendered pronouns never contradict.
+
+    A sentence contributes evidence only when it names exactly one character and
+    its gendered pronouns are all one gender. Both conditions matter. A sentence
+    naming two people cannot say which one "she" is, and a sentence mixing
+    genders usually refers to someone else as well: "She told Ann that he had
+    gone" names Ann alone and settles nothing about her. Contradictions are
+    therefore found across sentences, which is where the real failure lives --
+    "Linda ... her voice" in one and "Linda ... his expression" in the next.
+
+    This is a comparative measure, not ground truth. A sentence like "John looked
+    at her, shocked by the colour in her face" will be read as evidence that John
+    is female. That noise is roughly constant across checkpoints, so the trend is
+    meaningful even where a single number is not.
+
+    Returns None when nothing is attributable, which is not the same as perfect
+    consistency and must not be reported as 1.0.
+    """
+    names = character_names(text, limit=limit)
+    if not names:
+        return None
+    known = set(names)
+    seen: dict[str, set[str]] = {name: set() for name in names}
+    for sentence in _SENTENCE.findall(text):
+        tokens = _WORD.findall(sentence)
+        present = {token for token in tokens if token in known}
+        if len(present) != 1:
+            continue
+        lowered = [token.lower() for token in tokens]
+        male = any(token in _MALE for token in lowered)
+        female = any(token in _FEMALE for token in lowered)
+        if male == female:          # neither, or both: no usable evidence
+            continue
+        seen[present.pop()].add("male" if male else "female")
+    judged = [name for name, genders in seen.items() if genders]
+    if not judged:
+        return None
+    return sum(1 for name in judged if len(seen[name]) == 1) / len(judged)
+
+
+def duplicate_reference_rate(text: str, limit: int = 8) -> float | None:
+    """Share of name-bearing sentences that name the same character twice.
+
+    "John found himself drawn towards John's side" is the signature of a model
+    treating a name as a slot to fill rather than a person to refer back to.
+    Prose uses a pronoun the second time, so a repeat inside one sentence is
+    almost always an error rather than a style.
+    """
+    names = character_names(text, limit=limit)
+    if not names:
+        return None
+    known = set(names)
+    counted = duplicated = 0
+    for sentence in _SENTENCE.findall(text):
+        tokens = [token for token in _WORD.findall(sentence) if token in known]
+        if not tokens:
+            continue
+        counted += 1
+        if len(tokens) != len(set(tokens)):
+            duplicated += 1
+    if not counted:
+        return None
+    return duplicated / counted

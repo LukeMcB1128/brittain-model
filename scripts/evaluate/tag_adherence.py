@@ -152,6 +152,11 @@ def main():
 
     results = {}
     samples_kept = []
+    # Entity coherence is not a tag and nothing conditions on it, but "the model
+    # loses track of who people are" is the loudest failure in the samples and
+    # it needs to be a number before it can be said to be improving. Every
+    # generated sample is scored, whatever tag produced it.
+    coherence = {"pronoun": [], "duplicate": []}
     for name in selected:
         per_value = {}
         for value in TAG_VALUES[name]:
@@ -174,6 +179,12 @@ def main():
                         hits += 1
                     else:
                         misses += 1
+                consistency = story_tagger.pronoun_consistency(text)
+                if consistency is not None:
+                    coherence["pronoun"].append(consistency)
+                duplicates = story_tagger.duplicate_reference_rate(text)
+                if duplicates is not None:
+                    coherence["duplicate"].append(duplicates)
                 if index == 0:
                     samples_kept.append(
                         {"tag": name, "requested": value, "got": got,
@@ -213,6 +224,21 @@ def main():
         print(f"{name}: overall {overall:.1%}" if overall is not None
               else f"{name}: overall n/a", flush=True)
 
+    def mean(values):
+        return sum(values) / len(values) if values else None
+
+    entity = {
+        "pronoun_consistency": mean(coherence["pronoun"]),
+        "duplicate_reference_rate": mean(coherence["duplicate"]),
+        "scored_samples": len(coherence["pronoun"]),
+    }
+    if entity["pronoun_consistency"] is not None:
+        print(f"\nentity coherence over {entity['scored_samples']} samples:")
+        print(f"  pronoun consistency      {entity['pronoun_consistency']:6.1%}  "
+              f"(share of named characters whose pronouns never contradict)")
+        print(f"  duplicate reference rate {entity['duplicate_reference_rate']:6.1%}  "
+              f"(sentences naming the same character twice)")
+
     report = {
         "format": "brittain-shakespeare-adherence-v1",
         "checkpoint": str(checkpoint_path),
@@ -223,6 +249,7 @@ def main():
         "baseline_distribution": {
             name: dict(counts) for name, counts in baseline.items()
         },
+        "entity_coherence": entity,
         "tags": results,
         "examples": samples_kept,
     }

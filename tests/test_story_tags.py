@@ -626,3 +626,91 @@ def test_extract_emits_characters():
                                 death_year=1912)
     assert tags["Characters"] == "Harker"
     validate(tags)
+
+
+# --------------------------------------------------------------------------- #
+# Entity coherence
+# --------------------------------------------------------------------------- #
+
+# character_names needs 150 words before it will name anyone, so these fixtures
+# are long enough to clear that floor.
+
+_COHERENT = """
+Mary crossed the yard slowly. She had not slept at all, and her hands were cold
+against the iron of the gate, and the morning was grey and the grass was stiff
+with frost under her boots.
+
+Mary spoke first, because she always did. "You should go home," she said. Her
+voice carried further than she wanted it to, and she wished at once that she had
+said nothing at all to anybody.
+
+Mary waited by the wall for a while after that. She had known this house for
+eleven years and she could read its silences as easily as she could read a page
+of print, and she did not like what she read in them now.
+
+Mary turned back towards the house at last. She did not look again at the gate,
+and she did not hear anyone follow her, though she was almost sure that someone
+would come before the morning was over.
+
+"Then at least come inside," she said again, to nobody, and she went in without
+waiting for an answer from the empty yard behind her.
+"""
+
+_INCONSISTENT = """
+Linda shouted from the doorway, trying to get his attention across the noise of
+the hall, and he did not turn around at all.
+
+Linda answered without looking up from the table, and her face was pale in the
+grey light that came through the tall windows of the room.
+
+Linda glanced away toward the stairs. It was a difficult argument, and he had
+promised himself that he would not raise his voice again in this house.
+
+Linda, however, continued to observe the room, and his expression was unreadable
+in the shadow of the doorway where he stood waiting.
+
+Linda shrugged at the question. "I do," she said, and her voice was barely
+audible above the rain against the glass.
+
+Linda stared back at the empty chair, and her mind was reeling with everything
+she had not managed to say that evening.
+
+Linda had been standing there a long while before anyone noticed, and her coat
+was still wet from the walk along the road that ran behind the churchyard.
+
+Linda considered the whole business again from the beginning, and his patience
+was wearing thinner with every hour that passed in that cold front room.
+"""
+
+
+def test_pronoun_consistency_separates_coherent_from_inconsistent_prose():
+    assert story_tagger.pronoun_consistency(_COHERENT) == 1.0
+    assert story_tagger.pronoun_consistency(_INCONSISTENT) == 0.0
+
+
+def test_pronoun_consistency_is_none_when_no_name_is_attributable():
+    # Not the same as perfect consistency; reporting 1.0 here would make an
+    # unscorable sample look like a success.
+    assert story_tagger.pronoun_consistency("He walked on. " * 80) is None
+
+
+def test_a_sentence_naming_two_characters_gives_no_evidence():
+    # Nothing here says which of them "she" is.
+    text = "Ann walked beside Boris and she did not speak to him at all. " * 30
+    assert story_tagger.pronoun_consistency(text) is None
+
+
+def test_a_sentence_mixing_genders_gives_no_evidence():
+    # "She told Ann that he had gone" names Ann alone but settles nothing about
+    # her; counting it would invent a contradiction the text does not contain.
+    text = "She told Ann that he had gone away before the morning. " * 30
+    assert story_tagger.pronoun_consistency(text) is None
+
+
+def test_duplicate_reference_rate_catches_a_name_used_twice_in_one_sentence():
+    repeated = ("John found himself drawn towards John's side. "
+                "The room was quiet and the rain had not stopped. " * 2) * 12
+    plain = ("John found himself drawn towards the fire. "
+             "The room was quiet and the rain had not stopped. " * 2) * 12
+    assert story_tagger.duplicate_reference_rate(repeated) > 0.3
+    assert story_tagger.duplicate_reference_rate(plain) == 0.0
