@@ -27,6 +27,7 @@ import numpy as np
 
 from brittain.data_v3 import repository_in_validation
 from brittain.sft_story import encode_example, example_from_story
+from brittain.story_tagger import pronoun_consistency
 from brittain.tokenizer_story import STORY_TOKENIZER, StoryTokenizer
 
 SYNTHETIC = "data/raw/brittain-shakespeare-synthetic/stories_renamed.jsonl"
@@ -40,6 +41,15 @@ def parse_args():
     parser.add_argument("--block-size", type=int, default=2048)
     parser.add_argument("--validation-fraction", type=float, default=0.01)
     parser.add_argument("--seed", type=int, default=1337)
+    parser.add_argument(
+        "--min-pronoun-consistency", type=float, default=1.0,
+        help="drop stories whose named characters take contradictory pronouns. "
+             "The synthetic stories are only 72-80%% consistent themselves, and "
+             "the pretrained model measured 75%%, so the data is the ceiling and "
+             "training longer cannot raise it. Stories with no evidence either "
+             "way are kept: absence of evidence is not a contradiction. Pass 0 "
+             "to keep everything.",
+    )
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args()
@@ -112,9 +122,13 @@ def main():
             except json.JSONDecodeError:
                 skipped["malformed json"] += 1
                 continue
-            example = example_from_story(
-                row.get("text") or "", row.get("book_tags") or {}, rng
-            )
+            story = row.get("text") or ""
+            if args.min_pronoun_consistency > 0 and story:
+                consistency = pronoun_consistency(story)
+                if consistency is not None and consistency < args.min_pronoun_consistency:
+                    skipped["contradictory pronouns"] += 1
+                    continue
+            example = example_from_story(story, row.get("book_tags") or {}, rng)
             if example is None:
                 skipped["no story or no tags"] += 1
                 continue
@@ -141,6 +155,7 @@ def main():
         "stories": str(project_path(args.stories)),
         "block_size": args.block_size,
         "examples": seen,
+        "min_pronoun_consistency": args.min_pronoun_consistency,
         "skipped": dict(skipped),
     }
     write_split("train", train, args.block_size, tokenizer.pad, output_dir, report)
