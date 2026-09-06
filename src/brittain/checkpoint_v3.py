@@ -83,6 +83,33 @@ def validate_checkpoint(checkpoint: dict[str, Any]) -> Brittain3Config:
     return Brittain3Config(**checkpoint["cfg"])
 
 
+def validate_initialization_checkpoint(
+    checkpoint: dict[str, Any],
+    expected_cfg: Brittain3Config,
+    expected_tokenizer_path: str,
+) -> None:
+    """Reject weights that do not belong to the requested training plan.
+
+    A new training stage can change its data and optimizer schedule. It cannot
+    change the model shape or tokenizer because the saved tensors and token ids
+    would then have different meanings.
+    """
+    source_cfg = validate_checkpoint(checkpoint)
+    if source_cfg.to_dict() != expected_cfg.to_dict():
+        raise ValueError("initialization checkpoint model configuration does not match")
+
+    source_tokenizer_path = checkpoint.get("tokenizer_path")
+    if not isinstance(source_tokenizer_path, str):
+        raise ValueError("initialization checkpoint does not identify its tokenizer")
+    if Path(source_tokenizer_path) != Path(expected_tokenizer_path):
+        raise ValueError("initialization checkpoint tokenizer path does not match")
+
+    metadata = checkpoint.get("tokenizer_metadata", {})
+    source_vocab = metadata.get("vocab_size")
+    if source_vocab is not None and int(source_vocab) != expected_cfg.vocab_size:
+        raise ValueError("initialization checkpoint tokenizer vocabulary does not match")
+
+
 def load_brittain3_checkpoint(
     path: str | Path,
     device: torch.device | str = "cpu",

@@ -1,0 +1,60 @@
+{
+  "format": "brittain3-teacher-bakeoff-v1",
+  "seed": 2041,
+  "models": [
+    "qwen3-coder:30b",
+    "qwen3.6:35b-a3b",
+    "glm-4.7-flash:latest"
+  ],
+  "cases": [
+    {
+      "id": "python/clamp_scores",
+      "language": "python",
+      "request": "Write normalize_scores(values). Return a new list where each numeric value is clamped to the inclusive range 0 through 100. Do not change the input list.",
+      "reference": "def normalize_scores(values):\n    return [max(0, min(100, value)) for value in values]",
+      "tests": "original = [-5, 0, 42, 105]\nassert normalize_scores(original) == [0, 0, 42, 100]\nassert original == [-5, 0, 42, 105]\nassert normalize_scores([]) == []"
+    },
+    {
+      "id": "typescript/count_status",
+      "language": "typescript",
+      "request": "Write function countByStatus(rows: Array<{status: string}>): Record<string, number>. Count how many rows have each status. Do not change the input array or its objects.",
+      "reference": "function countByStatus(rows: Array<{status: string}>): Record<string, number> {\n  const result: Record<string, number> = {};\n  for (const row of rows) result[row.status] = (result[row.status] ?? 0) + 1;\n  return result;\n}",
+      "tests": "const rows = [{status: 'open'}, {status: 'done'}, {status: 'open'}];\nconst snapshot = JSON.stringify(rows);\nconst counts = countByStatus(rows);\nif (JSON.stringify(counts) !== JSON.stringify({open: 2, done: 1})) throw new Error('wrong counts');\nif (JSON.stringify(rows) !== snapshot) throw new Error('input changed');\nif (Object.keys(countByStatus([])).length !== 0) throw new Error('empty input failed');"
+    },
+    {
+      "id": "javascript/append_unique",
+      "language": "javascript",
+      "request": "Write function appendUnique(names, name). If name is absent, append it to names and return true. If it is already present, leave names unchanged and return false.",
+      "reference": "function appendUnique(names, name) {\n  if (names.includes(name)) return false;\n  names.push(name);\n  return true;\n}",
+      "tests": "const names = ['Ada'];\nif (appendUnique(names, 'Lin') !== true) throw new Error('new return');\nif (JSON.stringify(names) !== JSON.stringify(['Ada', 'Lin'])) throw new Error('new mutation');\nif (appendUnique(names, 'Ada') !== false) throw new Error('old return');\nif (JSON.stringify(names) !== JSON.stringify(['Ada', 'Lin'])) throw new Error('old mutation');"
+    },
+    {
+      "id": "rust/dedupe_order",
+      "language": "rust",
+      "request": "Write fn dedupe_order(values: &[i32]) -> Vec<i32>. Keep the first occurrence of each value and preserve order. Include all required use declarations. Do not write main.",
+      "reference": "use std::collections::HashSet;\nfn dedupe_order(values: &[i32]) -> Vec<i32> {\n    let mut seen = HashSet::new();\n    values.iter().copied().filter(|value| seen.insert(*value)).collect()\n}",
+      "tests": "fn main() {\n    assert_eq!(dedupe_order(&[3, 1, 3, 2, 1]), vec![3, 1, 2]);\n    assert_eq!(dedupe_order(&[]), Vec::<i32>::new());\n}"
+    },
+    {
+      "id": "cpp/running_totals",
+      "language": "cpp",
+      "request": "Write std::vector<int> running_totals(const std::vector<int>& values). Return the cumulative total at each position. Include all required #include directives. Do not write main.",
+      "reference": "#include <vector>\nstd::vector<int> running_totals(const std::vector<int>& values) {\n    std::vector<int> result;\n    int total = 0;\n    for (int value : values) { total += value; result.push_back(total); }\n    return result;\n}",
+      "tests": "#include <cassert>\nint main() {\n    assert((running_totals({2, -1, 4}) == std::vector<int>{2, 1, 5}));\n    assert(running_totals({}).empty());\n}"
+    },
+    {
+      "id": "c/first_even",
+      "language": "c",
+      "request": "Write int find_first_even(const int *values, size_t length). Return the zero-based index of the first even value, or -1 when there is none. Include all required #include directives. Do not write main.",
+      "reference": "#include <stddef.h>\nint find_first_even(const int *values, size_t length) {\n    for (size_t index = 0; index < length; index++) {\n        if (values[index] % 2 == 0) return (int)index;\n    }\n    return -1;\n}",
+      "tests": "#include <assert.h>\nint main(void) {\n    int a[] = {3, 7, 8, 10};\n    int b[] = {1, 3, 5};\n    assert(find_first_even(a, 4) == 2);\n    assert(find_first_even(b, 3) == -1);\n    assert(find_first_even(NULL, 0) == -1);\n    return 0;\n}"
+    },
+    {
+      "id": "go/word_lengths",
+      "language": "go",
+      "request": "Write func WordLengths(words []string) map[string]int. Map every word to its byte length. Begin the source with package main. Do not write main.",
+      "reference": "package main\nfunc WordLengths(words []string) map[string]int {\n    result := make(map[string]int)\n    for _, word := range words { result[word] = len(word) }\n    return result\n}",
+      "tests": "func main() {\n    got := WordLengths([]string{\"go\", \"model\", \"\"})\n    if got[\"go\"] != 2 || got[\"model\"] != 5 || got[\"\"] != 0 { panic(\"wrong lengths\") }\n    if len(WordLengths(nil)) != 0 { panic(\"nil failed\") }\n}"
+    }
+  ]
+}

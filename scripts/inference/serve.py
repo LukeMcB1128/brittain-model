@@ -57,6 +57,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from brittain.model import Brittain, GPTConfig
 from brittain.model_v3 import Brittain3, Brittain3Config
 from brittain import model_bs
+from brittain.loading import document_prefix
 from brittain.paths import CHECKPOINT_DIR
 from brittain.prompts import format_prompt
 from brittain.tokenizer import load_tokenizer
@@ -83,9 +84,45 @@ device = (torch.device("cuda") if torch.cuda.is_available()
           else torch.device("cpu"))
 
 
+def load_card(path, checkpoint):
+    """Descriptive metadata for a checkpoint: languages, mixture, provenance.
+
+    Two sources, most authoritative first.
+
+    1. A `corpus` block inside the checkpoint itself. This travels with the
+       weights and cannot drift from them, which is why the tokenizer identity
+       and the full training plan already live there.
+    2. `card.json` beside the checkpoint, or `<name>.card.json` next to a
+       loose .pt. Convenient for checkpoints trained before the payload carried
+       a corpus block — like the 49M pilot — but it is a separate file, so it can
+       be lost or go stale. Prefer (1) for anything trained from here on.
+
+    Returns {} when neither exists. A model with no card still serves; it just
+    reports nothing beyond what is derivable from the weights.
+    """
+    embedded = {}
+    if isinstance(checkpoint, dict):
+        embedded = checkpoint.get("corpus") or {}
+        meta = checkpoint.get("metadata")
+        if isinstance(meta, dict) and isinstance(meta.get("corpus"), dict):
+            embedded = {**meta["corpus"], **embedded}
+    candidates = [Path(path).parent / "card.json",
+                  Path(str(path)[:-3] + ".card.json") if str(path).endswith(".pt") else None]
+    for candidate in candidates:
+        if candidate and candidate.is_file():
+            try:
+                on_disk = json.loads(candidate.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                print(f"  [warn] unreadable card {candidate}: {exc}")
+                continue
+            # The embedded block wins: it cannot have drifted from the weights.
+            return {**on_disk, **embedded}
+    return embedded
+
+
 class Loaded:
     def __init__(self, path, name):
-        ck = torch.load(path, map_location=device)
+        ck = torch.load(path, map_location=device, weights_only=False)
         # BS checkpoints are a bare ModuleList state_dict with no 'cfg' key
         if not isinstance(ck, dict) or "cfg" not in ck:
             self.model, self.enc = model_bs.load(path, device)
@@ -104,6 +141,14 @@ class Loaded:
             self.enc = load_tokenizer(ck)
         self.name = name
         self.params = self.model.num_params()
+        # Brittain3 saw every pretraining document wrapped as
+        # <|repo_start|>repo<|file_start|>path, so an unframed prompt is out of
+        # distribution: the model emits <|file_end|><|repo_end|> and stops. The
+        # server must supply the framing or every completion comes back empty.
+        # Brittain1/2 have no such tokens and correctly get "".
+        self.frame = document_prefix(self.enc, "workspace/project", "main.py")
+        self.frame_ids = self.enc.encode(self.frame) if self.frame else []
+        self.card = load_card(path, ck if isinstance(ck, dict) else {})
         self.is_brittain = isinstance(self.model, (Brittain, Brittain3))
         self.supports_fim = bool(getattr(self.enc, "has_fim", False))
         low = os.path.basename(path).lower()
@@ -115,12 +160,43 @@ class Loaded:
             self.raw_default = not ("sft" in low or "instruct" in low)
 
 
+# Brittain3 training writes weights.pt/best.pt/latest.pt into a per-run
+# DIRECTORY, so the old one-level glob missed them entirely, and naming by file
+# stem would have served them as "weights" and "best" — useless in a model picker
+# and ambiguous the moment there are two runs.
+# latest.pt only: mid-run it duplicates best.pt, after a run it duplicates the
+# final weights. Everything else in a run directory is offered.
+RUN_DIR_SKIP = {"latest.pt"}
+
+
+def run_dir_label(run_name, stem):
+    """Name a checkpoint found inside a per-run directory.
+
+    Training writes weights.pt/best.pt, but a finished model is often renamed to
+    something meaningful like `brittain3-xs-coder:49m-pilot.pt` — which is
+    already a good served name and should be used as-is. Only the generic
+    training filenames need the directory to disambiguate them.
+    """
+    if stem == "weights":
+        return run_name
+    if stem == "best":
+        return f"{run_name}-best"
+    return stem
+
+
 def discover():
-    """Find every filed checkpoint plus any active checkpoint in the repo root."""
+    """Find filed checkpoints, repo-root checkpoints, and Brittain3 run dirs."""
+    named = []
     found = list(CHECKPOINT_DIR.glob("*.pt")) + list(PROJECT_ROOT.glob("*.pt"))
-    found = {p.resolve() for p in found if "model_backup" not in p.name}
-    return [str(p) for p in sorted(found, key=lambda p: p.stat().st_mtime,
-                                   reverse=True)]
+    for path in sorted({p.resolve() for p in found if "model_backup" not in p.name},
+                       key=lambda p: p.stat().st_mtime, reverse=True):
+        named.append(str(path))
+    for run in sorted(CHECKPOINT_DIR.glob("*/"), key=lambda p: p.name):
+        for candidate in sorted(run.glob("*.pt")):
+            if candidate.name in RUN_DIR_SKIP:
+                continue
+            named.append(f"{candidate.resolve()}={run_dir_label(run.name, candidate.stem)}")
+    return named
 
 
 specs = args.checkpoints or discover()
@@ -245,21 +321,33 @@ def normalize_fim(prompt, canonical=("<fim_prefix>", "<fim_suffix>", "<fim_middl
 
 
 def prepare_raw_completion(prompt, request_suffix, supports_fim, canonical=None):
-    """Normalize wrapped FIM or Ollama's separate prompt/suffix form."""
-    if supports_fim:
-        prepared, embedded_suffix = normalize_fim(
-            prompt, canonical or ("<fim_prefix>", "<fim_suffix>", "<fim_middle>")
-        )
-    else:
-        prepared, embedded_suffix = strip_fim(prompt)
-    if embedded_suffix is not None:
-        return prepared, embedded_suffix
-    if request_suffix is None:
-        return prepared, None
-    if supports_fim:
-        markers = canonical or ("<fim_prefix>", "<fim_suffix>", "<fim_middle>")
-        return f"{markers[0]}{prepared}{markers[1]}{request_suffix}{markers[2]}", request_suffix
-    return prepared, request_suffix
+    """Normalize wrapped FIM or Ollama's separate prompt/suffix form.
+
+    AN EMPTY SUFFIX IS NOT A SUFFIX. Wrapping a prompt as
+    <fim_prefix>...<fim_suffix><fim_middle> asserts "the file ends at the cursor",
+    which is a rare shape in training. These are base models with FIM as an added
+    capability — the pilot corpus is ~40% FIM and ~60% ordinary causal documents —
+    so with nothing after the cursor, plain left-to-right continuation is both
+    what the caller means and what the model saw most of.
+
+    A client that omits `suffix` and one that sends "" want the same thing, and
+    web forms produce "" for an untouched textarea.
+    """
+    if not request_suffix:
+        request_suffix = None
+
+    # Read the prompt as bare text first, so an empty embedded suffix can be
+    # discarded without having already committed to FIM framing.
+    bare_prefix, embedded_suffix = strip_fim(prompt)
+    if not embedded_suffix:
+        embedded_suffix = None
+
+    suffix = embedded_suffix if embedded_suffix is not None else request_suffix
+    if suffix is None or not supports_fim:
+        return bare_prefix, suffix
+
+    pre, suf, mid = canonical or ("<fim_prefix>", "<fim_suffix>", "<fim_middle>")
+    return f"{pre}{bare_prefix}{suf}{suffix}{mid}", suffix
 
 
 def suffix_stop(suffix):
@@ -320,10 +408,17 @@ def stream_pieces(M, prompt, raw, opts):
     # crashes on [:, -1, :] ("index -1 is out of bounds for dimension 1 with size
     # 0"). Seed with end-of-text instead, which is exactly the start-of-document
     # state these models saw between every training document.
-    if not token_ids:
+    if not token_ids and not M.frame_ids:
         token_ids = [M.enc.eot]
+    # Framing goes in FRONT and survives truncation. Trimming the combined
+    # sequence with [:, -block:] would drop the <|repo_start|> prefix on any
+    # prompt near the context limit — silently reintroducing the empty-completion
+    # bug for exactly the long files where autocomplete matters most. For a framed
+    # model an empty prompt needs no EOT seed: the frame IS the start-of-document
+    # state, and it is what the model was trained to continue from.
+    room = M.block - len(M.frame_ids)
+    token_ids = M.frame_ids + token_ids[-room:]
     ids = torch.tensor([token_ids], dtype=torch.long, device=device)
-    ids = ids[:, -M.block:]
     utf8 = codecs.getincrementaldecoder("utf-8")("replace")
     acc = ""
     def token_stream():
@@ -405,20 +500,27 @@ def stream_pieces(M, prompt, raw, opts):
 def describe(m):
     """What a model is and how it wants to be talked to.
 
-    A client picks its input shape from `mode`, so checkpoints can be swapped
-    behind this without the client changing: 235m-fim -> 235m-fim-2k, 50m-bs ->
-    50m-bs-4b, or a new *-instruct appearing, all show up correctly on their own.
-    `fim` is derived from the tokenizer (vocab 32003) and `instruct` from the
-    filename, so neither needs configuring.
+    MODE IS THE INTERACTION, supports_fim IS A CAPABILITY. They are deliberately
+    separate fields:
 
-      fim       prefix AND suffix; the model writes the middle
-      raw       a prefix; the model continues it
-      instruct  an instruction; the server applies the Alpaca template
+      mode=raw       send `prompt`; the model continues it
+      mode=instruct  send an instruction; the server applies the Alpaca template
+      supports_fim   `suffix` MAY also be sent, and the model will fill the gap
+
+    There is no mode=fim. These are base models that additionally understand
+    infilling — the pilot corpus is ~40% FIM and ~60% ordinary causal documents —
+    so forcing every request through the FIM wrapper misrepresents them and puts
+    the model in its rarer training shape. A client shows a prefix box always, and
+    an optional "infill" suffix box when supports_fim is true.
+
+    Both fields are derived, not configured: supports_fim from the tokenizer
+    (the three sentinels), instruct from the filename. Checkpoints can be swapped
+    behind this without the client changing.
     """
-    # An instruct fine-tune can keep the FIM tokenizer from its base model.
-    # It must still use the Alpaca prompt format. Report instruct first so the
-    # browser sends an instruction instead of a prefix and suffix.
-    mode = "instruct" if not m.raw_default else ("fim" if m.supports_fim else "raw")
+    # An instruct fine-tune keeps the FIM tokenizer inherited from its base, so
+    # supports_fim stays true and would otherwise win. The prompt FORMAT is what
+    # matters for how a client talks to it, so raw_default decides the mode.
+    mode = "raw" if m.raw_default else "instruct"
     return {
         "name": m.name, "model": m.name, "modified_at": now(), "size": 0,
         "digest": m.name, "context": str(m.block),
@@ -426,15 +528,26 @@ def describe(m):
         # This is the public client capability, not merely the tokenizer
         # capability. An instruct model may retain FIM tokens but must not be
         # called as a FIM model.
-        "supports_fim": mode == "fim",
+        # From the tokenizer, NOT from mode — mode no longer has a "fim" value,
+        # and the two are deliberately independent: an instruct model can carry
+        # the FIM sentinels it inherited from its base.
+        "supports_fim": m.supports_fim,
         "max_tokens": MAX_NEW_TOKENS,
         "defaults": ({"temperature": 0.2, "num_predict": 64}
                      if m.raw_default else
                      {"temperature": 0.5, "num_predict": 256}),
+        # A client cannot use a framed model correctly without knowing this.
+        # It is applied server-side too, so a client that ignores it still works.
+        "prompt_framing": m.frame or None,
+        "languages": (m.card.get("primary_languages")
+                      or sorted(m.card.get("languages", {}), key=lambda k: -m.card["languages"][k])[:3]
+                      or None),
         "details": {"family": "brittain",
                     "parameter_size": f"{m.params/1e6:.0f}M",
                     "tokenizer": m.enc.name,
-                    "mode": mode},
+                    "mode": mode,
+                    **({"languages": ", ".join(m.card["primary_languages"])}
+                       if m.card.get("primary_languages") else {})},
     }
 
 
@@ -451,15 +564,32 @@ def version():
 @app.post("/api/show")
 async def show(req: Request):
     M = pick(await req.json())
+    card = M.card
+    info = {
+        "general.architecture": "brittain",
+        "general.parameter_count": M.params,
+        "brittain.context_length": M.block,
+        "brittain.tokenizer": M.enc.name,
+        "brittain.vocab_size": M.enc.vocab_size,
+    }
+    # Dotted namespaced keys are Ollama's own convention for architecture facts,
+    # so unknown ones are ignored by clients rather than rejected.
+    if M.frame:
+        info["brittain.prompt_framing"] = M.frame
+    for key in ("languages", "primary_languages", "mixture", "corpus_tokens",
+                "corpus_config_sha256", "training_tokens", "epochs", "notes"):
+        if key in card:
+            info[f"brittain.{key}"] = card[key]
+    capabilities = ["completion"]
+    if M.supports_fim and M.raw_default:
+        capabilities.append("infill")
+    if M.frame:
+        capabilities.append("document-framing")
     result = {"details": {"family": "brittain",
                           "parameter_size": f"{M.params/1e6:.0f}M"},
-              "capabilities": ["completion"],
+              "capabilities": capabilities,
               "parameters": f"num_ctx {M.block}",
-              "model_info": {
-                  "general.architecture": "brittain",
-                  "general.parameter_count": M.params,
-                  "brittain.context_length": M.block,
-              },
+              "model_info": info,
               "context_length": M.block}
     if M.supports_fim and M.raw_default:
         # Continue's Ollama provider detects native FIM support by looking for
@@ -592,8 +722,7 @@ if __name__ == "__main__":
     print(f"BRITTAIN serving {len(MODELS)} model(s) on http://localhost:{args.port}"
           f"  [device {device}]")
     for m in MODELS.values():
-        mode = ("instruct" if not m.raw_default
-                else ("fim" if m.supports_fim else "raw"))
+        mode = "raw" if m.raw_default else "instruct"
         print(f"  {m.name:<30} {m.params/1e6:6.0f}M  ctx {m.block:<5} "
-              f"{m.enc.name:<9} {mode}")
+              f"{m.enc.name:<9} {mode}{'  +fim' if m.supports_fim else ''}")
     uvicorn.run(app, host=args.host, port=args.port)

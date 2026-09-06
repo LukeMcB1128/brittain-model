@@ -1,0 +1,10 @@
+{
+  "name": "brittain3-typescript-verifier",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Pinned TypeScript compiler for Brittain3 corpus verification",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

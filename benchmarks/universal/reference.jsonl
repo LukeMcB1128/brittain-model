@@ -1,0 +1,75 @@
+{"id":"python/math/clamp_value","completion":"    return max(low, min(val, high))\n"}
+{"id":"python/lists/chunk_list","completion":"    return [items[i:i + size] for i in range(0, len(items), size)]\n"}
+{"id":"python/strings/is_palindrome","completion":"    cleaned = ''.join(c.lower() for c in text if c.isalnum())\n    return cleaned == cleaned[::-1]\n"}
+{"id":"python/dict/invert_dict","completion":"    return {v: k for k, v in d.items()}\n"}
+{"id":"python/algorithms/binary_search","completion":"    low, high = 0, len(arr) - 1\n    while low <= high:\n        mid = (low + high) // 2\n        if arr[mid] == target:\n            return mid\n        elif arr[mid] < target:\n            low = mid + 1\n        else:\n            high = mid - 1\n    return -1\n"}
+{"id":"python/oop/counter_class","completion":"        self.step = step\n        self.val = 0\n    def count(self):\n        self.val += self.step\n        return self.val\n    def reset(self):\n        self.val = 0\n"}
+{"id":"python/parsing/parse_hex_color","completion":"    h = hex_str.lstrip('#')\n    return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))\n"}
+{"id":"python/control/fizz_buzz_list","completion":"    res = []\n    for i in range(1, n + 1):\n        if i % 15 == 0:\n            res.append('FizzBuzz')\n        elif i % 3 == 0:\n            res.append('Fizz')\n        elif i % 5 == 0:\n            res.append('Buzz')\n        else:\n            res.append(str(i))\n    return res\n"}
+{"id":"python/lists/flatten_shallow","completion":"    return [item for sub in nested for item in sub]\n"}
+{"id":"python/strings/slugify","completion":"    import re\n    words = re.findall(r'[a-zA-Z0-9]+', text.lower())\n    return '-'.join(words)\n"}
+{"id":"python/math/gcd","completion":"    import math\n    return math.gcd(a, b)\n"}
+{"id":"python/dict/merge_with_sum","completion":"    res = dict(d1)\n    for k, v in d2.items():\n        res[k] = res.get(k, 0) + v\n    return res\n"}
+{"id":"python/oop/stack","completion":"        self.items = []\n    def push(self, val):\n        self.items.append(val)\n    def pop(self):\n        return self.items.pop() if self.items else None\n    def is_empty(self):\n        return len(self.items) == 0\n"}
+{"id":"python/parsing/extract_emails","completion":"    import re\n    return [w for w in text.split() if '@' in w and not w.startswith('@') and not w.endswith('@')]\n"}
+{"id":"python/algorithms/run_length_encode","completion":"    if not text:\n        return []\n    res = []\n    curr = text[0]\n    cnt = 1\n    for c in text[1:]:\n        if c == curr:\n            cnt += 1\n        else:\n            res.append((curr, cnt))\n            curr = c\n            cnt = 1\n    res.append((curr, cnt))\n    return res\n"}
+{"id":"javascript/arrays/unique_elements","completion":"    return Array.from(new Set(arr));\n}\n"}
+{"id":"javascript/strings/capitalize_words","completion":"    return str.split(' ').map(w => w ? w[0].toUpperCase() + w.slice(1) : '').join(' ');\n}\n"}
+{"id":"javascript/objects/pick_keys","completion":"    const res = {};\n    for (const k of keysToPick) {\n        if (Object.prototype.hasOwnProperty.call(obj, k)) res[k] = obj[k];\n    }\n    return res;\n}\n"}
+{"id":"javascript/math/sum_evens","completion":"    return numbers.filter(n => n % 2 === 0).reduce((acc, n) => acc + n, 0);\n}\n"}
+{"id":"javascript/arrays/flatten_once","completion":"    return [].concat(...arrays);\n}\n"}
+{"id":"javascript/strings/count_vowels","completion":"    const m = text.match(/[aeiou]/gi);\n    return m ? m.length : 0;\n}\n"}
+{"id":"javascript/state/create_accumulator","completion":"    let val = initial;\n    return {\n        add(n) { val += n; return val; },\n        get() { return val; },\n        reset() { val = initial; return val; }\n    };\n}\n"}
+{"id":"javascript/objects/omit_keys","completion":"    const res = Object.assign({}, obj);\n    for (const k of keysToOmit) delete res[k];\n    return res;\n}\n"}
+{"id":"javascript/arrays/zip_arrays","completion":"    const len = Math.min(a.length, b.length);\n    const res = [];\n    for (let i = 0; i < len; i++) res.push([a[i], b[i]]);\n    return res;\n}\n"}
+{"id":"javascript/control/range_list","completion":"    const res = [];\n    for (let i = start; i < end; i += step) res.push(i);\n    return res;\n}\n"}
+{"id":"javascript/parsing/is_valid_email","completion":"    const parts = email.split('@');\n    if (parts.length !== 2) return false;\n    const [user, domain] = parts;\n    return user.length > 0 && domain.includes('.') && domain.indexOf('.') > 0 && domain.slice(-1) !== '.';\n}\n"}
+{"id":"javascript/strings/truncate_string","completion":"    if (str.length <= maxLength) return str;\n    return str.slice(0, maxLength - 3) + '...';\n}\n"}
+{"id":"javascript/objects/group_by_key","completion":"    const res = {};\n    for (const item of items) {\n        const val = item[key];\n        if (!res[val]) res[val] = [];\n        res[val].push(item);\n    }\n    return res;\n}\n"}
+{"id":"javascript/arrays/chunk_array","completion":"    const res = [];\n    for (let i = 0; i < arr.length; i += size) res.push(arr.slice(i, i + size));\n    return res;\n}\n"}
+{"id":"javascript/state/event_emitter","completion":"        this.listeners = {};\n    }\n    on(event, cb) {\n        if (!this.listeners[event]) this.listeners[event] = [];\n        this.listeners[event].push(cb);\n    }\n    emit(event, data) {\n        if (this.listeners[event]) {\n            for (const cb of this.listeners[event]) cb(data);\n        }\n    }\n}\n"}
+{"id":"typescript/math/average","completion":"    if (nums.length === 0) return 0;\n    return nums.reduce((acc, n) => acc + n, 0) / nums.length;\n}\n"}
+{"id":"typescript/strings/mask_phone","completion":"    let seen = 0;\n    let res = '';\n    for (let i = phone.length - 1; i >= 0; i--) {\n        if (/\\d/.test(phone[i])) {\n            seen++;\n            res = (seen <= 4 ? phone[i] : '*') + res;\n        } else {\n            res = phone[i] + res;\n        }\n    }\n    return res;\n}\n"}
+{"id":"typescript/interfaces/user_summary","completion":"    return `${user.name} (${user.age}) - ${user.active ? 'Active' : 'Inactive'}`;\n}\n"}
+{"id":"typescript/generics/first_or_default","completion":"    return items.length > 0 ? items[0] : defaultValue;\n}\n"}
+{"id":"typescript/arrays/count_occurrences","completion":"    const counts: Record<string, number> = {};\n    for (const item of items) {\n        const key = String(item);\n        counts[key] = (counts[key] || 0) + 1;\n    }\n    return counts;\n}\n"}
+{"id":"typescript/objects/filter_object","completion":"    const res: Record<string, T> = {};\n    for (const [k, v] of Object.entries(obj)) {\n        if (predicate(v)) res[k] = v;\n    }\n    return res;\n}\n"}
+{"id":"typescript/control/batch_process","completion":"    const batches: T[][] = [];\n    for (let i = 0; i < items.length; i += batchSize) {\n        batches.push(items.slice(i, i + batchSize));\n    }\n    return batches;\n}\n"}
+{"id":"typescript/math/is_prime","completion":"    if (num < 2) return false;\n    for (let i = 2; i * i <= num; i++) {\n        if (num % i === 0) return false;\n    }\n    return true;\n}\n"}
+{"id":"typescript/parsing/parse_key_value","completion":"    const res: Record<string, string> = {};\n    const str = qs.startsWith('?') ? qs.slice(1) : qs;\n    if (!str) return res;\n    for (const pair of str.split('&')) {\n        const [k, v] = pair.split('=');\n        if (k) res[k] = v || '';\n    }\n    return res;\n}\n"}
+{"id":"typescript/state/lru_cache","completion":"        this.map = new Map<K, V>();\n    }\n    get(k: K): V | undefined {\n        return this.map.get(k);\n    }\n    set(k: K, v: V): void {\n        this.map.set(k, v);\n    }\n    get size(): number {\n        return this.map.size;\n    }\n}\n"}
+{"id":"typescript/arrays/partition","completion":"    const pass: T[] = [];\n    const fail: T[] = [];\n    for (const item of items) {\n        if (predicate(item)) pass.push(item);\n        else fail.push(item);\n    }\n    return [pass, fail];\n}\n"}
+{"id":"typescript/strings/camel_to_snake","completion":"    return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);\n}\n"}
+{"id":"typescript/interfaces/order_total","completion":"    const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);\n    const tax = subtotal * (taxPercent / 100);\n    return Math.round((subtotal + tax) * 100) / 100;\n}\n"}
+{"id":"typescript/generics/wrap_result","completion":"    return { success: true, data };\n}\n"}
+{"id":"typescript/algorithms/deep_flatten","completion":"    const res: number[] = [];\n    for (const x of arr) {\n        if (Array.isArray(x)) res.push(...x);\n        else res.push(x);\n    }\n    return res;\n}\n"}
+{"id":"json/config/package_json","completion":"    \"build\": \"tsc\",\n    \"test\": \"node test.js\"\n  }\n}"}
+{"id":"json/records/user_profile","completion":"  \"role\": \"admin\"\n}"}
+{"id":"json/config/database_settings","completion":"    \"name\": \"prod_db\"\n  }\n}"}
+{"id":"json/geo/coordinates_record","completion":"    \"lng\": 2.3522\n  }\n}"}
+{"id":"json/collections/event_list","completion":"    \"event\": \"logout\",\n    \"timestamp\": 1600003600\n  }\n]"}
+{"id":"json/records/http_response","completion":"    \"items\": []\n  }\n}"}
+{"id":"json/config/server_env","completion":"  \"debug\": false\n}"}
+{"id":"json/ecommerce/product_item","completion":"  \"in_stock\": true\n}"}
+{"id":"json/collections/color_palette","completion":"    \"background\": \"#1e1e1e\"\n  }\n}"}
+{"id":"json/records/weather_report","completion":"  \"conditions\": \"cloudy\"\n}"}
+{"id":"json/auth/jwt_payload","completion":"    \"user\",\n    \"editor\"\n  ]\n}"}
+{"id":"json/records/book_metadata","completion":"  \"pages\": 464\n}"}
+{"id":"json/collections/todo_items","completion":"    \"task\": \"Ship benchmark\",\n    \"done\": false\n  }\n]"}
+{"id":"json/metrics/system_stats","completion":"    \"free_mb\": 8192\n  }\n}"}
+{"id":"json/records/api_error","completion":"    \"status\": 404\n  }\n}"}
+{"id":"prose/tech/hash_tables","completion":" map arbitrary keys to array buckets, resolving collisions via chaining or open addressing to ensure balanced performance."}
+{"id":"prose/tech/compiler_phases","completion":" semantic analysis verifies types and scopes, followed by intermediate representation optimization and final machine code generation."}
+{"id":"prose/tech/garbage_collection","completion":" identifying reachable root references, traversing object graphs, and sweeping away unreferenced memory blocks."}
+{"id":"prose/tech/event_loop","completion":" task queue, waiting for the current call stack to clear before being pushed to execution."}
+{"id":"prose/tech/neural_networks","completion":" multiplying query and key matrices, scaling by dimension, applying softmax, and weighting the corresponding values."}
+{"id":"prose/narrative/clock_tower","completion":" the bronze pendulum swung once more, sending a resonant chime across the sleeping rooftops of the valley below."}
+{"id":"prose/narrative/sea_voyage","completion":" urging them to haul tight the mainsail and batten down the hatches before the next crested wave broke over the bow."}
+{"id":"prose/narrative/library_secret","completion":" the cryptic inscription etched in fading sepia ink: whoever seeks the true foundation must first examine the earliest stones."}
+{"id":"prose/narrative/desert_crossing","completion":" resuming the arduous march under the cold canopy of desert constellations."}
+{"id":"prose/narrative/market_morning","completion":" the scent of roasted coffee beans mingled with the salty ocean breeze across the bustling harbor quay."}
+{"id":"prose/expository/scientific_method","completion":" critically re-evaluate hypotheses, refine experimental parameters, and pursue reproducible validation without confirmation bias."}
+{"id":"prose/expository/architecture_tradeoffs","completion":" sacrificing immediate availability during network partitions to ensure every client reads identical state."}
+{"id":"prose/expository/open_source","completion":" maintainers must cultivate an inclusive culture, document operational standards, and automate continuous testing."}
+{"id":"prose/expository/urban_planning","completion":" measurable reductions in commuter emissions, enhanced neighborhood safety, and renewed local economic vitality."}
+{"id":"prose/expository/cryptography_basics","completion":" computing the function in one direction is efficient, while finding the inverse remains computationally intractable without the private key."}

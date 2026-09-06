@@ -257,7 +257,7 @@ def main():
 
     device = select_device(args.device)
     print(f"loading {args.checkpoint} on {device.type} ...", flush=True)
-    loaded = torch.load(args.checkpoint, map_location=device)
+    loaded = torch.load(args.checkpoint, map_location=device, weights_only=False)
     if isinstance(loaded, dict) and "cfg" in loaded:
         ck = loaded
         cfg = GPTConfig(**ck["cfg"])

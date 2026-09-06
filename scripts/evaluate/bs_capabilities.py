@@ -149,7 +149,7 @@ class BSCfg:
 
 
 def load_model(path, device):
-    checkpoint = torch.load(path, map_location=device)
+    checkpoint = torch.load(path, map_location=device, weights_only=False)
     if isinstance(checkpoint, dict) and "cfg" in checkpoint:
         cfg = GPTConfig(**checkpoint["cfg"])
         model = Brittain(cfg).to(device)

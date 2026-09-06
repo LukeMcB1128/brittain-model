@@ -1,6 +1,7 @@
 """Configuration, batching, and scheduling helpers for Brittain3 training."""
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 from dataclasses import dataclass
@@ -25,6 +26,15 @@ def resolve_project_path(value: str | Path) -> Path:
 def load_json(path: str | Path) -> dict[str, Any]:
     with resolve_project_path(path).open(encoding="utf-8") as handle:
         return json.load(handle)
+
+
+def file_sha256(path: str | Path) -> str:
+    """Return the SHA-256 digest of one project file."""
+    digest = hashlib.sha256()
+    with resolve_project_path(path).open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 @dataclass(frozen=True)
@@ -117,6 +127,14 @@ def load_training_config(path: str | Path) -> tuple[dict, Brittain3Config, list[
         raise ValueError("unsupported Brittain3 training configuration")
     model_cfg = Brittain3Config(**load_json(training["model_config"]))
     stages = parse_training_config(training, model_cfg)
+    expected_tokenizer_hash = training.get("tokenizer_sha256")
+    if expected_tokenizer_hash:
+        actual_tokenizer_hash = file_sha256(training["tokenizer_path"])
+        if actual_tokenizer_hash != expected_tokenizer_hash:
+            raise ValueError(
+                "tokenizer SHA-256 does not match the training configuration: "
+                f"expected {expected_tokenizer_hash}, got {actual_tokenizer_hash}"
+            )
     return training, model_cfg, stages
 
 

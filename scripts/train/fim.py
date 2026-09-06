@@ -95,7 +95,7 @@ if args.resume:
     # and best_val all come back: AdamW's moments took thousands of steps to
     # build, and lr_at(it) reads the iteration, so a resume that restarted the
     # counter would jump the cosine back to peak and undo the annealing.
-    ck = torch.load(args.resume, map_location="cpu")
+    ck = torch.load(args.resume, map_location="cpu", weights_only=False)
     cfg = GPTConfig(**ck["cfg"])
     if cfg.vocab_size != new_vocab:
         raise SystemExit(f"resume vocab {cfg.vocab_size} != FIM data vocab {new_vocab}")
@@ -124,7 +124,7 @@ if args.resume:
           f"lr will be {args.lr:.2e} -> resuming mid-cosine")
 else:
     # ---------------- load base and grow the vocabulary ----------------
-    ck = torch.load(args.base, map_location="cpu")
+    ck = torch.load(args.base, map_location="cpu", weights_only=False)
     old_cfg = dict(ck["cfg"])
     old_vocab = old_cfg["vocab_size"]
     old_block = old_cfg["block_size"]

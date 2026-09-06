@@ -9,3 +9,7 @@ Brittain3 prepared JSONL rows use the fields `repository`, `path`, `text`,
 `brittain3_tokenizer_corpus.json` is the separate tokenizer-corpus policy. It
 defines byte quotas, language shares, license rules, filters, local sources, and
 remote sources. See `docs/BRITTAIN3_TOKENIZER_CORPUS.md` before remote use.
+
+`brittain3_teacher_bakeoff.json` freezes the seven-language local-teacher test.
+`brittain3_teacher_curriculum.json` records the planner, author, reviewer, and
+language shares for execution-verified Brittain3 curriculum seeds.

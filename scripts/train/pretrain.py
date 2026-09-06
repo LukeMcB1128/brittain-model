@@ -113,7 +113,7 @@ start_iter = 0
 best_val = float("inf")
 os.makedirs(os.path.dirname(out_path), exist_ok=True)
 if resume and os.path.exists(out_path):
-    ck = torch.load(out_path, map_location=device)
+    ck = torch.load(out_path, map_location=device, weights_only=False)
     raw_model.load_state_dict(ck['model'])
     optimizer.load_state_dict(ck['optim'])
     start_iter = ck['iter'] + 1

@@ -21,20 +21,33 @@ BRITTAIN · 604M MoE                    abandoned — char-level, learned positi
 ├┄┄ rewritten: RoPE, SwiGLU, fused attention
 │
 ├── BRITTAIN-1 · 124M            gpt2 BPE 50257 · FineWeb-Edu 2.6B · val 3.247
-│   └── 124M Instruct            SFT on Alpaca — the only true fine-tune here
+│   └── 124M Instruct            SFT on Alpaca — the only true fine-tune of that line
 │
 ├┄┄ retokenized (32k code BPE) + recorpused (The Stack)
 │
-└── BRITTAIN-2
+├── BRITTAIN-2
+│   │
+│   ├── XS-Coder · 50M           trained BY BrittainScript (brittain_script/train_50m.bs)
+│   │   ├── XS-Specialist        continued on native + verified-translation BrittainScript
+│   │   └── 50m-bs-4b            4x Chinchilla rerun — see the warning below
+│   │
+│   └── Coder · 235M             1K ctx · 14.7B tokens · val 1.4177   <- the base
+│       └── + FIM                +2.2B FIM tokens · vocab 32000 -> 32003
+│           └── + 2K context     +1.42B · SHIPPED as brittain2-coder:235m-fim-2k
+│               └── + code SFT   32,849 examples · brittain2-coder:235m-instruct-2k
+│
+├┄┄ new architecture: GQA, QK-norm, RMSNorm, 24k tokenizer, rope_theta 100000
+│
+├── BRITTAIN-3
+│   ├── 49M pilot                go/no-go · REQUIRES repo/file prompt framing
+│   ├── 49M curriculum probe     quality-first corpus probe
+│   └── 181M                     PLANNED · gated on corpus + evaluations
+│
+└┄┄ same BRITTAIN-3 engine, different domain: narrative prose, 8k tokenizer
     │
-    ├── XS-Coder · 50M           trained BY BrittainScript (brittain_script/train_50m.bs), on the Mac
-    │   └── XS-Specialist        complete · continued for 3 epochs on the mixed
-    │                            native + verified-translation BrittainScript corpus
-    │
-    └── Coder · 235M             1K ctx · 14.7B tokens · val 1.4177   <- the base
-        └── + FIM                complete · +2.2B FIM tokens · vocab 32000 -> 32003
-            └── + 2K context     planned
-                └── + 4K context planned
+    └── BRITTAIN-SHAKESPEARE
+        ├── 18M pilot            1,500 updates at 1K context
+        └── 80M                  TRAINING · tag-conditioned story model
 ```
 
 The context steps are a **chain, not siblings** — each is continued pretraining
@@ -115,7 +128,40 @@ a scaled init on residual projections.
 
 ---
 
+## What BRITTAIN-3 changes again
+
+The 49M pilot, the curriculum probe, the planned 181M, and both Shakespeare
+models share a second-generation engine (`src/brittain/model_v3.py`). Four
+changes from the BRITTAIN-1/2 block:
+
+| | BRITTAIN-1/2 | BRITTAIN-3 |
+|---|---|---|
+| attention | multi-head | **grouped-query (GQA)** |
+| Q/K scaling | none | **QK-norm** |
+| normalisation | LayerNorm | **RMSNorm** |
+| RoPE base | 10,000 | **100,000** |
+
+**GQA** shrinks the KV cache by the query-to-KV head ratio — 3x on the 49M
+(9 query heads, 3 KV), 2x on the Shakespeare 80M (10 and 5). That is what makes a
+16K maximum context affordable to serve at all.
+
+**QK-norm** normalises queries and keys before the attention product. It
+stabilises training at higher learning rates, which shortens schedules.
+
+**RMSNorm** drops the mean-subtraction and the bias of LayerNorm for equivalent
+quality at lower cost.
+
+**rope_theta 100000** stretches the rotary period so positions stay
+distinguishable at long context, rather than aliasing the way a 10,000 base does
+past a few thousand tokens.
+
+`intermediate_size` is also stated explicitly per config rather than derived from
+`8/3 × d`, so width and depth can be traded without the MLP silently resizing.
+
+---
+
 ## The models
+
 
 ### Prehistory — the 604M char-level MoE *(abandoned)*
 
@@ -264,6 +310,14 @@ the correct boundary is still the obvious weakness.
 
 ---
 
+
+### 4K context — dropped
+
+4K belongs in a model designed for it, not bolted onto a 1K model. It also has a
+real downside here: roughly 45% of 4K windows would span unrelated files, and
+there is no document-boundary attention masking. Extending context without that
+masking partly trains the model to ignore its own context.
+
 ### brittain2-general:254m — 254M *(shelved)*
 
 | | |
@@ -302,6 +356,225 @@ from indentation merges, which prose doesn't contain. GPT-2's BPE was itself
 trained on English web text, so it's already well matched — a custom English BPE
 would buy maybe 5-10%, and dropping to 32k vocab would cost a little packing
 efficiency on English. The direct comparability with BRITTAIN-1 is worth more.
+
+### brittain2-coder:235m-fim-2k — 235M *(complete, shipped)*
+
+| | |
+|---|---|
+| Parameters | 235,180,032 |
+| Shape | 16 layers, 16 heads, 1024 embd, **2048 context** |
+| Tokenizer | code BPE 32003 (`tokenizer_fim.json`) |
+| Data | +1.42B tokens on top of the FIM checkpoint |
+| Cost | ~$12.6 on an L4 |
+| Checkpoint | `brittain2_235m_fim_2k.pt` |
+
+The autocomplete model. 2048 tokens is roughly 195 lines of code against ~100
+before, so it can hold a whole small module rather than the neighbourhood of the
+cursor.
+
+**Ship the ANNEALED final, not `_best`.** Validation said the opposite — 1.3045 at
+iter 1000 against ~1.36 at the end — and validation was wrong. The annealed
+checkpoint won every BPB metric and +6 points of syntax validity. A mid-cosine
+"best val" checkpoint has hot weights; finish the anneal and decide on BPB.
+
+HumanEval was **flat** against the 1K FIM model (2.44% vs 2.26% pass@1), exactly
+as predicted: those prompts are a few hundred tokens and cannot use a 2048 window.
+Longer context is for real files, not for benchmarks made of short ones.
+
+### brittain2-coder:235m-instruct-2k — 235M *(complete, shipped)*
+
+| | |
+|---|---|
+| Parameters | 235,180,032 |
+| Shape | 16 layers, 16 heads, 1024 embd, 2048 context |
+| Tokenizer | code BPE 32003 — inherited from its FIM base |
+| Data | 32,849 SFT examples (19,849 CodeAlpaca, 10,000 Magicoder, 3,000 alpaca-cleaned) |
+| Cost | ~$1 on an L4 |
+| Checkpoint | `brittain2_235m_instruct_2k.pt` |
+
+The first BRITTAIN model that answers a question about code rather than
+continuing it. The SFT was never about raw capability — it was about **knowing
+when to stop**. Runaway generation fell 5.4x, 97% to 18% of completions hitting
+the token cap under greedy decoding.
+
+**It needs the Alpaca template.** Handed a bare instruction it continues the
+sentence instead of answering. `scripts/inference/chat.py` and the server's
+instruct mode apply it; `sample.py` deliberately warns rather than templating.
+
+**BPB cannot judge this model.** It scores *worse* on code BPB than its base
+(0.851 vs 0.687) because it now models Alpaca-formatted instructions rather than
+raw source. Selecting on BPB would systematically prefer whichever checkpoint
+fine-tuned least — the one that did the least work. It also keeps the FIM
+sentinels from its base, so `supports_fim` stays true while `mode` is `instruct`;
+the server treats those as independent for that reason.
+
+### BRITTAIN-3 — 49M pilot and curriculum probe *(complete)*
+
+| | |
+|---|---|
+| Parameters | 49,558,592 |
+| Shape | 10 layers, 9 heads, **3 KV heads**, 576 embd, intermediate 1536 |
+| Tokenizer | `tokenizers/brittain3-code-24k`, vocab 24,576 |
+| Context | 2048 trained, **16384 maximum** |
+| Checkpoints | `checkpoints/brittain3_49m_pilot/`, `checkpoints/brittain3_49m_curriculum_probe/` |
+
+A go/no-go pilot for the planned 181M, not a release model.
+
+**Prompt framing is not optional.** Every pretraining document was wrapped as
+`<|repo_start|>{repository}<|file_start|>{path}\n`. Measured on this checkpoint,
+an unframed prompt returns `<|file_end|><|repo_end|>` and stops after two tokens,
+every sample. `serve.py` applies the framing server-side.
+
+The pilot carries a `card.json` beside the checkpoint because it predates the
+checkpoint payload carrying a corpus block. Anything trained after it should embed
+that metadata in the checkpoint, where it cannot drift from the weights.
+
+### brittain3-coder:181m — 181M *(planned)*
+
+The real capability target: a model that writes working simple code at a
+novice-developer level and operates the Brittain app's agent tools.
+
+**Gated.** Do not start the paid L4 run until the focused corpus and the
+novice-code evaluation suite exist. The reasoning is in this document's findings —
+Brittain2 saw 14.7B code-heavy tokens and still fails basic instructions, so
+scaling alone will not fix it. Quality-first corpus, verified by execution, or the
+run repeats the same ceiling more expensively.
+
+### brittain-shakespeare — 18M pilot and 80M *(80M training)*
+
+A narrative-prose model on a separate branch, sharing the BRITTAIN-3 engine
+unmodified. Trains on a single RTX 3060 12GB.
+
+| | 18M pilot | **80M** |
+|---|---|---|
+| Parameters | 18.1M | 80M |
+| Layers / heads / KV | 8 / 6 / 2 | 16 / 10 / **5** |
+| Embedding / intermediate | 384 / 1280 | 640 / 1792 |
+| Context | 1024 | **4096** |
+| Tokenizer | `brittain-shakespeare-prose-8k`, vocab 8192 | same |
+
+**Tokenizer.** 8192 vocab trained on 900MB with `archaic_boost: 3`. Efficiency by
+register: modern prose 3.67 bytes/token, early modern 3.52, dialogue 3.13, tag
+blocks 2.50.
+
+**Corpus.** ~1.5B target tokens — 1.2B Gutenberg fiction, 120M Standard Ebooks,
+48M early modern (**upsampled 4x**), 80M world texture, 60M synthetic, with 40M
+reserved for a later SFT pass. Story prose only: essays, treatises, reference
+works and biography are excluded, because at this parameter count there is no
+capacity to spend on knowledge that never appears inside a story.
+
+**Schedule.** Four stages, 13,734 updates x 131,072 tokens = **1.80B tokens**,
+~22 tokens/parameter. Context grows 1K to 2K to 4K, then a 4K anneal. Measured on
+the 3060: 17,137 tok/s at 1K, 15,630 at 2K, 9,887 at 4K, peak 7.0GB — about
+33 hours end to end.
+
+**Nine conditioning tags** with closed value vocabularies, prepended to every
+pretraining document:
+
+```
+<|story_start|><|tags|>[Voice: Modern] [Genre: Tragedy] [Setting: Tavern]<|end_tags|>
+```
+
+`Voice`, `Genre`, `POV`, `Tense`, `Setting`, `Tone`, `Cast`, `Length`, `Twist`.
+Because the tags are present from the first pretraining token they are native
+structure, not a post-hoc instruction layer, and by the end of training they act
+as control levers.
+
+Two design decisions carry the project. **Labels are correct by construction** —
+eight of nine tags are computed from the text or its bibliographic metadata by
+regex and lexicon, no model and no API. A tag the model cannot verify against the
+text teaches it that tags are noise, and the lever goes dead. And **the same
+tagger scores generated samples**, so tag adherence is a measured number rather
+than an opinion — the oracle problem that prose usually lacks.
+
+One trap worth recording: **`Voice` cannot come from publication year.**
+Gutenberg's `dcterms:issued` is its own release date — Dracula is stamped 1995 —
+so deriving register from it would have labelled nearly the whole corpus `Modern`
+and trained the lever on noise, while every test still passed. `Voice` comes from
+archaic morphology in the text, falling back to the author's death year.
+
+## Every model, measured
+
+BPB is over identical frozen held-out text (`data/eval_code.py`, `english.txt`).
+Lower is better, and it IS comparable across tokenizers — raw validation loss is
+not. HumanEval is 10 samples/task at temperature 0.4 / top_p 0.95 / rep 1.12.
+
+| model | params | shape | ctx | tokens | BPB code | BPB prose | syntax | p@1 | p@10 |
+|---|---|---|---|---|---|---|---|---|---|
+| 604M MoE | 604M | char-level MoE | 32 | ~3M | — | — | — | — | — |
+| `124m_best` | 124M | 12L/12H/768 | 1024 | 2.6B | 2.031 | 1.354 | 0% | 0.00% | 0.00% |
+| `124m_sft` | 124M | 12L/12H/768 | 1024 | +Alpaca | — | — | — | N/A | N/A |
+| `235m_weights` | 235M | 16L/16H/1024 | 1024 | 14.7B | 0.751 | 1.259 | 67% | 0.06% | 0.61% |
+| `235m_fim` | 235M | 16L/16H/1024 | 1024 | +2.2B | 0.737 | 1.254 | 56% | 2.26% | 6.10% |
+| **`235m_fim_2k`** | 235M | 16L/16H/1024 | **2048** | +1.42B | **0.687** | **1.233** | 62% | **2.44%** | 5.49% |
+| **`235m_instruct_2k`** | 235M | 16L/16H/1024 | 2048 | +32.8k ex | 0.851 | 1.554 | — | N/A | N/A |
+| `50m_bs` | 52M | 6L/8H/512 | 512 | ~1B | 1.080 | 1.702 | 53% | 0.00% | 0.00% |
+| `50m_bs_4b` | 52M | 6L/8H/512 | 512 | ~4B | **1.002** | **1.603** | **38%** | 0.00% | 0.00% |
+| `xs_bs_mixed` | 52M | 6L/8H/512 | 512 | +BS | — | — | — | 0.00% | 0.00% |
+| `49m_pilot` | 49.6M | 10L/9H/3KV/576 | 2048 | — | — | — | — | — | — |
+| `181m` | 181M | planned | — | ~5.2B | — | — | — | — | — |
+| `shakespeare_18m` | 18.1M | 8L/6H/2KV/384 | 1024 | pilot | — | — | — | — | — |
+| `shakespeare_80m` | 80M | 16L/10H/5KV/640 | 4096 | 1.80B | — | — | — | — | — |
+
+Runaway generation — completions hitting the token cap instead of stopping,
+greedy over 60 HumanEval tasks:
+
+| model | ran to the cap |
+|---|---|
+| `235m_fim_2k` | 58/60 — **97%** |
+| `235m_instruct_2k` | 11/60 — **18%** |
+
+Do not compare syntax percentages taken at different sample counts. It is a
+binomial proportion: at ~100 samples sigma is about 5 points, which is why the
+1B BrittainScript checkpoint reads 53% here and 46% in older notes.
+
+## More data compressed better and generated worse
+
+The sharpest single result in the project. Same 52M model, same corpus, 4x the
+tokens:
+
+| checkpoint | tokens | BPB code | syntax |
+|---|---|---|---|
+| `brittain2_50m_bs` | ~1B | 1.080 | 53% |
+| `brittain2_50m_bs_4b` | ~4B | **1.002** | **38%** |
+
+BPB improved 0.078 and syntax validity fell 15 points. **The two moved in
+opposite directions.** HumanEval stayed at 0.00% for both, so the benchmark could
+not see a difference that BPB says is real — which is its own finding: HumanEval
+has no resolution below roughly 200M parameters.
+
+This is the core argument for a quality-first corpus in BRITTAIN-3. More tokens of
+mixed-quality data buys compression while degrading usable output.
+
+## `_best` picked the wrong checkpoint three times out of three
+
+Every training script writes a `_best.pt` on the lowest validation loss. On three
+consecutive runs, measured on the capability the run actually existed to buy, it
+was the worse checkpoint.
+
+| run | `_best` said | what the capability test said |
+|---|---|---|
+| FIM | val 1.3604 at iter 1800 | ran past the hole **44%** of the time vs **17%** for the annealed final |
+| 2K context | val 1.3045 at iter 1000 | lost **every** BPB metric and 6 points of syntax to the final |
+| code SFT | BPB 0.767 | truncated **32%** of the time vs **18%** for the final |
+
+Three different runs, three different metrics, one conclusion: **finish the
+anneal, then decide on the capability you want, not on validation loss.** A
+mid-cosine checkpoint has hot weights; low validation loss at that point measures
+a model still in motion.
+
+The SFT case is the sharpest, because BPB there is actively misleading. An
+instruction tune *should* score worse on raw-source BPB — it now models
+Alpaca-formatted text. Selecting on BPB systematically prefers whichever
+checkpoint fine-tuned least.
+
+Every shipped checkpoint in this document is a final. `_best.pt` files are kept as
+crash-recovery artifacts, not as release candidates. Several also remain on disk
+purely as dev history — `brittain2_235m_2k_best_weights.pt`,
+`brittain2_235m_instruct_best.pt`, `brittain_50m_bs_expanded_best.pt`,
+`xs_bs_native.pt`, `xs_bs_native6.pt` — none are released, and
+`brittain_model_backup.pt` is the 604M prehistory model, which current code
+cannot load.
 
 ## The first BRITTAIN-2 release side by side
 

@@ -90,7 +90,7 @@ with open(os.path.join(args.data_dir, "meta.pkl"), "rb") as f:
 train_data = np.memmap(os.path.join(args.data_dir, "train.bin"), dtype=np.uint16, mode="r")
 val_data = np.memmap(os.path.join(args.data_dir, "val.bin"), dtype=np.uint16, mode="r")
 
-ck = torch.load(args.base, map_location=device)
+ck = torch.load(args.base, map_location=device, weights_only=False)
 cfg_dict = dict(ck["cfg"])
 if args.dropout is not None:
     cfg_dict["dropout"] = args.dropout

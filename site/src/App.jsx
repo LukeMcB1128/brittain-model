@@ -130,7 +130,7 @@ function App() {
 
   return (
     <main className="app">
-      <h1>Brittain</h1>
+      <h1>Brittain API Chat</h1>
 
       <form onSubmit={generate}>
         <label htmlFor="model">Model</label>
@@ -198,7 +198,9 @@ function App() {
         <p>{selectedModel?.name}</p>
         <p>{selectedModel?.details?.parameter_size ?? "unknown"} parameters</p>
         <p>{selectedModel?.context} token context</p>
+        <p>Languages supported: {selectedModel?.details.languages ?? "unknown"}</p>
         <p>Mode: {mode}</p>
+        <p>Supports fim: {selectedModel?.details?.supports_fim ? "Yes" : "No"}</p>
         <p>Note: these models are not all Brittain models, just our current best models.</p>
       </div>
     </main>
