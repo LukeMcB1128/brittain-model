@@ -255,25 +255,41 @@ def test_story_ids_come_from_content_not_a_counter():
     assert first["repository"].startswith("synthetic/")
 
 
-def test_genre_is_not_carried_from_an_unverifiable_source():
-    # Real books get Genre from their Gutenberg bookshelves, which extract()
-    # reads directly. Synthetic stories have none, so carrying it meant trusting
-    # the generator: one story tagged Ghost is a darts match with no ghost.
+def test_genre_is_carried_and_the_extractor_still_wins_where_it_can():
+    # This test previously asserted the opposite, and the behaviour it locked in
+    # cost the Genre lever entirely. Synthetic stories have no bookshelves, so
+    # genre_from_metadata returns nothing for them; not carrying the generator's
+    # Genre discarded all 66,219 labels, and Tragedy fell to roughly 0% of the
+    # corpus. It then scored nothing in evaluation, because it was never trained.
+    #
+    # The worry that motivated the removal was real -- one story tagged Ghost is
+    # a darts match -- but Twist is carried from the same generator with no
+    # verification at all and is the one lever that works. Noisy coverage beats
+    # none.
     from brittain.story_tagger import extract
 
-    assert "Genre" not in CARRIED_TAGS
+    assert "Genre" in CARRIED_TAGS
+    # A real book's bookshelves still decide, because derived tags are merged
+    # over carried ones.
     real = extract("word " * 400, token_count=400, birth_year=1847,
                    death_year=1912, bookshelves=["Horror"])
     assert real["Genre"] == "Ghost"
+    # A synthetic story has no bookshelves, so the extractor abstains and the
+    # carried value is what survives.
     synthetic_story = extract("word " * 400, token_count=400)
     assert "Genre" not in synthetic_story
 
 
-def test_twist_and_voice_are_still_carried():
-    # Twist has no extractor at all. Voice is checked a different way: verify()
-    # rejects any synthetic story that reads archaic, so Modern is not a bare
-    # claim.
-    assert CARRIED_TAGS == {"Twist", "Voice"}
+def test_pov_is_carried_because_the_extractor_misses_omniscient():
+    # point_of_view() reports Third-Omniscient on about 1% of windows against 19%
+    # requested, which is why that value scored +6.7pp lift against a 0%
+    # baseline. Carrying it puts the requested value back wherever the extractor
+    # cannot decide.
+    assert "POV" in CARRIED_TAGS
+
+
+def test_the_carried_set_is_exactly_the_tags_the_text_cannot_settle():
+    assert CARRIED_TAGS == {"Twist", "Voice", "Genre", "POV"}
 
 
 def test_the_generator_treats_hopeless_statuses_as_fatal():

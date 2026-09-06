@@ -80,21 +80,28 @@ _CHARACTER_NAME = re.compile(r"^[A-Z][A-Za-z'’.\- ]{0,30}$")
 # evaluation reports these separately from the interpretive tags.
 OBJECTIVE_TAGS = ("Voice", "POV", "Tense", "Setting", "Cast", "Length")
 
-# Tags no extractor can derive from the text alone, so they must be carried from
-# the document's metadata. Everything else is re-derived from the text at
-# preparation time, which is what stops a claimed tag the text does not support
-# from reaching training.
+# Tags carried from the document's metadata. extract() returns only tags it has
+# usable evidence for, and derived values are merged over carried ones, so a
+# carried tag survives exactly where the extractor cannot decide and loses
+# wherever it can.
 #
-# Genre is deliberately absent. Real books get it from their Gutenberg
-# bookshelves, which extract() reads directly, so carrying it changes nothing
-# there. Synthetic stories have no bookshelves, so carrying it meant trusting
-# the generator's claim: one story tagged Ghost is a darts match in a pub with
-# no ghost in it. An unverified label teaches the lever wrong, and 11,813 real
-# books already carry genuine genre metadata.
+# Genre was removed from this set once, because one synthetic story tagged Ghost
+# was a darts match in a pub and an unverified label teaches a lever wrong. The
+# cost was not weighed: synthetic stories have no bookshelves, so
+# genre_from_metadata returns nothing for them and all 66,219 Genre labels were
+# discarded. Measured afterwards, Genre survived into training on 0 of 400
+# synthetic stories, and Tragedy fell to roughly 0% of the corpus -- the lever
+# scored nothing in evaluation because it was never trained.
 #
-# Voice stays. Synthetic prose is Modern by construction, and verify() rejects
-# any generated story that reads archaic, so the claim is checked.
-CARRIED_TAGS = frozenset({"Twist", "Voice"})
+# Twist is the counter-evidence. It is carried from the same generator with no
+# verification at all, and it is the one lever that works: +19% even coverage
+# and an explicit betrayal on request. Compliance is high; zero coverage is
+# strictly worse than noisy coverage.
+#
+# POV is carried for the same reason. point_of_view() detects Third-Omniscient
+# on about 1% of windows against 19% requested, which is why that value scored
+# +6.7pp lift.
+CARRIED_TAGS = frozenset({"Twist", "Voice", "Genre", "POV"})
 INTERPRETIVE_TAGS = ("Genre", "Tone", "Twist")
 
 
