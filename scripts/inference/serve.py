@@ -148,10 +148,35 @@ class Loaded:
         # Brittain1/2 have no such tokens and correctly get "".
         self.frame = document_prefix(self.enc, "workspace/project", "main.py")
         self.frame_ids = self.enc.encode(self.frame) if self.frame else []
+        specials = getattr(self.enc, "special_ids", {}) or {}
+        # A prose model is one whose vocabulary has story markers. Asked of the
+        # tokenizer rather than the filename, which says nothing reliable.
+        self.story = "<|story_start|>" in specials
+        if self.story:
+            # Stopping on every special token is right for the code models,
+            # whose specials all end something. It is wrong here: an SFT
+            # response OPENS with <|tags|>, so the generation would stop on its
+            # first token and return an empty story. Only these end a turn.
+            self.stop_ids = {
+                self.enc.eot,
+                *(specials[name] for name in
+                  ("<|end_message|>", "<|story_end|>", "<|pad|>")
+                  if specials.get(name) is not None),
+            }
+        else:
+            self.stop_ids = {self.enc.eot, *specials.values()}
         self.card = load_card(path, ck if isinstance(ck, dict) else {})
         self.is_brittain = isinstance(self.model, (Brittain, Brittain3))
         self.supports_fim = bool(getattr(self.enc, "has_fim", False))
-        low = os.path.basename(path).lower()
+        # The filename alone is not enough: a Brittain3 run writes weights.pt
+        # inside a named directory, so the basename is the same for every model
+        # and "sft" never appears in it. The display name the operator chose and
+        # the output_dir the checkpoint was trained into both carry the intent.
+        trained_into = ""
+        if isinstance(ck, dict):
+            trained_into = str((ck.get("training_config") or {}).get("output_dir") or "")
+        low = " ".join((os.path.dirname(path), os.path.basename(path),
+                        name, trained_into)).lower()
         if args.raw:
             self.raw_default = True
         elif args.instruct:
@@ -386,6 +411,18 @@ GPU_LOCK = threading.Lock()
 REQUEST_IDS = itertools.count(1)
 
 
+def frame_request(M, text):
+    """Wrap one request the way the model was fine-tuned to receive it.
+
+    The Alpaca template is right for the code models and wrong for
+    brittain-shakespeare, which learned <|user|>...<|end_message|><|assistant|>
+    and answers with a tag block followed by the story.
+    """
+    if M.story:
+        return f"<|user|>{text}<|end_message|><|assistant|>"
+    return format_prompt(text)
+
+
 def stream_pieces(M, prompt, raw, opts):
     if raw:
         temperature = opts.get("temperature", 0.2)
@@ -471,8 +508,7 @@ def stream_pieces(M, prompt, raw, opts):
     with torch.no_grad():
         for tok in locked_tokens():
             nxt = tok[0, -1].item()
-            stop_ids = {M.enc.eot, *getattr(M.enc, "special_ids", {}).values()}
-            if nxt in stop_ids:
+            if nxt in M.stop_ids:
                 break
             piece = utf8.decode(M.enc.token_bytes(nxt))
             if not piece:
@@ -637,7 +673,7 @@ async def generate(req: Request):
             if extra:
                 opts = {**opts, "stop": ["\n\n"] + extra}
     else:
-        prompt = format_prompt(prompt)
+        prompt = frame_request(M, prompt)
 
     def gen():
         chars = 0
@@ -699,7 +735,7 @@ async def chat(req: Request):
         ) if M.supports_fim
                      else strip_fim(user))
     else:
-        prompt = format_prompt(user)
+        prompt = frame_request(M, user)
 
     def gen():
         for p in stream_pieces(M, prompt, raw, opts):
