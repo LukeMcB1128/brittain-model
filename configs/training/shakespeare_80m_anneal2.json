@@ -1,0 +1,38 @@
+{
+  "format": "brittain3-training-v1",
+  "model_config": "configs/models/shakespeare_80m.json",
+  "tokenizer_path": "tokenizers/brittain-shakespeare-prose-8k/tokenizer.json",
+  "output_dir": "checkpoints/shakespeare_80m_anneal2",
+  "seed": 1337,
+  "precision": "bf16",
+  "compile": false,
+  "compile_note": "Inductor needs Triton, which has no Windows build.",
+  "optimizer": {
+    "betas": [0.9, 0.95],
+    "epsilon": 1e-8,
+    "weight_decay": 0.1,
+    "gradient_clip": 1.0
+  },
+  "evaluation": {
+    "interval": 100,
+    "batches": 20,
+    "plateau_evaluations": 8,
+    "minimum_delta": 0.001
+  },
+  "stage_note": "A second anneal, started with --init-from on the finished pretraining weights. The first anneal fixed front matter, taught the model to end stories, and made Twist a working lever, all in 1145 updates by changing what the model finishes on. This one runs the same recipe over anneal data rebuilt with Genre and POV carried, so Tragedy, Comedy and Third-Omniscient exist in the labels for the first time. Same LR schedule as the first anneal: 5e-5 down to 5e-6, low enough to move the levers without disturbing the prose.",
+  "stages": [
+    {
+      "name": "anneal2",
+      "context": 4096,
+      "microbatch": 2,
+      "accumulation": 16,
+      "updates": 1145,
+      "warmup_updates": 40,
+      "decay_updates": 1105,
+      "peak_lr": 0.00005,
+      "min_lr": 0.000005,
+      "train_data": "data/processed/brittain-shakespeare/anneal_4096",
+      "validation_data": "data/processed/brittain-shakespeare/validation_4096"
+    }
+  ]
+}
