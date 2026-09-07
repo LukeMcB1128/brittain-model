@@ -36,6 +36,7 @@ used, preserving the legacy autocomplete fallback.
 """
 import os
 import json
+import contextlib
 import time
 import codecs
 import asyncio
@@ -60,6 +61,8 @@ from brittain import model_bs
 from brittain.loading import document_prefix
 from brittain.paths import CHECKPOINT_DIR
 from brittain.prompts import format_prompt
+from brittain.chat_context import PromptTooLongError, prepare_chat_context, validate_messages
+from brittain.keep_awake import keep_awake
 from brittain.tokenizer import load_tokenizer
 
 ap = argparse.ArgumentParser()
@@ -69,6 +72,11 @@ ap.add_argument("checkpoints", nargs="*",
 ap.add_argument("--raw", action="store_true", help="force raw mode for all models")
 ap.add_argument("--instruct", action="store_true", help="force template mode for all models")
 ap.add_argument("--port", type=int, default=11435)
+ap.add_argument("--keep-awake", action="store_true",
+                help="hold off sleep while serving. A server is idle from the "
+                     "operating system's point of view -- no keyboard, no mouse, "
+                     "and GPU load does not count -- so the machine sleeps on its "
+                     "usual timeout and the tunnel goes dead. Released on exit.")
 ap.add_argument("--host", default="127.0.0.1",
                 help="127.0.0.1 keeps it local; ngrok tunnels to it either way")
 ap.add_argument("--cors-origin", action="append", default=None,
@@ -82,6 +90,18 @@ args.cors_origin = args.cors_origin or ["*"]
 device = (torch.device("cuda") if torch.cuda.is_available()
           else torch.device("mps") if torch.backends.mps.is_available()
           else torch.device("cpu"))
+
+# Public generation caps. Keys are the model names reported by /api/tags; keep
+# aliases here too when the server is launched with explicit PATH=display-name.
+MAX_NEW_TOKENS = 512
+MODEL_MAX_NEW_TOKENS = {
+    "brittain2_50m_bs_4b": 256,
+    "brittain2-xs-coder:50m-bs-4b": 256,
+    "brittain2_235m_instruct_2k": 1024,
+    "brittain2-coder:235m-instruct-2k": 1024,
+    "shakespeare_80m_sft": 1500,
+    "brittain-shakespeare:80m-instruct": 1500,
+}
 
 
 def load_card(path, checkpoint):
@@ -140,6 +160,7 @@ class Loaded:
             self.model.eval()
             self.enc = load_tokenizer(ck)
         self.name = name
+        self.max_new_tokens = MODEL_MAX_NEW_TOKENS.get(name, MAX_NEW_TOKENS)
         self.params = self.model.num_params()
         # Brittain3 saw every pretraining document wrapped as
         # <|repo_start|>repo<|file_start|>path, so an unframed prompt is out of
@@ -264,7 +285,6 @@ now = lambda: time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 # token, so concurrent callers interleave and all make progress. A counter would
 # need decrementing in a generator's finally, and an abandoned generator stays
 # suspended without running it — exactly the bug that wedged this server before.
-MAX_NEW_TOKENS = 512
 MAX_PROMPT_CHARS = 20_000
 RATE_BURST = 4          # requests available instantly
 RATE_PER_MIN = 40       # sustained refill
@@ -437,7 +457,7 @@ def stream_pieces(M, prompt, raw, opts):
     top_p = opts.get("top_p", 0.95)
     # Clamp, don't trust. Reachable from the public internet through ngrok, an
     # unbounded num_predict holds the one GPU for as long as the caller asks.
-    max_new = max(1, min(int(max_new), MAX_NEW_TOKENS))
+    max_new = max(1, min(int(max_new), M.max_new_tokens))
 
     token_ids = M.enc.encode(prompt)
     # An EMPTY prompt is normal, not a client error: the cursor sits at the top of
@@ -561,6 +581,7 @@ def describe(m):
         "name": m.name, "model": m.name, "modified_at": now(), "size": 0,
         "digest": m.name, "context": str(m.block),
         "mode": mode,
+        "chat_history": not m.raw_default,
         # This is the public client capability, not merely the tokenizer
         # capability. An instruct model may retain FIM tokens but must not be
         # called as a FIM model.
@@ -568,7 +589,7 @@ def describe(m):
         # and the two are deliberately independent: an instruct model can carry
         # the FIM sentinels it inherited from its base.
         "supports_fim": m.supports_fim,
-        "max_tokens": MAX_NEW_TOKENS,
+        "max_tokens": m.max_new_tokens,
         "defaults": ({"temperature": 0.2, "num_predict": 64}
                      if m.raw_default else
                      {"temperature": 0.5, "num_predict": 256}),
@@ -716,17 +737,32 @@ async def chat(req: Request):
     limited = too_many(req)
     if limited:
         return limited
-    body = await req.json()
+    try:
+        body = await req.json()
+    except ValueError:
+        return JSONResponse({"error": "request body must be valid JSON"}, status_code=400)
+    if not isinstance(body, dict):
+        return JSONResponse({"error": "request body must be an object"}, status_code=400)
     M = pick(body)
     opts = body.get("options") or {}
     msgs = body.get("messages", [])
-    if sum(len(m.get("content") or "") for m in msgs) > MAX_PROMPT_CHARS:
-        return JSONResponse(
-            {"error": f"prompt too long (limit {MAX_PROMPT_CHARS} characters)"},
-            status_code=413)
-    user = next((m["content"] for m in reversed(msgs) if m.get("role") == "user"), "")
-    # single-turn: these models never saw multi-turn conversations in training
+    # A continuation carries no new user turn -- its input is the story so far --
+    # so the trailing-user rule would reject every one of them here, before
+    # prepare_chat_context ever saw it.
+    continuing = bool(body.get("continue"))
+    try:
+        validate_messages(msgs, MAX_PROMPT_CHARS, continuing=continuing)
+        if not isinstance(opts, dict):
+            raise ValueError("options must be an object")
+    except PromptTooLongError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=413)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    user = msgs[-1]["content"]
+    # Raw checkpoints continue code; instruction models receive conversation
+    # context using their own prompt format. Context is not multi-turn training.
     raw = body.get("raw", M.raw_default)
+    context = None
     if raw:
         canonical = (("<|fim_prefix|>", "<|fim_suffix|>", "<|fim_middle|>")
                      if M.enc.name == "brittain3_bpe" else None)
@@ -735,7 +771,18 @@ async def chat(req: Request):
         ) if M.supports_fim
                      else strip_fim(user))
     else:
-        prompt = frame_request(M, user)
+        try:
+            max_new = max(1, min(int(opts.get("num_predict", 400)), M.max_new_tokens))
+            # "continue" is a client intent, not something to infer from the
+            # user's wording: sniffing for the word would misfire on a story
+            # that is about continuing, and miss "keep going".
+            prompt, context = prepare_chat_context(
+                msgs, M.enc.encode, M.block, max_new,
+                story=M.story, frame_tokens=len(M.frame_ids),
+                continuing=continuing)
+        except (TypeError, ValueError, OverflowError) as exc:
+            return JSONResponse({"error": str(exc)}, status_code=400)
+        opts = {**opts, "num_predict": max_new}
 
     def gen():
         for p in stream_pieces(M, prompt, raw, opts):
@@ -744,14 +791,15 @@ async def chat(req: Request):
                               "done": False}) + "\n"
         yield json.dumps({"model": M.name, "created_at": now(),
                           "message": {"role": "assistant", "content": ""},
+                          "context": context,
                           "done": True, "done_reason": "stop"}) + "\n"
 
     if body.get("stream", True):
         return StreamingResponse(gen(), media_type="application/x-ndjson")
+    text = await asyncio.to_thread(lambda: "".join(stream_pieces(M, prompt, raw, opts)))
     return JSONResponse({"model": M.name, "created_at": now(),
-                         "message": {"role": "assistant",
-                                     "content": "".join(stream_pieces(M, prompt, raw, opts))},
-                         "done": True})
+                         "message": {"role": "assistant", "content": text},
+                         "context": context, "done": True})
 
 
 if __name__ == "__main__":
@@ -761,4 +809,7 @@ if __name__ == "__main__":
         mode = "raw" if m.raw_default else "instruct"
         print(f"  {m.name:<30} {m.params/1e6:6.0f}M  ctx {m.block:<5} "
               f"{m.enc.name:<9} {mode}{'  +fim' if m.supports_fim else ''}")
-    uvicorn.run(app, host=args.host, port=args.port)
+    with contextlib.ExitStack() as stack:
+        if args.keep_awake:
+            stack.enter_context(keep_awake("the BRITTAIN server"))
+        uvicorn.run(app, host=args.host, port=args.port)
