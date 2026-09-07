@@ -7577,5 +7577,2337 @@
         "pass@1": 0.0
       }
     ]
+  },
+  {
+    "checkpoint": "b3_49m_pilot_u200.pt",
+    "params": 49558592,
+    "block_size": 16384,
+    "tokenizer": "brittain3_bpe",
+    "prompt_style": "completion",
+    "harness_version": 2,
+    "bpb_code": 0.9061524409737077,
+    "bpb_prose": 1.7136329246917954,
+    "tracks": {
+      "python": {
+        "tasks": 15,
+        "syntax_validity": 0.8666666666666667,
+        "solved_tasks": 0,
+        "repetition_collapse": 0.21333333333333335,
+        "empty_rate": 0.13333333333333333,
+        "pass@1": 0.0
+      },
+      "javascript": {
+        "tasks": 15,
+        "syntax_validity": 0.72,
+        "solved_tasks": 0,
+        "repetition_collapse": 0.06666666666666667,
+        "empty_rate": 0.0,
+        "pass@1": 0.0
+      },
+      "typescript": {
+        "tasks": 15,
+        "syntax_validity": 0.22666666666666666,
+        "solved_tasks": 1,
+        "repetition_collapse": 0.08,
+        "empty_rate": 0.0,
+        "pass@1": 0.01333333333333333
+      },
+      "json": {
+        "tasks": 15,
+        "syntax_validity": 0.41333333333333333,
+        "solved_tasks": 3,
+        "repetition_collapse": 0.37333333333333335,
+        "empty_rate": 0.0,
+        "pass@1": 0.17333333333333334,
+        "schema_validity": 0.17333333333333334
+      },
+      "prose": {
+        "tasks": 15,
+        "syntax_validity": 1.0,
+        "solved_tasks": 6,
+        "repetition_collapse": 0.32,
+        "empty_rate": 0.0,
+        "clean_completion_rate": 0.10666666666666665,
+        "distinct_1": 0.40653455653247433,
+        "distinct_2": 0.5743808244240175,
+        "sentence_closed_rate": 0.10666666666666667
+      }
+    },
+    "per_task": [
+      {
+        "id": "python/math/clamp_value",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/lists/chunk_list",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/strings/is_palindrome",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/dict/invert_dict",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/algorithms/binary_search",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/oop/counter_class",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/parsing/parse_hex_color",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/control/fizz_buzz_list",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/lists/flatten_shallow",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/strings/slugify",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/math/gcd",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/dict/merge_with_sum",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/oop/stack",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/parsing/extract_emails",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/algorithms/run_length_encode",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/arrays/unique_elements",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/strings/capitalize_words",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/objects/pick_keys",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/math/sum_evens",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/arrays/flatten_once",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/strings/count_vowels",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/state/create_accumulator",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/objects/omit_keys",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/arrays/zip_arrays",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/control/range_list",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/parsing/is_valid_email",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/strings/truncate_string",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/objects/group_by_key",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/arrays/chunk_array",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/state/event_emitter",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/math/average",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/strings/mask_phone",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/interfaces/user_summary",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/generics/first_or_default",
+        "track": "typescript",
+        "correct": 1,
+        "n": 5,
+        "pass@1": 0.19999999999999996
+      },
+      {
+        "id": "typescript/arrays/count_occurrences",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/objects/filter_object",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/control/batch_process",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/math/is_prime",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/parsing/parse_key_value",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/state/lru_cache",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/arrays/partition",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/strings/camel_to_snake",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/interfaces/order_total",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/generics/wrap_result",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/algorithms/deep_flatten",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/config/package_json",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/records/user_profile",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/config/database_settings",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/geo/coordinates_record",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/collections/event_list",
+        "track": "json",
+        "correct": 3,
+        "n": 5,
+        "pass@1": 0.6
+      },
+      {
+        "id": "json/records/http_response",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/config/server_env",
+        "track": "json",
+        "correct": 5,
+        "n": 5,
+        "pass@1": 1.0
+      },
+      {
+        "id": "json/ecommerce/product_item",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/collections/color_palette",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/records/weather_report",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/auth/jwt_payload",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/records/book_metadata",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/collections/todo_items",
+        "track": "json",
+        "correct": 5,
+        "n": 5,
+        "pass@1": 1.0
+      },
+      {
+        "id": "json/metrics/system_stats",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/records/api_error",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/tech/hash_tables",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/tech/compiler_phases",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/tech/garbage_collection",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/tech/event_loop",
+        "track": "prose",
+        "correct": 1,
+        "n": 5,
+        "pass@1": 0.19999999999999996
+      },
+      {
+        "id": "prose/tech/neural_networks",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/narrative/clock_tower",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/narrative/sea_voyage",
+        "track": "prose",
+        "correct": 1,
+        "n": 5,
+        "pass@1": 0.19999999999999996
+      },
+      {
+        "id": "prose/narrative/library_secret",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/narrative/desert_crossing",
+        "track": "prose",
+        "correct": 1,
+        "n": 5,
+        "pass@1": 0.19999999999999996
+      },
+      {
+        "id": "prose/narrative/market_morning",
+        "track": "prose",
+        "correct": 1,
+        "n": 5,
+        "pass@1": 0.19999999999999996
+      },
+      {
+        "id": "prose/expository/scientific_method",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/expository/architecture_tradeoffs",
+        "track": "prose",
+        "correct": 1,
+        "n": 5,
+        "pass@1": 0.19999999999999996
+      },
+      {
+        "id": "prose/expository/open_source",
+        "track": "prose",
+        "correct": 3,
+        "n": 5,
+        "pass@1": 0.6
+      },
+      {
+        "id": "prose/expository/urban_planning",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/expository/cryptography_basics",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      }
+    ]
+  },
+  {
+    "checkpoint": "b3_49m_pilot_u400.pt",
+    "params": 49558592,
+    "block_size": 16384,
+    "tokenizer": "brittain3_bpe",
+    "prompt_style": "completion",
+    "harness_version": 2,
+    "bpb_code": 0.9012840442833402,
+    "bpb_prose": 1.7028422538791157,
+    "tracks": {
+      "python": {
+        "tasks": 15,
+        "syntax_validity": 0.8666666666666667,
+        "solved_tasks": 0,
+        "repetition_collapse": 0.13333333333333333,
+        "empty_rate": 0.13333333333333333,
+        "pass@1": 0.0
+      },
+      "javascript": {
+        "tasks": 15,
+        "syntax_validity": 0.7066666666666667,
+        "solved_tasks": 0,
+        "repetition_collapse": 0.09333333333333334,
+        "empty_rate": 0.0,
+        "pass@1": 0.0
+      },
+      "typescript": {
+        "tasks": 15,
+        "syntax_validity": 0.29333333333333333,
+        "solved_tasks": 1,
+        "repetition_collapse": 0.08,
+        "empty_rate": 0.0,
+        "pass@1": 0.01333333333333333
+      },
+      "json": {
+        "tasks": 15,
+        "syntax_validity": 0.44,
+        "solved_tasks": 4,
+        "repetition_collapse": 0.4,
+        "empty_rate": 0.0,
+        "pass@1": 0.2,
+        "schema_validity": 0.2
+      },
+      "prose": {
+        "tasks": 15,
+        "syntax_validity": 1.0,
+        "solved_tasks": 3,
+        "repetition_collapse": 0.10666666666666667,
+        "empty_rate": 0.0,
+        "clean_completion_rate": 0.039999999999999994,
+        "distinct_1": 0.40992081550606546,
+        "distinct_2": 0.5893093801451729,
+        "sentence_closed_rate": 0.04
+      }
+    },
+    "per_task": [
+      {
+        "id": "python/math/clamp_value",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/lists/chunk_list",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/strings/is_palindrome",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/dict/invert_dict",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/algorithms/binary_search",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/oop/counter_class",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/parsing/parse_hex_color",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/control/fizz_buzz_list",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/lists/flatten_shallow",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/strings/slugify",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/math/gcd",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/dict/merge_with_sum",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/oop/stack",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/parsing/extract_emails",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/algorithms/run_length_encode",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/arrays/unique_elements",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/strings/capitalize_words",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/objects/pick_keys",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/math/sum_evens",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/arrays/flatten_once",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/strings/count_vowels",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/state/create_accumulator",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/objects/omit_keys",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/arrays/zip_arrays",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/control/range_list",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/parsing/is_valid_email",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/strings/truncate_string",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/objects/group_by_key",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/arrays/chunk_array",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/state/event_emitter",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/math/average",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/strings/mask_phone",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/interfaces/user_summary",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/generics/first_or_default",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/arrays/count_occurrences",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/objects/filter_object",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/control/batch_process",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/math/is_prime",
+        "track": "typescript",
+        "correct": 1,
+        "n": 5,
+        "pass@1": 0.19999999999999996
+      },
+      {
+        "id": "typescript/parsing/parse_key_value",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/state/lru_cache",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/arrays/partition",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/strings/camel_to_snake",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/interfaces/order_total",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/generics/wrap_result",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/algorithms/deep_flatten",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/config/package_json",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/records/user_profile",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/config/database_settings",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/geo/coordinates_record",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/collections/event_list",
+        "track": "json",
+        "correct": 3,
+        "n": 5,
+        "pass@1": 0.6
+      },
+      {
+        "id": "json/records/http_response",
+        "track": "json",
+        "correct": 2,
+        "n": 5,
+        "pass@1": 0.3999999999999999
+      },
+      {
+        "id": "json/config/server_env",
+        "track": "json",
+        "correct": 5,
+        "n": 5,
+        "pass@1": 1.0
+      },
+      {
+        "id": "json/ecommerce/product_item",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/collections/color_palette",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/records/weather_report",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/auth/jwt_payload",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/records/book_metadata",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/collections/todo_items",
+        "track": "json",
+        "correct": 5,
+        "n": 5,
+        "pass@1": 1.0
+      },
+      {
+        "id": "json/metrics/system_stats",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/records/api_error",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/tech/hash_tables",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/tech/compiler_phases",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/tech/garbage_collection",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/tech/event_loop",
+        "track": "prose",
+        "correct": 1,
+        "n": 5,
+        "pass@1": 0.19999999999999996
+      },
+      {
+        "id": "prose/tech/neural_networks",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/narrative/clock_tower",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/narrative/sea_voyage",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/narrative/library_secret",
+        "track": "prose",
+        "correct": 1,
+        "n": 5,
+        "pass@1": 0.19999999999999996
+      },
+      {
+        "id": "prose/narrative/desert_crossing",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/narrative/market_morning",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/expository/scientific_method",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/expository/architecture_tradeoffs",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/expository/open_source",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/expository/urban_planning",
+        "track": "prose",
+        "correct": 1,
+        "n": 5,
+        "pass@1": 0.19999999999999996
+      },
+      {
+        "id": "prose/expository/cryptography_basics",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      }
+    ]
+  },
+  {
+    "checkpoint": "b3_49m_probe_u50.pt",
+    "params": 49558592,
+    "block_size": 16384,
+    "tokenizer": "brittain3_bpe",
+    "prompt_style": "completion",
+    "harness_version": 2,
+    "bpb_code": 0.9019858607165098,
+    "bpb_prose": 1.7070534041208618,
+    "tracks": {
+      "python": {
+        "tasks": 15,
+        "syntax_validity": 0.88,
+        "solved_tasks": 0,
+        "repetition_collapse": 0.16,
+        "empty_rate": 0.12,
+        "pass@1": 0.0
+      },
+      "javascript": {
+        "tasks": 15,
+        "syntax_validity": 0.7333333333333333,
+        "solved_tasks": 1,
+        "repetition_collapse": 0.06666666666666667,
+        "empty_rate": 0.0,
+        "pass@1": 0.01333333333333333
+      },
+      "typescript": {
+        "tasks": 15,
+        "syntax_validity": 0.26666666666666666,
+        "solved_tasks": 0,
+        "repetition_collapse": 0.08,
+        "empty_rate": 0.0,
+        "pass@1": 0.0
+      },
+      "json": {
+        "tasks": 15,
+        "syntax_validity": 0.4266666666666667,
+        "solved_tasks": 3,
+        "repetition_collapse": 0.32,
+        "empty_rate": 0.0,
+        "pass@1": 0.2,
+        "schema_validity": 0.2
+      },
+      "prose": {
+        "tasks": 15,
+        "syntax_validity": 1.0,
+        "solved_tasks": 4,
+        "repetition_collapse": 0.25333333333333335,
+        "empty_rate": 0.0,
+        "clean_completion_rate": 0.06666666666666665,
+        "distinct_1": 0.4052647000221841,
+        "distinct_2": 0.5761163274306168,
+        "sentence_closed_rate": 0.06666666666666667
+      }
+    },
+    "per_task": [
+      {
+        "id": "python/math/clamp_value",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/lists/chunk_list",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/strings/is_palindrome",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/dict/invert_dict",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/algorithms/binary_search",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/oop/counter_class",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/parsing/parse_hex_color",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/control/fizz_buzz_list",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/lists/flatten_shallow",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/strings/slugify",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/math/gcd",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/dict/merge_with_sum",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/oop/stack",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/parsing/extract_emails",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/algorithms/run_length_encode",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/arrays/unique_elements",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/strings/capitalize_words",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/objects/pick_keys",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/math/sum_evens",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/arrays/flatten_once",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/strings/count_vowels",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/state/create_accumulator",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/objects/omit_keys",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/arrays/zip_arrays",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/control/range_list",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/parsing/is_valid_email",
+        "track": "javascript",
+        "correct": 1,
+        "n": 5,
+        "pass@1": 0.19999999999999996
+      },
+      {
+        "id": "javascript/strings/truncate_string",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/objects/group_by_key",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/arrays/chunk_array",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/state/event_emitter",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/math/average",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/strings/mask_phone",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/interfaces/user_summary",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/generics/first_or_default",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/arrays/count_occurrences",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/objects/filter_object",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/control/batch_process",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/math/is_prime",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/parsing/parse_key_value",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/state/lru_cache",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/arrays/partition",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/strings/camel_to_snake",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/interfaces/order_total",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/generics/wrap_result",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/algorithms/deep_flatten",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/config/package_json",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/records/user_profile",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/config/database_settings",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/geo/coordinates_record",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/collections/event_list",
+        "track": "json",
+        "correct": 5,
+        "n": 5,
+        "pass@1": 1.0
+      },
+      {
+        "id": "json/records/http_response",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/config/server_env",
+        "track": "json",
+        "correct": 5,
+        "n": 5,
+        "pass@1": 1.0
+      },
+      {
+        "id": "json/ecommerce/product_item",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/collections/color_palette",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/records/weather_report",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/auth/jwt_payload",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/records/book_metadata",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/collections/todo_items",
+        "track": "json",
+        "correct": 5,
+        "n": 5,
+        "pass@1": 1.0
+      },
+      {
+        "id": "json/metrics/system_stats",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/records/api_error",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/tech/hash_tables",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/tech/compiler_phases",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/tech/garbage_collection",
+        "track": "prose",
+        "correct": 1,
+        "n": 5,
+        "pass@1": 0.19999999999999996
+      },
+      {
+        "id": "prose/tech/event_loop",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/tech/neural_networks",
+        "track": "prose",
+        "correct": 1,
+        "n": 5,
+        "pass@1": 0.19999999999999996
+      },
+      {
+        "id": "prose/narrative/clock_tower",
+        "track": "prose",
+        "correct": 1,
+        "n": 5,
+        "pass@1": 0.19999999999999996
+      },
+      {
+        "id": "prose/narrative/sea_voyage",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/narrative/library_secret",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/narrative/desert_crossing",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/narrative/market_morning",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/expository/scientific_method",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/expository/architecture_tradeoffs",
+        "track": "prose",
+        "correct": 2,
+        "n": 5,
+        "pass@1": 0.3999999999999999
+      },
+      {
+        "id": "prose/expository/open_source",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/expository/urban_planning",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/expository/cryptography_basics",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      }
+    ]
+  },
+  {
+    "checkpoint": "b3_49m_probe_u64.pt",
+    "params": 49558592,
+    "block_size": 16384,
+    "tokenizer": "brittain3_bpe",
+    "prompt_style": "completion",
+    "harness_version": 2,
+    "bpb_code": 0.900416108628143,
+    "bpb_prose": 1.7072844460428656,
+    "tracks": {
+      "python": {
+        "tasks": 15,
+        "syntax_validity": 0.88,
+        "solved_tasks": 0,
+        "repetition_collapse": 0.09333333333333334,
+        "empty_rate": 0.12,
+        "pass@1": 0.0
+      },
+      "javascript": {
+        "tasks": 15,
+        "syntax_validity": 0.68,
+        "solved_tasks": 0,
+        "repetition_collapse": 0.06666666666666667,
+        "empty_rate": 0.0,
+        "pass@1": 0.0
+      },
+      "typescript": {
+        "tasks": 15,
+        "syntax_validity": 0.28,
+        "solved_tasks": 1,
+        "repetition_collapse": 0.05333333333333334,
+        "empty_rate": 0.0,
+        "pass@1": 0.01333333333333333
+      },
+      "json": {
+        "tasks": 15,
+        "syntax_validity": 0.41333333333333333,
+        "solved_tasks": 4,
+        "repetition_collapse": 0.36,
+        "empty_rate": 0.0,
+        "pass@1": 0.17333333333333334,
+        "schema_validity": 0.17333333333333334
+      },
+      "prose": {
+        "tasks": 15,
+        "syntax_validity": 1.0,
+        "solved_tasks": 9,
+        "repetition_collapse": 0.22666666666666666,
+        "empty_rate": 0.0,
+        "clean_completion_rate": 0.1333333333333333,
+        "distinct_1": 0.3975630577269861,
+        "distinct_2": 0.5728458098100024,
+        "sentence_closed_rate": 0.13333333333333333
+      }
+    },
+    "per_task": [
+      {
+        "id": "python/math/clamp_value",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/lists/chunk_list",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/strings/is_palindrome",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/dict/invert_dict",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/algorithms/binary_search",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/oop/counter_class",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/parsing/parse_hex_color",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/control/fizz_buzz_list",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/lists/flatten_shallow",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/strings/slugify",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/math/gcd",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/dict/merge_with_sum",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/oop/stack",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/parsing/extract_emails",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "python/algorithms/run_length_encode",
+        "track": "python",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/arrays/unique_elements",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/strings/capitalize_words",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/objects/pick_keys",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/math/sum_evens",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/arrays/flatten_once",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/strings/count_vowels",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/state/create_accumulator",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/objects/omit_keys",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/arrays/zip_arrays",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/control/range_list",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/parsing/is_valid_email",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/strings/truncate_string",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/objects/group_by_key",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/arrays/chunk_array",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "javascript/state/event_emitter",
+        "track": "javascript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/math/average",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/strings/mask_phone",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/interfaces/user_summary",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/generics/first_or_default",
+        "track": "typescript",
+        "correct": 1,
+        "n": 5,
+        "pass@1": 0.19999999999999996
+      },
+      {
+        "id": "typescript/arrays/count_occurrences",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/objects/filter_object",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/control/batch_process",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/math/is_prime",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/parsing/parse_key_value",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/state/lru_cache",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/arrays/partition",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/strings/camel_to_snake",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/interfaces/order_total",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/generics/wrap_result",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "typescript/algorithms/deep_flatten",
+        "track": "typescript",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/config/package_json",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/records/user_profile",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/config/database_settings",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/geo/coordinates_record",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/collections/event_list",
+        "track": "json",
+        "correct": 3,
+        "n": 5,
+        "pass@1": 0.6
+      },
+      {
+        "id": "json/records/http_response",
+        "track": "json",
+        "correct": 1,
+        "n": 5,
+        "pass@1": 0.19999999999999996
+      },
+      {
+        "id": "json/config/server_env",
+        "track": "json",
+        "correct": 5,
+        "n": 5,
+        "pass@1": 1.0
+      },
+      {
+        "id": "json/ecommerce/product_item",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/collections/color_palette",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/records/weather_report",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/auth/jwt_payload",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/records/book_metadata",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/collections/todo_items",
+        "track": "json",
+        "correct": 4,
+        "n": 5,
+        "pass@1": 0.8
+      },
+      {
+        "id": "json/metrics/system_stats",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "json/records/api_error",
+        "track": "json",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/tech/hash_tables",
+        "track": "prose",
+        "correct": 1,
+        "n": 5,
+        "pass@1": 0.19999999999999996
+      },
+      {
+        "id": "prose/tech/compiler_phases",
+        "track": "prose",
+        "correct": 1,
+        "n": 5,
+        "pass@1": 0.19999999999999996
+      },
+      {
+        "id": "prose/tech/garbage_collection",
+        "track": "prose",
+        "correct": 1,
+        "n": 5,
+        "pass@1": 0.19999999999999996
+      },
+      {
+        "id": "prose/tech/event_loop",
+        "track": "prose",
+        "correct": 1,
+        "n": 5,
+        "pass@1": 0.19999999999999996
+      },
+      {
+        "id": "prose/tech/neural_networks",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/narrative/clock_tower",
+        "track": "prose",
+        "correct": 2,
+        "n": 5,
+        "pass@1": 0.3999999999999999
+      },
+      {
+        "id": "prose/narrative/sea_voyage",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/narrative/library_secret",
+        "track": "prose",
+        "correct": 1,
+        "n": 5,
+        "pass@1": 0.19999999999999996
+      },
+      {
+        "id": "prose/narrative/desert_crossing",
+        "track": "prose",
+        "correct": 1,
+        "n": 5,
+        "pass@1": 0.19999999999999996
+      },
+      {
+        "id": "prose/narrative/market_morning",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/expository/scientific_method",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/expository/architecture_tradeoffs",
+        "track": "prose",
+        "correct": 1,
+        "n": 5,
+        "pass@1": 0.19999999999999996
+      },
+      {
+        "id": "prose/expository/open_source",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      },
+      {
+        "id": "prose/expository/urban_planning",
+        "track": "prose",
+        "correct": 1,
+        "n": 5,
+        "pass@1": 0.19999999999999996
+      },
+      {
+        "id": "prose/expository/cryptography_basics",
+        "track": "prose",
+        "correct": 0,
+        "n": 5,
+        "pass@1": 0.0
+      }
+    ]
   }
 ]
