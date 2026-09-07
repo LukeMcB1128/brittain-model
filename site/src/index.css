@@ -1,1 +1,57 @@
-
+:root {
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  
+  /* Aligned with main CSS palette */
+  --bg: #111214;
+  --sidebar: #1a1b1e;
+  --bg-panel: #1a1b1e;
+  --bg-input: #202124;
+  --hover: #282a2f;
+  --accent-soft: #1b2c3a;
+  --accent-border: #304c63;
+  --text: #d7d8db;
+  --text-dim: #8b8d94;
+  --muted: #8b8d94; /* Alias for --text-dim to prevent breaking existing classes */
+  --accent: #4a9eda;
+  --green: #4dab6d;
+  --red: #d05c5c;
+  --yellow: #c9a24a; 
+  --purple: #a583d9; 
+  --border: #33353a;
+  --mono: "SF Mono", Menlo, Consolas, monospace;
+  
+  color-scheme: dark;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  min-width: 320px;
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+a {
+  color: inherit;
+}
+::selection {
+  background: #4a9eda55; /* var(--accent) with 33% opacity */
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
