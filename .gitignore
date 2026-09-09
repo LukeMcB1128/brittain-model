@@ -43,3 +43,5 @@ tools/typescript/node_modules/
 # OS / editor
 .DS_Store
 .vscode/
+
+.env

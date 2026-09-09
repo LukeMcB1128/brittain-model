@@ -23,3 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 .npm-cache/
+
+# Never include server credentials in source or deployment archives.
+.env
+.env.*
+!.env.example

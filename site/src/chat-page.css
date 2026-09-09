@@ -81,3 +81,12 @@
   .c-suggestions button { font-size: var(--t0); }
   .c-bottom-composer, .c-conversation { padding: var(--s4); }
 }
+.c-response { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.c-response .prose { white-space: pre-wrap; }
+.c-response pre { overflow-x: auto; }
+.c-response .c-error { color: var(--red); }
+.c-response .c-usage { font-size: var(--t0); margin-top: var(--s3); }
+.c-reply-actions { display: flex; gap: var(--s4); margin-top: var(--s3); }
+.c-reply-actions button, .c-inline-button { background: transparent; border: 0; font-size: var(--t0); color: var(--subtle); padding: var(--s1); }
+.c-inline-button { margin-left: var(--s2); text-decoration: underline; }
+.c-reply-actions button:hover, .c-inline-button:hover { color: var(--ink); }

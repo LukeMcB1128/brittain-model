@@ -83,7 +83,7 @@ function Icon({ name, ...props }) {
     </svg>
   );
 }
-function MessageContent({ text }) {
+export function MessageContent({ text }) {
   // React escapes model output, including HTML inside fenced code.
   return text.split("```").map((part, i) => {
     if (i % 2) {

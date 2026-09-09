@@ -1,4 +1,33 @@
-# BRITTAIN chat
+# Brittain 4 website
+
+The main chat uses `/api/session` and `/api/chat` on the website server. The server calls the authenticated Brittain 4 `/v1/chat/completions` endpoint. The key is never included in browser files.
+
+## Local development
+
+Run `npm run dev -- --host 127.0.0.1`. The local gateway reads `BRITTAIN_API_KEY` from the parent repository `.env`, or `BRITTAIN4_API_KEY` from the site environment. Local gateway access is restricted to loopback clients. Do not expose the development server through a tunnel.
+
+## Hosted private chat
+
+Run `npm run build:hosted` for Sites. The build emits a Worker with the frontend assets and server gateway. Set `BRITTAIN4_API_KEY` as a secret runtime value in Sites. The gateway requires the platform's authenticated user header. Keep this review site private. Public account registration and a shared request queue are separate release work.
+
+The ordinary `npm run build` still produces the static GitHub Pages frontend. Static hosting cannot serve the authenticated gateway; the chat reports unavailable there. Do not publish a secret using a `VITE_` variable.
+
+## Chat behaviour
+
+- Replies stream over SSE. Thinking is off.
+- Stop cancels the request and keeps partial text. Retry replaces the last reply.
+- Conversations remain in memory for this page session. They are not saved across reloads or devices.
+- History is sent without silent trimming. Replies are capped at 2,048 output tokens. The upstream server rejects a request if prompt plus output exceeds its 32,768-token context.
+- Context and service errors remain visible. The tunnel's `/tokenize` route returned HTTP 502 during integration, so exact preflight token counting is not enabled.
+- Search, PDF, and image controls are not enabled in this text-chat release.
+
+Run `npm test`, `npm run lint`, and `npm run build:hosted` to verify the integration.
+
+## Earlier experimental chat
+
+The retained experimental interface is at `#/experimental-chat`. It uses the old Ollama-compatible API, which differs from the Brittain 4 API. The following notes apply only to that interface.
+
+### Experimental chat
 
 React + Vite frontend for the Ollama-compatible server in `scripts/inference/serve.py`.
 
