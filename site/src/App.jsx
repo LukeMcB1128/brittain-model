@@ -167,7 +167,7 @@ function App() {
       if (err.name === "AbortError") return;
       setConnection("offline");
       setConnectionError(
-        `Cannot reach the model server. Check that serve.py and the tunnel are running. ${err.message}`,
+        `Cannot reach the model server. ${err.message}`,
       );
     }
   }
