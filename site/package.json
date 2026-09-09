@@ -7,13 +7,15 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "test": "node --test src/chat.test.js src/brittain4.test.js server/gateway.test.js",
+    "test": "node --test src/*.test.js server/*.test.js",
     "preview": "vite preview",
     "build:hosted": "vite build --base=/ --outDir dist/client && node scripts/build-server.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",

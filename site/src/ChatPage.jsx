@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import './chat-page.css';
 import BrandLogo from './BrandLogo.jsx';
 import { readCompletion } from './brittain4.js';
-import { MessageContent } from './App.jsx';
+import MarkdownReply from './MarkdownReply.js';
+import { contextUsage } from './context-usage.js';
 
 const suggestions = [
   ['write', 'Write something', 'Help me write a clear introduction for a community science project.'],
@@ -33,6 +34,7 @@ export default function Chat() {
   const [active, setActive] = useState(null);
   const [connection, setConnection] = useState('loading');
   const [busy, setBusy] = useState(false);
+  const [contextLimit, setContextLimit] = useState(32768);
   const [copyNotice, setCopyNotice] = useState('');
   const controller = useRef(null);
   const input = useRef(null);
@@ -43,6 +45,7 @@ export default function Chat() {
       if (response.status === 401) { setConnection('signed-out'); return; }
       if (!response.ok) throw new Error();
       const data = await response.json();
+      if (Number.isInteger(data.context) && data.context > 0) setContextLimit(data.context);
       setConnection(data.ready ? 'ready' : data.configured ? 'offline' : 'unconfigured');
     } catch { setConnection('offline'); }
   }
@@ -51,6 +54,7 @@ export default function Chat() {
   const end = useRef(null);
   const current = chats.find(chat => chat.id === active);
   const messages = current?.messages || [];
+  const context = contextUsage(messages, contextLimit);
   useEffect(() => { end.current?.scrollIntoView({ block: 'nearest' }); }, [chats, active]);
   useEffect(() => {
     const onKey = e => { if (e.key === 'Escape') { setSidebar(false); setInfo(false); } };
@@ -96,6 +100,11 @@ export default function Chat() {
       <textarea ref={input} id="chat-message" placeholder="Message Brittain 4…" value={draft} onChange={e => setDraft(e.target.value)} rows={2} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) send(e); }}/>
       <div className="c-composer-controls"><span>Brittain 4 <span className="c-dot">·</span> 32k context</span>{busy ? <button type="button" className="c-send" onClick={() => controller.current?.abort()} aria-label="Stop reply">■</button> : <button type="submit" className="c-send" disabled={!draft.trim() || !preview} aria-label="Send message"><Icon name="arrow"/></button>}</div>
     </form>
+    <div className="c-context" title="Server-reported prompt and reply tokens from the latest request. Excludes your unsent message. Counts are not added across requests.">
+      <div className="c-context-label"><span>{context.stale && context.tokens !== null ? 'Last reported context' : 'Context used'}</span><span>{context.tokens === null ? 'Awaiting usage' : `${context.tokens.toLocaleString()} / ${context.limit.toLocaleString()} tokens (${context.percent}%)`}</span></div>
+      <progress max={context.limit} value={context.tokens === null ? 0 : Math.min(context.limit, context.tokens)} aria-label="Context used" />
+      {(busy || context.stale || draft.trim()) && <p>{busy ? 'Updates when the reply finishes.' : context.stale ? 'Latest reply usage is unavailable.' : 'Unsent message not included.'}</p>}
+    </div>
     <p className="c-disclaimer">{connection === 'loading' ? 'Checking chat connection…' : preview ? 'Chats stay in this page session. Check important information.' : connection === 'signed-out' ? 'Sign in to this private site to use chat.' : connection === 'unconfigured' ? 'The server access key is not configured yet.' : 'Cannot reach the chat service.'}{!preview && connection !== 'loading' && <button type="button" className="c-inline-button" onClick={checkConnection}>Retry connection</button>}</p>
   </div>;
   return <main className={`c-app ${collapsed ? 'c-collapsed' : ''} ${sidebar ? 'c-sidebar-open' : ''}`}>
@@ -108,8 +117,8 @@ export default function Chat() {
       <div className="c-sidebar-bottom">{preview ? <div className="c-account"><span className="c-avatar">B</span><div>Private chat<small>Local to this page</small></div></div> : <><p>Try Brittain 4 with a free account.</p><a className="button full-width" href="#/signup">Sign up free</a></>}<a href="#/" className="c-home-link">← Back to Brittain</a></div>
     </aside>
     <section className="c-main">
-      <header className="c-header"><div className="c-header-left"><button className={`c-icon c-open ${collapsed ? 'c-is-collapsed' : ''}`} aria-label="Open sidebar" aria-expanded={sidebar || !collapsed} onClick={() => { setCollapsed(false); setSidebar(true); }}><Icon name="panel"/></button><div className="c-model-wrap"><button className="c-model-button" onClick={() => setInfo(!info)} aria-expanded={info}>Brittain 4<Icon name="down"/></button>{info && <div className="c-model-info"><strong>Brittain 4</strong><p>9B dense model</p><dl><div><dt>Web chat</dt><dd>32,768 tokens</dd></div><div><dt>Model maximum</dt><dd>262k</dd></div></dl><a href="#/models/brittain-4">View model details ↗</a></div>}</div></div><div className="c-header-right"><span className="c-preview">{busy ? 'Responding…' : preview ? 'Connected' : 'Not connected'}</span>{!preview && <a href="#/signup" className="button compact">Sign up free</a>}</div></header>
-      {messages.length === 0 ? <div className="c-start"><div className="c-start-inner"><h1>What can I help with?</h1>{composer}<div className="c-suggestions">{suggestions.map(([icon,label,prompt]) => <button key={icon} onClick={() => { setDraft(prompt); input.current?.focus(); }}><Icon name={icon}/>{label}</button>)}</div></div></div> : <><div className="c-conversation" role="log" aria-label="Conversation"><div className="c-message-column">{messages.map((message, index) => <div className="c-turn" key={message.id}><div className="c-user-message">{message.prompt}</div><div className="c-reply"><BrandLogo/><div className="c-response">{message.answer ? <MessageContent text={message.answer}/> : message.status === 'streaming' ? <p role="status">Waiting for Brittain 4…</p> : null}{message.error && <p className="c-error" role="alert">{message.error}</p>}{message.status === 'stopped' && <p>Reply stopped.</p>}{message.note && <p>{message.note}</p>}{message.usage && <p className="c-usage">{message.usage.total_tokens?.toLocaleString()} tokens used</p>}<div className="c-reply-actions">{message.answer && <button onClick={() => copyAnswer(message.answer)}>Copy</button>}{!busy && index === messages.length - 1 && <button onClick={e => send(e, true)}>Retry</button>}</div></div></div></div>)}<span className="sr-only" role="status">{copyNotice}</span><div ref={end}/></div></div><div className="c-bottom-composer">{composer}</div></>}
+      <header className="c-header"><div className="c-header-left"><button className={`c-icon c-open ${collapsed ? 'c-is-collapsed' : ''}`} aria-label="Open sidebar" aria-expanded={sidebar || !collapsed} onClick={() => { setCollapsed(false); setSidebar(true); }}><Icon name="panel"/></button><div className="c-model-wrap"><button className="c-model-button" onClick={() => setInfo(!info)} aria-expanded={info}>Brittain 4<Icon name="down"/></button>{info && <div className="c-model-info"><strong>Brittain 4</strong><p>9B dense model</p><dl><div><dt>Web chat</dt><dd>{contextLimit.toLocaleString()} tokens</dd></div><div><dt>Model maximum</dt><dd>262k</dd></div></dl><a href="#/models/brittain-4">View model details ↗</a></div>}</div></div><div className="c-header-right"><span className="c-preview">{busy ? 'Responding…' : preview ? 'Connected' : 'Not connected'}</span>{!preview && <a href="#/signup" className="button compact">Sign up free</a>}</div></header>
+      {messages.length === 0 ? <div className="c-start"><div className="c-start-inner"><h1>What can I help with?</h1>{composer}<div className="c-suggestions">{suggestions.map(([icon,label,prompt]) => <button key={icon} onClick={() => { setDraft(prompt); input.current?.focus(); }}><Icon name={icon}/>{label}</button>)}</div></div></div> : <><div className="c-conversation" role="log" aria-label="Conversation"><div className="c-message-column">{messages.map((message, index) => <div className="c-turn" key={message.id}><div className="c-user-message">{message.prompt}</div><div className="c-reply"><BrandLogo/><div className="c-response">{message.answer ? <MarkdownReply text={message.answer}/> : message.status === 'streaming' ? <p role="status">Waiting for Brittain 4…</p> : null}{message.error && <p className="c-error" role="alert">{message.error}</p>}{message.status === 'stopped' && <p>Reply stopped.</p>}{message.note && <p>{message.note}</p>}<div className="c-reply-actions">{message.answer && <button onClick={() => copyAnswer(message.answer)}>Copy</button>}{!busy && index === messages.length - 1 && <button onClick={e => send(e, true)}>Retry</button>}</div></div></div></div>)}<span className="sr-only" role="status">{copyNotice}</span><div ref={end}/></div></div><div className="c-bottom-composer">{composer}</div></>}
     </section>
   </main>;
 }
