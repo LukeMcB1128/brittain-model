@@ -9,6 +9,7 @@ import {
   visibleStory,
 } from "./chat";
 import "./App.css";
+import BrandLogo from "./BrandLogo.jsx";
 
 const STORAGE_KEY = "brittain.chats.v1";
 const uid = () => crypto.randomUUID();
@@ -412,9 +413,7 @@ function App() {
         aria-label="Conversations"
       >
         <div className="brand">
-          <span className="brand-monogram" aria-hidden="true">
-            B
-          </span>
+          <BrandLogo/>
           <span>
             BRITTAIN
             <span className="brand-caption">
@@ -566,9 +565,7 @@ function App() {
         >
           {messages.length === 0 ? (
             <section className="welcome">
-              <div className="welcome-mark" aria-hidden="true">
-                B
-              </div>
+              <BrandLogo/>
               <div className="eyebrow">
                 BRITTAIN / {raw ? "CODE" : story ? "STORIES" : "CHAT"}
               </div>
@@ -631,7 +628,7 @@ function App() {
                   >
                     {message.role === "assistant" && (
                       <div className="assistant-heading">
-                        <span className="assistant-avatar">B</span>
+                        <BrandLogo/>
                         <strong>{modelLabel(selectedName)}</strong>
                       </div>
                     )}

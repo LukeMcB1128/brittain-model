@@ -1,0 +1,14 @@
+.brand-logo {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: var(--logo-size, 36px);
+  height: var(--logo-size, 36px);
+  overflow: visible;
+  background: transparent;
+}
+.c-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s3);
+}
+.c-reply .brand-logo { --logo-size: 28px; }
