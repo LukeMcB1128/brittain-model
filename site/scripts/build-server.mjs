@@ -12,6 +12,7 @@ async function collect(dir, prefix = '') {
 await collect('dist/client');
 await mkdir('dist/server', { recursive: true });
 await copyFile('server/gateway.js', 'dist/server/gateway.js');
+await copyFile('server/tools.js', 'dist/server/tools.js');
 await writeFile('dist/server/assets.js', `export default ${JSON.stringify(assets)};`);
 await writeFile('dist/server/index.js', `import { handleApi } from './gateway.js';
 import assets from './assets.js';

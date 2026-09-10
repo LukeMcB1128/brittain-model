@@ -26,3 +26,10 @@ test('finish length and inline stream errors are handled', async () => {
   assert.equal(chunks[0].finishReason, 'length');
   await assert.rejects(readCompletion(sse('data: {"error":{"message":"Failed"}}\n'), () => {}), /Failed/);
 });
+test('custom gateway tool, usage, and completion events are delivered', async () => {
+  const chunks = [];
+  await readCompletion(sse('data: {"type":"tool","id":"1","name":"web_search","status":"running"}\n\ndata: {"type":"usage","usage":{"total_tokens":8}}\n\ndata: {"type":"done","finishReason":"stop"}\n\n'), chunk => chunks.push(chunk));
+  assert.deepEqual(chunks.map(chunk => chunk.type), ['tool', 'usage', 'done']);
+  assert.equal(chunks[0].name, 'web_search');
+  assert.equal(chunks[1].usage.total_tokens, 8);
+});

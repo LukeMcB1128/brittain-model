@@ -83,6 +83,15 @@
   .c-bottom-composer, .c-conversation { padding: var(--s4); }
 }
 .c-response { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.c-tool-list { display: grid; gap: var(--s2); margin-bottom: var(--s4); }
+.c-tool { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--s3); padding: var(--s3); border: 1px solid var(--line); border-radius: var(--r2); background: var(--panel); font-size: var(--t1); }
+.c-tool-icon { display: grid; place-items: center; color: var(--blue); }
+.c-tool-icon svg { width: 17px; height: 17px; }
+.c-tool strong { display: block; font-size: var(--t1); font-weight: var(--medium); }
+.c-tool small { display: block; color: var(--subtle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.c-tool-status { color: var(--subtle); font-size: var(--t0); text-align: right; }
+.c-tool-running .c-tool-status { color: var(--blue); }
+.c-tool-error .c-tool-status { color: var(--red); }
 .c-response .prose { white-space: pre-wrap; }
 .c-response pre { overflow-x: auto; }
 .c-response .c-error { color: var(--red); }

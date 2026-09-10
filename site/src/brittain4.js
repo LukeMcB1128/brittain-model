@@ -16,8 +16,14 @@ export async function readCompletion(response, onChunk) {
     if (value === '[DONE]') { done = true; return; }
     const data = JSON.parse(value);
     if (data.error) throw new Error(typeof data.error === 'string' ? data.error : data.error.message || 'The response failed.');
+    if (data.type) {
+      if (data.type === 'error') throw new Error(data.error || 'The response failed.');
+      if (data.type === 'done') done = true;
+      onChunk(data);
+      return;
+    }
     const choice = data.choices?.find(c => c.index === 0);
-    onChunk({ text: choice?.delta?.content || '', finishReason: choice?.finish_reason, usage: data.usage });
+    onChunk({ type: 'content', text: choice?.delta?.content || '', finishReason: choice?.finish_reason, usage: data.usage });
   }
   try {
     while (!done) {
