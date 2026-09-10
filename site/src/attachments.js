@@ -1,0 +1,86 @@
+export const ACCEPTED_ATTACHMENTS = '.txt,.md,.markdown,.csv,.tsv,.json,.js,.jsx,.ts,.tsx,.py,.java,.c,.cpp,.h,.hpp,.rs,.go,.html,.css,.xml,.yaml,.yml,.toml,.sql,.sh,.log,.pdf,image/png,image/jpeg,image/webp';
+export const MAX_ATTACHMENT_COUNT = 5;
+export const MAX_ATTACHMENT_BYTES = 10_000_000;
+
+const MAX_IMAGE_BYTES = 5_000_000;
+const MAX_TEXT_BYTES = 2_000_000;
+const MAX_TEXT_CHARS = 120_000;
+const MAX_PDF_PAGES = 50;
+const TEXT_EXTENSIONS = new Set(['txt', 'md', 'markdown', 'csv', 'tsv', 'json', 'js', 'jsx', 'ts', 'tsx', 'py', 'java', 'c', 'cpp', 'h', 'hpp', 'rs', 'go', 'html', 'css', 'xml', 'yaml', 'yml', 'toml', 'sql', 'sh', 'log']);
+const IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
+
+function extension(name) {
+  return String(name).split('.').pop()?.toLowerCase() || '';
+}
+
+function safeName(name) {
+  return [...String(name || 'attachment')].filter(character => {
+    const code = character.charCodeAt(0);
+    return code >= 32 && code !== 127;
+  }).join('').slice(0, 180) || 'attachment';
+}
+
+function readDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error(`Could not read ${file.name}.`));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function readPdf(file) {
+  const [{ getDocument, GlobalWorkerOptions }, worker] = await Promise.all([
+    import('pdfjs-dist/build/pdf.mjs'),
+    import('pdfjs-dist/build/pdf.worker.min.mjs?url'),
+  ]);
+  GlobalWorkerOptions.workerSrc = worker.default;
+  const document = await getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise;
+  const sections = [];
+  let length = 0;
+  const pages = Math.min(document.numPages, MAX_PDF_PAGES);
+  try {
+    for (let pageNumber = 1; pageNumber <= pages && length < MAX_TEXT_CHARS; pageNumber += 1) {
+      const page = await document.getPage(pageNumber);
+      const content = await page.getTextContent();
+      const text = content.items.map(item => item.str).join(' ').replace(/\s+/g, ' ').trim();
+      if (text) {
+        const section = `Page ${pageNumber}\n${text}`;
+        sections.push(section);
+        length += section.length;
+      }
+    }
+  } finally { await document.destroy(); }
+  if (!sections.length) throw new Error(`${file.name} has no selectable text. Upload page images instead.`);
+  const content = sections.join('\n\n').slice(0, MAX_TEXT_CHARS);
+  return { content, truncated: document.numPages > pages || length > MAX_TEXT_CHARS };
+}
+
+export async function importAttachment(file) {
+  const name = safeName(file.name);
+  if (IMAGE_TYPES.has(file.type)) {
+    if (file.size > MAX_IMAGE_BYTES) throw new Error(`${name} is larger than the 5 MB image limit.`);
+    return { id: crypto.randomUUID(), name, type: file.type, size: file.size, kind: 'image', dataUrl: await readDataUrl(file) };
+  }
+  if (file.type === 'application/pdf' || extension(name) === 'pdf') {
+    if (file.size > MAX_ATTACHMENT_BYTES) throw new Error(`${name} is larger than the 10 MB PDF limit.`);
+    const extracted = await readPdf(file);
+    return { id: crypto.randomUUID(), name, type: 'application/pdf', size: file.size, kind: 'text', ...extracted };
+  }
+  if (file.type.startsWith('text/') || TEXT_EXTENSIONS.has(extension(name))) {
+    if (file.size > MAX_TEXT_BYTES) throw new Error(`${name} is larger than the 2 MB text-file limit.`);
+    const text = await file.text();
+    return { id: crypto.randomUUID(), name, type: file.type || 'text/plain', size: file.size, kind: 'text', content: text.slice(0, MAX_TEXT_CHARS), truncated: text.length > MAX_TEXT_CHARS };
+  }
+  throw new Error(`${name} is not a supported image, PDF, text, code, CSV, JSON, or Markdown file.`);
+}
+
+export function messageContent(prompt, attachments = []) {
+  if (!attachments.length) return prompt;
+  return [
+    { type: 'text', text: prompt.trim() || 'Review the attached content.' },
+    ...attachments.flatMap(attachment => attachment.kind === 'image'
+      ? [{ type: 'text', text: `Attached image: ${safeName(attachment.name)}` }, { type: 'image_url', image_url: { url: attachment.dataUrl } }]
+      : [{ type: 'text', text: `Attached file: ${safeName(attachment.name)}${attachment.truncated ? ' (content truncated)' : ''}\n\n${attachment.content}` }]),
+  ];
+}

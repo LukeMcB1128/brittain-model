@@ -13,7 +13,7 @@ test('requires authenticated site identity, a secret, and same-origin POST', asy
 });
 test('validates messages and fixes server-owned model/options', async () => {
   assert.equal((await handleApi(req({ messages: [{ role: 'system', content: 'x' }] }), env)).status, 400);
-  assert.equal((await handleApi(req({ messages: [{ role: 'user', content: 'x'.repeat(180001) }] }), env)).status, 413);
+  assert.equal((await handleApi(req({ messages: [{ role: 'user', content: 'x'.repeat(500001) }] }), env)).status, 400);
   let payload;
   const response = await handleApi(req({ model: 'other', max_tokens: 99999, messages: [{ role: 'user', content: 'Hello' }] }), env, async (url, options) => {
     assert.equal(url, 'https://fragility-devoutly-dazzling.ngrok-free.dev/v1/chat/completions');
@@ -27,6 +27,18 @@ test('validates messages and fixes server-owned model/options', async () => {
   assert.equal(payload.chat_template_kwargs.enable_thinking, false);
   assert.deepEqual(payload.tools.map(tool => tool.function.name), ['web_search', 'web_fetch', 'calculate']);
   assert.equal((await response.text()).includes('test-only-secret'), false);
+});
+test('accepts safe image parts and rejects remote or oversized attachment content', async () => {
+  let payload;
+  const content = [{ type: 'text', text: 'Describe this image.' }, { type: 'image_url', image_url: { url: 'data:image/png;base64,iVBORw0KGgo=' } }];
+  const response = await handleApi(req({ messages: [{ role: 'user', content }] }), env, async (_url, options) => {
+    payload = JSON.parse(options.body);
+    return sse([{ choices: [{ index: 0, delta: { content: 'An image.' }, finish_reason: 'stop' }] }, '[DONE]']);
+  });
+  await response.text();
+  assert.deepEqual(payload.messages.at(-1).content, content);
+  assert.equal((await handleApi(req({ messages: [{ role: 'user', content: [{ type: 'text', text: 'Read it.' }, { type: 'image_url', image_url: { url: 'https://example.com/image.png' } }] }] }), env)).status, 400);
+  assert.equal((await handleApi(req({ messages: [{ role: 'assistant', content }] }), env)).status, 400);
 });
 test('upstream auth errors do not expose the key, HTML is rejected', async () => {
   const auth = await handleApi(req(), env, async () => Response.json({ error: 'test-only-secret' }, { status: 401 }));

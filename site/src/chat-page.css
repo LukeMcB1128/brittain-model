@@ -41,17 +41,36 @@
 .c-start { flex: 1; display: flex; align-items: center; justify-content: center; padding: var(--s6) var(--s6) var(--s9); overflow-y: auto; }
 .c-start-inner { width: 100%; max-width: var(--chat-width); }
 .c-start h1 { text-align: center; font-size: var(--t5); font-weight: var(--medium); letter-spacing: -.025em; margin-bottom: var(--s6); }
-.c-composer { background: var(--input); border: 1px solid var(--line); border-radius: var(--r3); padding: var(--s5) var(--s4) var(--s3); }
+.c-composer { position: relative; background: var(--input); border: 1px solid var(--line); border-radius: var(--r3); padding: var(--s4) var(--s4) var(--s3); }
 .c-composer:focus-within { border-color: var(--blue-line); box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 18%, transparent); }
+.c-composer.c-dragging { border-color: var(--blue); background: var(--blue-soft); }
 .c-composer textarea { display: block; width: 100%; min-height: 64px; max-height: 200px; resize: vertical; border: 0; outline: none; background: transparent; color: var(--ink); font-size: var(--t2); line-height: var(--line-body); padding: 0 var(--s2); }
 .c-composer textarea:focus-visible { outline: none; }
 .c-composer textarea::placeholder { color: var(--subtle); }
-.c-composer-controls { display: flex; justify-content: flex-end; align-items: center; gap: var(--s3); padding-left: var(--s2); }
+.c-composer-controls { display: flex; align-items: center; gap: var(--s2); padding-left: var(--s1); }
 .c-composer-controls > span { color: var(--subtle); font-size: var(--t0); margin-right: auto; }
+.c-attach { display: grid; place-items: center; width: 34px; height: 34px; padding: var(--s2); border: 0; border-radius: var(--r2); background: transparent; color: var(--subtle); }
+.c-attach:hover:not(:disabled) { background: var(--hover); color: var(--ink); }
+.c-attach:disabled { opacity: .5; cursor: default; }
+.c-attach svg { width: 18px; height: 18px; }
 .c-dot { padding: 0 var(--s1); }
 .c-send { display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: var(--r2); background: var(--blue); color: var(--button-ink) !important; }
 .c-send:disabled { background: var(--hover); color: var(--subtle) !important; opacity: 1; cursor: default; }
 .c-send:not(:disabled):hover { background: var(--ink); }
+.c-drop-message { position: absolute; inset: 0; display: grid; place-items: center; border-radius: var(--r3); background: color-mix(in srgb, var(--blue-soft) 92%, transparent); color: var(--ink); font-size: var(--t2); font-weight: var(--medium); pointer-events: none; }
+.c-attachment-error { color: var(--red); font-size: var(--t0); margin: var(--s2) var(--s3) 0; }
+.c-attachments { display: flex; flex-wrap: wrap; gap: var(--s2); margin-bottom: var(--s3); }
+.c-attachment { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: var(--s2); max-width: 260px; min-height: 48px; padding: var(--s2); border: 1px solid var(--line); border-radius: var(--r2); background: var(--panel); }
+.c-attachment img, .c-attachment-file { width: 36px; height: 36px; border-radius: var(--r1); }
+.c-attachment img { object-fit: cover; }
+.c-attachment-file { display: grid; place-items: center; background: var(--blue-soft); color: var(--blue); }
+.c-attachment-file svg { width: 18px; height: 18px; }
+.c-attachment strong, .c-attachment small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.c-attachment strong { font-size: var(--t0); font-weight: var(--medium); }
+.c-attachment small { color: var(--subtle); font-size: var(--t0); }
+.c-attachment button { display: grid; place-items: center; width: 28px; height: 28px; padding: var(--s1); border: 0; border-radius: var(--r2); background: transparent; color: var(--subtle); }
+.c-attachment button:hover { background: var(--hover); color: var(--ink); }
+.c-attachment button svg { width: 14px; height: 14px; }
 .c-disclaimer { text-align: center; font-size: var(--t0); margin-top: var(--s3) !important; }
 .c-disclaimer a { text-decoration: underline; text-underline-offset: var(--s1); }
 .c-suggestions { display: flex; justify-content: center; flex-wrap: wrap; gap: var(--s3); margin-top: var(--s5); }
@@ -62,6 +81,8 @@
 .c-message-column { max-width: var(--chat-width); margin: auto; }
 .c-turn { padding-bottom: var(--s7); }
 .c-user-message { max-width: 85%; width: fit-content; margin-left: auto; background: var(--input); border-radius: var(--r3); padding: var(--s3) var(--s5); white-space: pre-wrap; overflow-wrap: anywhere; }
+.c-user-message .c-attachments { margin-bottom: var(--s3); }
+.c-user-message .c-attachment { background: var(--hover); }
 .c-reply { display: flex; align-items: start; gap: var(--s4); padding-top: var(--s6); }
 .c-assistant-mark { font-family: Georgia,serif; font-size: var(--t4); color: var(--blue); line-height: var(--line-title); }
 .c-reply p { font-size: var(--t2); }

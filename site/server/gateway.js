@@ -1,7 +1,10 @@
 import { executeTool, TOOL_DEFINITIONS } from './tools.js';
 
 const UPSTREAM = 'https://fragility-devoutly-dazzling.ngrok-free.dev/v1/chat/completions';
-const MAX_BYTES = 180000;
+const MAX_BYTES = 15_000_000;
+const MAX_TEXT_CHARS = 500_000;
+const MAX_IMAGE_CHARS = 7_000_000;
+const MAX_IMAGES = 8;
 const MAX_TOOL_ROUNDS = 4;
 const MAX_TOOL_CALLS = 8;
 // Measured against the previous wording on a live session's failures, 12/13 vs
@@ -36,8 +39,38 @@ function json(body, status = 200) {
   return Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 }
 
+function contentText(content) {
+  if (typeof content === 'string') return content;
+  if (!Array.isArray(content)) return '';
+  return content.find(part => part?.type === 'text')?.text || '';
+}
+
+function normalizeContent(role, content, totals) {
+  if (typeof content === 'string') {
+    const text = content.trim();
+    if (!text || text.length > MAX_TEXT_CHARS) throw new Error('Message text is empty or too large.');
+    totals.text += text.length;
+    return text;
+  }
+  if (role !== 'user' || !Array.isArray(content) || !content.length) throw new Error('Message content is not valid.');
+  const clean = [];
+  for (const part of content) {
+    if (part?.type === 'text' && typeof part.text === 'string' && part.text.trim()) {
+      totals.text += part.text.length;
+      clean.push({ type: 'text', text: part.text });
+      continue;
+    }
+    const url = part?.type === 'image_url' && typeof part.image_url?.url === 'string' ? part.image_url.url : '';
+    if (!/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/i.test(url) || url.length > MAX_IMAGE_CHARS) throw new Error('An attached image is not valid or is too large.');
+    totals.images += 1;
+    clean.push({ type: 'image_url', image_url: { url } });
+  }
+  if (!clean.length) throw new Error('Message content is empty.');
+  return clean;
+}
+
 function requestedTool(messages) {
-  const prompt = [...messages].reverse().find(message => message.role === 'user')?.content || '';
+  const prompt = contentText([...messages].reverse().find(message => message.role === 'user')?.content);
   if (/https:\/\/\S+/i.test(prompt) && /\b(?:fetch|read|open|visit|summari[sz]e|review)\b/i.test(prompt)) return 'web_fetch';
   if (/\b(?:calculate|calculator|compute|arithmetic)\b/i.test(prompt) && /\d/.test(prompt)) return 'calculate';
   if (/\b(?:search the web|web search|browse the web|look up|latest|current news|today'?s news)\b/i.test(prompt)) return 'web_search';
@@ -47,7 +80,7 @@ function requestedTool(messages) {
 const CALCULATOR_NAMES = new Set(['abs', 'acos', 'asin', 'atan', 'atan2', 'ceil', 'cos', 'e', 'exp', 'floor', 'log', 'log10', 'max', 'min', 'pi', 'pow', 'round', 'sin', 'sqrt', 'tan']);
 
 function requestedArguments(messages, name) {
-  const prompt = [...messages].reverse().find(message => message.role === 'user')?.content || '';
+  const prompt = contentText([...messages].reverse().find(message => message.role === 'user')?.content);
   if (name === 'web_fetch') {
     const url = prompt.match(/https:\/\/[^\s<>'"]+/i)?.[0]?.replace(/[),.;!?]+$/, '');
     return url ? { url } : null;
@@ -246,9 +279,18 @@ export async function handleApi(request, env, fetchUpstream = fetch) {
     for (const chunk of chunks) { buffer.set(chunk, offset); offset += chunk.length; }
     body = JSON.parse(new TextDecoder().decode(buffer));
   } catch { return json({ error: 'Invalid request.' }, 400); }
-  if (!Array.isArray(body.messages) || !body.messages.length || body.messages.length > 200 || body.messages.some(m => !m || !['user', 'assistant'].includes(m.role) || typeof m.content !== 'string' || !m.content.trim()) || body.messages.at(-1).role !== 'user') {
+  if (!Array.isArray(body.messages) || !body.messages.length || body.messages.length > 200 || body.messages.at(-1)?.role !== 'user') {
     return json({ error: 'Send a non-empty conversation ending with a user message.' }, 400);
   }
+  const totals = { text: 0, images: 0 };
+  let messages;
+  try {
+    messages = body.messages.map(message => {
+      if (!message || !['user', 'assistant'].includes(message.role)) throw new Error('Message role is not valid.');
+      return { role: message.role, content: normalizeContent(message.role, message.content, totals) };
+    });
+  } catch (error) { return json({ error: error.message }, 400); }
+  if (totals.text > MAX_TEXT_CHARS || totals.images > MAX_IMAGES) return json({ error: 'This conversation has too much attached content. Start a new chat or remove attachments.' }, 413);
   // Tool definitions and execution stay on the server. Browser requests cannot add tools.
-  return streamChat([{ role: 'system', content: TOOL_INSTRUCTIONS }, ...body.messages.map(({ role, content }) => ({ role, content }))], request, env, fetchUpstream);
+  return streamChat([{ role: 'system', content: TOOL_INSTRUCTIONS }, ...messages], request, env, fetchUpstream);
 }
