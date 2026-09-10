@@ -125,6 +125,10 @@
 .c-markdown th { background: var(--panel); font-weight: var(--bold); }
 .c-markdown .contains-task-list { list-style: none; padding-left: 0; }
 .c-markdown input[type=checkbox] { margin-right: var(--s2); accent-color: var(--blue); }
+.c-markdown .katex { color: var(--ink); font-size: 1.04em; }
+.c-markdown .katex-display { max-width: 100%; margin: var(--s4) 0; padding: var(--s2) 0; overflow-x: auto; overflow-y: hidden; text-align: left; }
+.c-markdown .katex-display > .katex { text-align: left; }
+.c-markdown .katex-error { color: var(--red); font-family: var(--mono); font-size: .9em; }
 .c-context { margin-top: var(--s3); color: var(--subtle); font-size: var(--t0); }
 .c-context-label { display: flex; justify-content: space-between; gap: var(--s3); }
 .c-context progress { display: block; appearance: none; width: 100%; height: var(--s1); margin-top: var(--s2); border: 0; border-radius: var(--r1); overflow: hidden; background: var(--line); accent-color: var(--blue); }

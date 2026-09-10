@@ -12,10 +12,13 @@
     "build:hosted": "vite build --base=/ --outDir dist/client && node scripts/build-server.mjs"
   },
   "dependencies": {
+    "katex": "^0.18.7",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-markdown": "^10.1.0",
-    "remark-gfm": "^4.0.1"
+    "rehype-katex": "^7.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",

@@ -19,6 +19,16 @@ test('model HTML and unsafe links cannot run and remote images are not loaded', 
 test('partial fenced code can render during streaming', () => {
   assert.ok(render('```python\nprint("Hello').includes('<pre>'));
 });
+test('inline and display LaTeX render as formatted math', () => {
+  const html = render('For $y = -x^2 + 3$, the derivative is:\n\n$$\n\\frac{dy}{dx} = -2x\n$$');
+  const sameLine = render('Derivative: $$ \\frac{dy}{dx} = -2x $$');
+  assert.match(html, /class="katex"/);
+  assert.match(html, /class="katex-display"/);
+  assert.match(html, /<mfrac>/);
+  assert.doesNotMatch(html, /\$y = -x\^2 \+ 3\$/);
+  assert.match(sameLine, /<mfrac>/);
+  assert.doesNotMatch(sameLine, /\$\$/);
+});
 test('context uses latest server total without double-counting history', () => {
   assert.equal(contextUsage([{usage:{total_tokens:100}}, {usage:{total_tokens:250}}]).tokens,250);
   assert.equal(contextUsage([]).tokens,0);
