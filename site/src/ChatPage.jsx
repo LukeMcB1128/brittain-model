@@ -25,6 +25,7 @@ function Icon({ name }) {
     plan: 'M8 6h12M8 12h12M8 18h12M3 6h1M3 12h1M3 18h1',
     search: 'm21 21-4.4-4.4M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0',
     calculate: 'M5 3h14v18H5zM8 7h8M8 11h2M14 11h2M8 15h2M14 15h2',
+    delete: 'M4 7h16M9 7V4h6v3m3 0-1 14H7L6 7m4 4v6m4-6v6',
   };
   return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name] || paths.model}/></svg>;
 }
@@ -74,6 +75,12 @@ export default function Chat() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
   function newChat() { if (controller.current) return; setActive(null); setDraft(''); setSidebar(false); input.current?.focus(); }
+  function deleteChat(id) {
+    if (controller.current) return;
+    setChats(items => items.filter(chat => chat.id !== id));
+    setCopyNotice('Conversation deleted.');
+    if (active === id) { setActive(null); setDraft(''); setSidebar(false); requestAnimationFrame(() => input.current?.focus()); }
+  }
   async function send(e, retry = false) {
     e?.preventDefault();
     if (controller.current || connection !== 'ready' || (!retry && !draft.trim())) return;
@@ -135,7 +142,7 @@ export default function Chat() {
       <div className="c-sidebar-top"><a href="#/" className="c-brand" aria-label="Brittain home"><BrandLogo/>BRITTAIN</a><button className="c-icon c-desktop" aria-label="Collapse sidebar" onClick={() => setCollapsed(true)}><Icon name="panel"/></button><button className="c-icon c-mobile" aria-label="Close sidebar" onClick={() => setSidebar(false)}><Icon name="panel"/></button></div>
       <button className="c-nav-item" disabled={busy} onClick={newChat}><Icon name="edit"/>New chat</button>
       <a href="#/models" className="c-nav-item"><Icon name="model"/>Models</a>
-      <div className="c-history"><h2>Conversations</h2>{chats.length ? chats.map(chat => <button key={chat.id} className="c-history-item" disabled={busy} aria-current={active === chat.id ? 'page' : undefined} onClick={() => { setActive(chat.id); setSidebar(false); setDraft(''); }}>{chat.title}</button>) : <p>Your chats will appear here.</p>}</div>
+      <div className="c-history"><h2>Conversations</h2>{chats.length ? chats.map(chat => <div key={chat.id} className={`c-history-row ${active === chat.id ? 'c-active' : ''}`}><button className="c-history-item" disabled={busy} aria-current={active === chat.id ? 'page' : undefined} onClick={() => { setActive(chat.id); setSidebar(false); setDraft(''); }}>{chat.title}</button><button className="c-history-delete" disabled={busy} onClick={() => deleteChat(chat.id)} aria-label={`Delete conversation: ${chat.title}`} title="Delete conversation"><Icon name="delete"/></button></div>) : <p>Your chats will appear here.</p>}</div>
       <div className="c-sidebar-bottom">{preview ? <div className="c-account"><span className="c-avatar">B</span><div>Private chat<small>Local to this page</small></div></div> : <><p>Try Brittain 4 with a free account.</p><a className="button full-width" href="#/signup">Sign up free</a></>}<a href="#/" className="c-home-link">← Back to Brittain</a></div>
     </aside>
     <section className="c-main">

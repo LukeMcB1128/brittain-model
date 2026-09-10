@@ -7,11 +7,16 @@
 .c-icon:hover { background: var(--hover); color: var(--ink) !important; }
 .c-mobile, .c-open { display: none; }
 .c-nav-item { display: flex; align-items: center; gap: var(--s3); padding: var(--s3); border: 0; border-radius: var(--r2); background: transparent; text-align: left; font-size: var(--t1); }
-.c-nav-item:hover, .c-history-item:hover, .c-history-item[aria-current] { background: var(--hover); }
+.c-nav-item:hover, .c-history-row:hover, .c-history-row.c-active { background: var(--hover); }
 .c-history { flex: 1; overflow-y: auto; margin-top: var(--s7); }
 .c-history h2 { font-family: inherit; font-size: var(--t0); font-weight: var(--medium); color: var(--subtle); letter-spacing: 0; padding: 0 var(--s3) var(--s3); }
 .c-history > p { font-size: var(--t1); padding: var(--s3); }
-.c-history-item { display: block; width: 100%; border: 0; background: transparent; border-radius: var(--r2); text-align: left; padding: var(--s3); font-size: var(--t1); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.c-history-row { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; border-radius: var(--r2); }
+.c-history-item { min-width: 0; border: 0; background: transparent; border-radius: var(--r2); text-align: left; padding: var(--s3); font-size: var(--t1); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.c-history-delete { display: grid; place-items: center; width: 32px; height: 32px; margin-right: var(--s1); padding: var(--s2); border: 0; border-radius: var(--r2); background: transparent; color: var(--subtle); opacity: 0; }
+.c-history-row:hover .c-history-delete, .c-history-row:focus-within .c-history-delete { opacity: 1; }
+.c-history-delete:hover { background: var(--input); color: var(--red); }
+.c-history-delete svg { width: 16px; height: 16px; }
 .c-sidebar-bottom { padding: var(--s4) var(--s2) var(--s2); }
 .c-sidebar-bottom > p { font-size: var(--t1); margin-bottom: var(--s4); }
 .c-sidebar-bottom .button { min-height: 40px; background: var(--input); }
@@ -81,6 +86,7 @@
   .c-suggestions { gap: var(--s2); }
   .c-suggestions button { font-size: var(--t0); }
   .c-bottom-composer, .c-conversation { padding: var(--s4); }
+  .c-history-delete { opacity: 1; }
 }
 .c-response { min-width: 0; flex: 1; overflow-wrap: anywhere; }
 .c-tool-list { display: grid; gap: var(--s2); margin-bottom: var(--s4); }
