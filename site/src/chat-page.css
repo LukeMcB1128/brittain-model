@@ -37,11 +37,12 @@
 .c-start-inner { width: 100%; max-width: var(--chat-width); }
 .c-start h1 { text-align: center; font-size: var(--t5); font-weight: var(--medium); letter-spacing: -.025em; margin-bottom: var(--s6); }
 .c-composer { background: var(--input); border: 1px solid var(--line); border-radius: var(--r3); padding: var(--s5) var(--s4) var(--s3); }
-.c-composer:focus-within { border-color: var(--blue-line); }
-.c-composer textarea { display: block; width: 100%; min-height: 64px; max-height: 200px; resize: vertical; border: 0; background: transparent; color: var(--ink); font-size: var(--t2); line-height: var(--line-body); padding: 0 var(--s2); }
+.c-composer:focus-within { border-color: var(--blue-line); box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 18%, transparent); }
+.c-composer textarea { display: block; width: 100%; min-height: 64px; max-height: 200px; resize: vertical; border: 0; outline: none; background: transparent; color: var(--ink); font-size: var(--t2); line-height: var(--line-body); padding: 0 var(--s2); }
+.c-composer textarea:focus-visible { outline: none; }
 .c-composer textarea::placeholder { color: var(--subtle); }
-.c-composer-controls { display: flex; justify-content: space-between; align-items: center; gap: var(--s3); padding-left: var(--s2); }
-.c-composer-controls > span { color: var(--subtle); font-size: var(--t0); }
+.c-composer-controls { display: flex; justify-content: flex-end; align-items: center; gap: var(--s3); padding-left: var(--s2); }
+.c-composer-controls > span { color: var(--subtle); font-size: var(--t0); margin-right: auto; }
 .c-dot { padding: 0 var(--s1); }
 .c-send { display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: var(--r2); background: var(--blue); color: var(--button-ink) !important; }
 .c-send:disabled { background: var(--hover); color: var(--subtle) !important; opacity: 1; cursor: default; }

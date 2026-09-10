@@ -98,12 +98,12 @@ export default function Chat() {
     <form className="c-composer" onSubmit={send}>
       <label className="sr-only" htmlFor="chat-message">Message Brittain 4</label>
       <textarea ref={input} id="chat-message" placeholder="Message Brittain 4…" value={draft} onChange={e => setDraft(e.target.value)} rows={2} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) send(e); }}/>
-      <div className="c-composer-controls"><span>Brittain 4 <span className="c-dot">·</span> 32k context</span>{busy ? <button type="button" className="c-send" onClick={() => controller.current?.abort()} aria-label="Stop reply">■</button> : <button type="submit" className="c-send" disabled={!draft.trim() || !preview} aria-label="Send message"><Icon name="arrow"/></button>}</div>
+      <div className="c-composer-controls">{busy ? <button type="button" className="c-send" onClick={() => controller.current?.abort()} aria-label="Stop reply">■</button> : <button type="submit" className="c-send" disabled={!draft.trim() || !preview} aria-label="Send message"><Icon name="arrow"/></button>}</div>
     </form>
     <div className="c-context" title="Server-reported prompt and reply tokens from the latest request. Excludes your unsent message. Counts are not added across requests.">
       <div className="c-context-label"><span>{context.stale && context.tokens !== null ? 'Last reported context' : 'Context used'}</span><span>{context.tokens === null ? 'Awaiting usage' : `${context.tokens.toLocaleString()} / ${context.limit.toLocaleString()} tokens (${context.percent}%)`}</span></div>
       <progress max={context.limit} value={context.tokens === null ? 0 : Math.min(context.limit, context.tokens)} aria-label="Context used" />
-      {(busy || context.stale || draft.trim()) && <p>{busy ? 'Updates when the reply finishes.' : context.stale ? 'Latest reply usage is unavailable.' : 'Unsent message not included.'}</p>}
+      {(busy || context.stale || draft.trim()) && <p>{busy ? '' : context.stale ? 'Latest reply usage is unavailable.' : ''}</p>}
     </div>
     <p className="c-disclaimer">{connection === 'loading' ? 'Checking chat connection…' : preview ? 'Chats stay in this page session. Check important information.' : connection === 'signed-out' ? 'Sign in to this private site to use chat.' : connection === 'unconfigured' ? 'The server access key is not configured yet.' : 'Cannot reach the chat service.'}{!preview && connection !== 'loading' && <button type="button" className="c-inline-button" onClick={checkConnection}>Retry connection</button>}</p>
   </div>;
