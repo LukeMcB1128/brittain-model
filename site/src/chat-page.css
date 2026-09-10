@@ -71,6 +71,12 @@
 .c-attachment button { display: grid; place-items: center; width: 28px; height: 28px; padding: var(--s1); border: 0; border-radius: var(--r2); background: transparent; color: var(--subtle); }
 .c-attachment button:hover { background: var(--hover); color: var(--ink); }
 .c-attachment button svg { width: 14px; height: 14px; }
+.c-downloads { display: flex; flex-wrap: wrap; gap: var(--s2); margin-bottom: var(--s4); }
+.c-downloads a { display: grid; grid-template-columns: auto minmax(0,1fr); align-items: center; gap: var(--s3); min-width: 220px; max-width: 100%; padding: var(--s3); border: 1px solid var(--line); border-radius: var(--r2); background: var(--panel); }
+.c-downloads a:hover { border-color: var(--blue-line); background: var(--hover); }
+.c-downloads strong, .c-downloads small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.c-downloads strong { font-size: var(--t1); font-weight: var(--medium); }
+.c-downloads small { color: var(--subtle); font-size: var(--t0); }
 .c-disclaimer { text-align: center; font-size: var(--t0); margin-top: var(--s3) !important; }
 .c-disclaimer a { text-decoration: underline; text-underline-offset: var(--s1); }
 .c-suggestions { display: flex; justify-content: center; flex-wrap: wrap; gap: var(--s3); margin-top: var(--s5); }

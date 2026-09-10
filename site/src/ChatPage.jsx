@@ -4,7 +4,7 @@ import BrandLogo from './BrandLogo.jsx';
 import { readCompletion } from './brittain4.js';
 import MarkdownReply from './MarkdownReply.js';
 import { contextUsage } from './context-usage.js';
-import { ACCEPTED_ATTACHMENTS, importAttachment, MAX_ATTACHMENT_BYTES, MAX_ATTACHMENT_COUNT, messageContent } from './attachments.js';
+import { ACCEPTED_ATTACHMENTS, importAttachment, MAX_ATTACHMENT_BYTES, MAX_ATTACHMENT_COUNT, messageContent, requestAssets } from './attachments.js';
 
 const suggestions = [
   ['write', 'Write something', 'Help me write a clear introduction for a community science project.'],
@@ -35,15 +35,19 @@ function Icon({ name }) {
 }
 function AttachmentCards({ attachments, onRemove }) {
   if (!attachments?.length) return null;
-  return <div className={`c-attachments ${onRemove ? 'c-attachments-editable' : ''}`}>{attachments.map(attachment => <div className="c-attachment" key={attachment.id}>{attachment.kind === 'image' ? <img src={attachment.dataUrl} alt=""/> : <span className="c-attachment-file"><Icon name="file"/></span>}<span><strong>{attachment.name}</strong><small>{attachment.kind === 'image' ? 'Image' : attachment.type === 'application/pdf' ? 'PDF text' : 'File text'}{attachment.truncated ? ' · Truncated' : ''}</small></span>{onRemove && <button type="button" onClick={() => onRemove(attachment.id)} aria-label={`Remove ${attachment.name}`}><Icon name="close"/></button>}</div>)}</div>;
+  return <div className={`c-attachments ${onRemove ? 'c-attachments-editable' : ''}`}>{attachments.map(attachment => <div className="c-attachment" key={attachment.id}>{attachment.kind === 'image' ? <img src={attachment.dataUrl} alt=""/> : <span className="c-attachment-file"><Icon name="file"/></span>}<span><strong>{attachment.name}</strong><small>{attachment.kind === 'image' ? 'Image' : attachment.type === 'application/pdf' ? 'PDF' : 'File text'}{attachment.truncated ? ' · Truncated' : ''}</small></span>{onRemove && <button type="button" onClick={() => onRemove(attachment.id)} aria-label={`Remove ${attachment.name}`}><Icon name="close"/></button>}</div>)}</div>;
+}
+function DownloadCards({ artifacts }) {
+  if (!artifacts?.length) return null;
+  return <div className="c-downloads" aria-label="Generated files">{artifacts.map(file => <a key={file.id} href={file.dataUrl} download={file.name}><span className="c-attachment-file"><Icon name="file"/></span><span><strong>{file.name}</strong><small>Download PDF</small></span></a>)}</div>;
 }
 function ToolActivity({ tools }) {
   if (!tools?.length) return null;
   return <div className="c-tool-list" aria-label="Tools used">{tools.map(tool => {
-    const label = tool.label || (tool.name === 'web_search' ? 'Web search' : tool.name === 'web_fetch' ? 'Web page' : 'Calculator');
+    const label = tool.label || (tool.name === 'web_search' ? 'Web search' : tool.name === 'web_fetch' ? 'Web page' : tool.name === 'calculate' ? 'Calculator' : tool.name?.startsWith('pdf_') ? 'PDF' : 'Tool');
     const detail = tool.detail || tool.result || (tool.status === 'running' ? 'Working…' : '');
     const status = tool.status === 'running' ? 'Working' : tool.status === 'error' ? 'Failed' : tool.result || 'Done';
-    return <div className={`c-tool c-tool-${tool.status}`} key={tool.id}><span className="c-tool-icon"><Icon name={tool.name === 'calculate' ? 'calculate' : 'search'}/></span><span><strong>{label}</strong><small>{detail}</small></span><span className="c-tool-status">{status}</span></div>;
+    return <div className={`c-tool c-tool-${tool.status}`} key={tool.id}><span className="c-tool-icon"><Icon name={tool.name === 'calculate' ? 'calculate' : tool.name?.startsWith('pdf_') ? 'file' : 'search'}/></span><span><strong>{label}</strong><small>{detail}</small></span><span className="c-tool-status">{status}</span></div>;
   })}</div>;
 }
 export default function Chat() {
@@ -122,7 +126,7 @@ export default function Chat() {
     const id = active || crypto.randomUUID();
     const turnAttachments = retry ? messages.at(-1).attachments || [] : attachments;
     const prompt = retry ? messages.at(-1).prompt : draft.trim() || 'Review the attached content.';
-    const turn = { id: crypto.randomUUID(), prompt, attachments: turnAttachments, answer: '', tools: [], status: 'streaming' };
+    const turn = { id: crypto.randomUUID(), prompt, attachments: turnAttachments, answer: '', tools: [], artifacts: [], status: 'streaming' };
     const previous = retry ? messages.slice(0, -1) : messages;
     const history = previous.flatMap(m => [{ role: 'user', content: messageContent(m.prompt, m.attachments) }, ...(m.answer ? [{ role: 'assistant', content: m.answer }] : [])]);
     if (active) setChats(items => items.map(chat => chat.id === id ? { ...chat, messages: [...previous, turn] } : chat));
@@ -140,12 +144,16 @@ export default function Chat() {
         return { ...message, tools: index === -1 ? [...usedTools, tool] : usedTools.map((item, toolIndex) => toolIndex === index ? { ...item, ...tool } : item) };
       }) } : chat));
     }
+    function updateArtifact(artifact) {
+      setChats(items => items.map(chat => chat.id === id ? { ...chat, messages: chat.messages.map(message => message.id === turn.id ? { ...message, artifacts: [...(message.artifacts || []), { ...artifact, type: artifact.mediaType, kind: 'pdf' }] } : message) } : chat));
+    }
     let answer = '';
     let finishReason;
     try {
-      const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: [...history, { role: 'user', content: messageContent(turn.prompt, turnAttachments) }] }), signal: abort.signal });
+      const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: [...history, { role: 'user', content: messageContent(turn.prompt, turnAttachments) }], attachments: requestAssets([...previous, turn]) }), signal: abort.signal });
       await readCompletion(response, chunk => {
         if (chunk.type === 'tool') { updateTool(chunk); return; }
+        if (chunk.type === 'artifact') { updateArtifact(chunk); return; }
         if (chunk.type === 'usage') { update({ usage: chunk.usage }); return; }
         answer += chunk.text || '';
         if (chunk.finishReason) finishReason = chunk.finishReason;
@@ -188,7 +196,7 @@ export default function Chat() {
     </aside>
     <section className="c-main">
       <header className="c-header"><div className="c-header-left"><button className={`c-icon c-open ${collapsed ? 'c-is-collapsed' : ''}`} aria-label="Open sidebar" aria-expanded={sidebar || !collapsed} onClick={() => { setCollapsed(false); setSidebar(true); }}><Icon name="panel"/></button><div className="c-model-wrap"><button className="c-model-button" onClick={() => setInfo(!info)} aria-expanded={info}>Brittain 4<Icon name="down"/></button>{info && <div className="c-model-info"><strong>Brittain 4</strong><p>9B dense model</p><dl><div><dt>Web chat</dt><dd>{contextLimit.toLocaleString()} tokens</dd></div><div><dt>Model maximum</dt><dd>262k</dd></div></dl><a href="#/models/brittain-4">View model details ↗</a></div>}</div></div><div className="c-header-right"><span className="c-preview">{busy ? 'Responding…' : preview ? 'Connected' : 'Not connected'}</span>{!preview && <a href="#/signup" className="button compact">Sign up free</a>}</div></header>
-      {messages.length === 0 ? <div className="c-start"><div className="c-start-inner"><h1>What can I help with?</h1>{composer}<div className="c-suggestions">{suggestions.map(([icon,label,prompt]) => <button key={icon} onClick={() => { setDraft(prompt); input.current?.focus(); }}><Icon name={icon}/>{label}</button>)}</div></div></div> : <><div className="c-conversation" role="log" aria-label="Conversation"><div className="c-message-column">{messages.map((message, index) => <div className="c-turn" key={message.id}><div className="c-user-message"><AttachmentCards attachments={message.attachments}/><span>{message.prompt}</span></div><div className="c-reply"><BrandLogo/><div className="c-response"><ToolActivity tools={message.tools}/>{message.answer ? <MarkdownReply text={message.answer}/> : message.status === 'streaming' ? <p role="status">{message.tools?.some(tool => tool.status === 'running') ? 'Using tools…' : 'Waiting for Brittain 4…'}</p> : null}{message.error && <p className="c-error" role="alert">{message.error}</p>}{message.status === 'stopped' && <p>Reply stopped.</p>}{message.note && <p>{message.note}</p>}<div className="c-reply-actions">{message.answer && <button onClick={() => copyAnswer(message.answer)}>Copy</button>}{!busy && index === messages.length - 1 && <button onClick={e => send(e, true)}>Retry</button>}</div></div></div></div>)}<span className="sr-only" role="status">{copyNotice}</span><div ref={end}/></div></div><div className="c-bottom-composer">{composer}</div></>}
+      {messages.length === 0 ? <div className="c-start"><div className="c-start-inner"><h1>What can I help with?</h1>{composer}<div className="c-suggestions">{suggestions.map(([icon,label,prompt]) => <button key={icon} onClick={() => { setDraft(prompt); input.current?.focus(); }}><Icon name={icon}/>{label}</button>)}</div></div></div> : <><div className="c-conversation" role="log" aria-label="Conversation"><div className="c-message-column">{messages.map((message, index) => <div className="c-turn" key={message.id}><div className="c-user-message"><AttachmentCards attachments={message.attachments}/><span>{message.prompt}</span></div><div className="c-reply"><BrandLogo/><div className="c-response"><ToolActivity tools={message.tools}/><DownloadCards artifacts={message.artifacts}/>{message.answer ? <MarkdownReply text={message.answer}/> : message.status === 'streaming' ? <p role="status">{message.tools?.some(tool => tool.status === 'running') ? 'Using tools…' : 'Waiting for Brittain 4…'}</p> : null}{message.error && <p className="c-error" role="alert">{message.error}</p>}{message.status === 'stopped' && <p>Reply stopped.</p>}{message.note && <p>{message.note}</p>}<div className="c-reply-actions">{message.answer && <button onClick={() => copyAnswer(message.answer)}>Copy</button>}{!busy && index === messages.length - 1 && <button onClick={e => send(e, true)}>Retry</button>}</div></div></div></div>)}<span className="sr-only" role="status">{copyNotice}</span><div ref={end}/></div></div><div className="c-bottom-composer">{composer}</div></>}
     </section>
   </main>;
 }

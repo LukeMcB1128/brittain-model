@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { PDFDocument } from 'pdf-lib';
 import { handleApi } from './gateway.js';
 const env = { BRITTAIN4_API_KEY: 'test-only-secret' };
 function req(body = { messages: [{ role: 'user', content: 'Hello' }] }, extra = {}) {
@@ -39,6 +40,55 @@ test('accepts safe image parts and rejects remote or oversized attachment conten
   assert.deepEqual(payload.messages.at(-1).content, content);
   assert.equal((await handleApi(req({ messages: [{ role: 'user', content: [{ type: 'text', text: 'Read it.' }, { type: 'image_url', image_url: { url: 'https://example.com/image.png' } }] }] }), env)).status, 400);
   assert.equal((await handleApi(req({ messages: [{ role: 'assistant', content }] }), env)).status, 400);
+});
+test('offers PDF tools only when a PDF attachment is present', async () => {
+  let payload;
+  const response = await handleApi(req({ messages: [{ role: 'user', content: 'Summarize the attached file.' }], attachments: [{ id: 'pdf-1', name: 'notes.pdf', type: 'application/pdf', dataUrl: `data:application/pdf;base64,${btoa('%PDF-test')}`, pageCount: 1, pageImages: [] }] }), env, async (_url, options) => {
+    payload = JSON.parse(options.body);
+    return sse([{ choices: [{ index: 0, delta: { content: 'Summary' }, finish_reason: 'stop' }] }, '[DONE]']);
+  });
+  await response.text();
+  assert.deepEqual(payload.tools.slice(-6).map(tool => tool.function.name), ['pdf_info', 'pdf_render', 'pdf_fill_form', 'pdf_stamp', 'pdf_pages', 'pdf_merge']);
+  assert.equal(payload.messages.at(-1).content, 'Summarize the attached file.');
+});
+test('inspects the only attached PDF without making the model guess its filename', async () => {
+  const document = await PDFDocument.create();
+  document.addPage([612, 792]);
+  const pdf = Buffer.from(await document.save()).toString('base64');
+  let payload;
+  const response = await handleApi(req({ messages: [{ role: 'user', content: 'Inspect the attached PDF and tell me its page count.' }], attachments: [{ id: 'pdf-1', name: 'notes.pdf', type: 'application/pdf', dataUrl: `data:application/pdf;base64,${pdf}`, pageCount: 1, pageImages: [] }] }), env, async (_url, options) => {
+    payload = JSON.parse(options.body);
+    return sse([{ choices: [{ index: 0, delta: { content: 'It has one page.' }, finish_reason: 'stop' }] }, '[DONE]']);
+  });
+  const body = await response.text();
+  assert.equal(payload.messages.at(-2).tool_calls[0].function.name, 'pdf_info');
+  assert.deepEqual(JSON.parse(payload.messages.at(-2).tool_calls[0].function.arguments), {});
+  assert.match(payload.messages.at(-1).content, /"page_count": 1/);
+  assert.match(body, /"name":"pdf_info"/);
+});
+test('executes a PDF edit and streams a downloadable result', async () => {
+  const document = await PDFDocument.create();
+  document.addPage([612, 792]);
+  document.addPage([612, 792]);
+  const pdf = Buffer.from(await document.save()).toString('base64');
+  let round = 0;
+  const response = await handleApi(req({ messages: [{ role: 'user', content: 'Rotate page 1 in the attached PDF.' }], attachments: [{ id: 'pdf-1', name: 'pages.pdf', type: 'application/pdf', dataUrl: `data:application/pdf;base64,${pdf}`, pageCount: 2, pageImages: [] }] }), env, async (_url, options) => {
+    const payload = JSON.parse(options.body);
+    round += 1;
+    if (round === 1) {
+      assert.equal(payload.tool_choice, 'required');
+      assert.deepEqual(payload.tools.map(tool => tool.function.name), ['pdf_pages']);
+      return sse([{ choices: [{ index: 0, delta: { tool_calls: [{ index: 0, id: 'pdf-call', type: 'function', function: { name: 'pdf_pages', arguments: '{"file":"pages.pdf","operation":"rotate","pages":"1","degrees":90}' } }] }, finish_reason: 'tool_calls' }] }, '[DONE]']);
+    }
+    assert.equal(payload.messages.at(-1).role, 'tool');
+    assert.match(payload.messages.at(-1).content, /pages-rotated\.pdf/);
+    return sse([{ choices: [{ index: 0, delta: { content: 'The rotated PDF is ready.' }, finish_reason: 'stop' }] }, '[DONE]']);
+  });
+  const body = await response.text();
+  assert.equal(round, 2);
+  assert.match(body, /"type":"artifact"/);
+  assert.match(body, /pages-rotated\.pdf/);
+  assert.match(body, /data:application\/pdf;base64/);
 });
 test('upstream auth errors do not expose the key, HTML is rejected', async () => {
   const auth = await handleApi(req(), env, async () => Response.json({ error: 'test-only-secret' }, { status: 401 }));

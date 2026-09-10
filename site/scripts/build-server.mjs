@@ -1,5 +1,6 @@
-import { mkdir, readFile, readdir, writeFile, copyFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join, extname } from 'node:path';
+import { build } from 'esbuild';
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml' };
 const assets = {};
 async function collect(dir, prefix = '') {
@@ -11,8 +12,7 @@ async function collect(dir, prefix = '') {
 }
 await collect('dist/client');
 await mkdir('dist/server', { recursive: true });
-await copyFile('server/gateway.js', 'dist/server/gateway.js');
-await copyFile('server/tools.js', 'dist/server/tools.js');
+await build({ entryPoints: ['server/gateway.js'], outfile: 'dist/server/gateway.js', bundle: true, format: 'esm', platform: 'browser', target: 'es2022', minify: true });
 await writeFile('dist/server/assets.js', `export default ${JSON.stringify(assets)};`);
 await writeFile('dist/server/index.js', `import { handleApi } from './gateway.js';
 import assets from './assets.js';
