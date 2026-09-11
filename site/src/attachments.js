@@ -37,7 +37,8 @@ async function readPdf(file) {
   ]);
   GlobalWorkerOptions.workerSrc = worker.default;
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const document = await getDocument({ data: bytes, isEvalSupported: false }).promise;
+  const loadingTask = getDocument({ data: bytes, isEvalSupported: false });
+  const document = await loadingTask.promise;
   const sections = [];
   const pageImages = [];
   let length = 0;
@@ -67,7 +68,10 @@ async function readPdf(file) {
         } catch { /* Text extraction still makes the PDF useful when rendering fails. */ }
       }
     }
-  } finally { await document.destroy(); }
+  } finally {
+    if (typeof loadingTask.destroy === 'function') await loadingTask.destroy();
+    else if (typeof document.cleanup === 'function') await document.cleanup();
+  }
   if (!sections.length && !pageImages.length) throw new Error(`${file.name} could not be read or rendered.`);
   const content = sections.length ? sections.join('\n\n').slice(0, MAX_TEXT_CHARS) : '[No selectable text. Use the rendered page images.]';
   const rawDataUrl = await readDataUrl(file);
