@@ -1,5 +1,6 @@
 /* Chat extends the release design system, with one shared conversation width. */
-.c-app { --chat-width: 760px; --sidebar-width: 248px; display: grid; grid-template-columns: var(--sidebar-width) minmax(0,1fr); height: 100dvh; overflow: hidden; }
+.release-site.chat-route { height: 100dvh; min-height: 0; overflow: hidden; overscroll-behavior: none; }
+.c-app { --chat-width: 760px; --sidebar-width: 248px; display: grid; grid-template-columns: var(--sidebar-width) minmax(0,1fr); height: 100%; overflow: hidden; overscroll-behavior: none; }
 .c-sidebar { display: flex; flex-direction: column; min-height: 0; padding: var(--s4) var(--s3); background: var(--panel); }
 .c-sidebar-top { display: flex; align-items: center; justify-content: space-between; padding: var(--s2) var(--s3) var(--s5); }
 .c-brand { font-size: var(--t1); font-weight: var(--bold); letter-spacing: .14em; }
@@ -8,7 +9,7 @@
 .c-mobile, .c-open { display: none; }
 .c-nav-item { display: flex; align-items: center; gap: var(--s3); padding: var(--s3); border: 0; border-radius: var(--r2); background: transparent; text-align: left; font-size: var(--t1); }
 .c-nav-item:hover, .c-history-row:hover, .c-history-row.c-active { background: var(--hover); }
-.c-history { flex: 1; overflow-y: auto; margin-top: var(--s7); }
+.c-history { flex: 1; overflow-y: auto; overscroll-behavior-y: contain; margin-top: var(--s7); }
 .c-history h2 { font-family: inherit; font-size: var(--t0); font-weight: var(--medium); color: var(--subtle); letter-spacing: 0; padding: 0 var(--s3) var(--s3); }
 .c-history > p { font-size: var(--t1); padding: var(--s3); }
 .c-history-row { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; border-radius: var(--r2); }
@@ -24,7 +25,7 @@
 .c-account { display: flex; gap: var(--s3); align-items: center; font-size: var(--t1); }
 .c-account small { display: block; color: var(--subtle); font-size: var(--t0); }
 .c-avatar { width: 36px; height: 36px; border-radius: var(--r2); background: var(--blue-soft); color: var(--blue); display: grid; place-items: center; }
-.c-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.c-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; overscroll-behavior: none; }
 .c-header { height: 72px; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; padding: var(--s4) var(--s5); gap: var(--s4); }
 .c-header-left, .c-header-right { display: flex; align-items: center; gap: var(--s4); }
 .c-model-wrap { position: relative; }
@@ -38,7 +39,7 @@
 .c-model-info dl div { display: flex; justify-content: space-between; gap: var(--s4); padding: var(--s2) 0; }
 .c-model-info dt { color: var(--subtle); }
 .c-model-info a { color: var(--blue); }
-.c-start { flex: 1; display: flex; align-items: center; justify-content: center; padding: var(--s6) var(--s6) var(--s9); overflow-y: auto; }
+.c-start { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: var(--s6) var(--s6) var(--s9); overflow-y: auto; overscroll-behavior-y: contain; }
 .c-start-inner { width: 100%; max-width: var(--chat-width); }
 .c-start h1 { text-align: center; font-size: var(--t5); font-weight: var(--medium); letter-spacing: -.025em; margin-bottom: var(--s6); }
 .c-composer { position: relative; background: var(--input); border: 1px solid var(--line); border-radius: var(--r3); padding: var(--s4) var(--s4) var(--s3); }
@@ -83,7 +84,7 @@
 .c-suggestions button { display: flex; align-items: center; gap: var(--s2); background: transparent; border: 1px solid var(--line); border-radius: var(--r2); padding: var(--s2) var(--s3); font-size: var(--t1); color: var(--subtle); }
 .c-suggestions button svg { width: 16px; height: 16px; }
 .c-suggestions button:hover { background: var(--panel); color: var(--ink); }
-.c-conversation { flex: 1; overflow-y: auto; padding: var(--s6); }
+.c-conversation { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; padding: var(--s6); }
 .c-message-column { max-width: var(--chat-width); margin: auto; }
 .c-turn { padding-bottom: var(--s7); }
 .c-user-message { max-width: 85%; width: fit-content; margin-left: auto; background: var(--input); border-radius: var(--r3); padding: var(--s3) var(--s5); white-space: pre-wrap; overflow-wrap: anywhere; }
