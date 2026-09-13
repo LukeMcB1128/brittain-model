@@ -228,3 +228,16 @@ test('a failed exchange is recorded with its partial reply', async () => {
   assert.match(written[0].entry.error, /upstream exploded/);
   assert.equal(written[0].entry.reply, 'I started answering');
 });
+
+test('a served exchange reaches D1, the sink Sites actually uses', async () => {
+  const rows = [];
+  const DB = { prepare: sql => ({ bind: (...values) => ({ run: async () => rows.push({ sql, values }) }) }) };
+  const response = await handleApi(
+    req({ messages: [{ role: 'user', content: 'Hello there' }] }), { ...env, DB },
+    async () => sse([say('Hi.'), stop, '[DONE]']));
+  assert.match(await response.text(), /Hi\./);
+  assert.equal(rows.length, 1);
+  const payload = JSON.parse(rows[0].values.at(-1));
+  assert.equal(payload.reply, 'Hi.');
+  assert.deepEqual(payload.messages, [{ role: 'user', text: 'Hello there' }]);
+});

@@ -147,3 +147,58 @@ test('tool calls are recorded with arguments and outcome', async () => {
   assert.equal(entry.tools[1].ok, false);
   assert.match(entry.tools[1].arguments, /example\.com/);
 });
+
+// --- D1 ---------------------------------------------------------------------
+// This is the branch that actually runs in Sites, and it was the only sink
+// without coverage. A mismatch between the INSERT and db/schema.ts would not
+// throw anywhere visible: recordExchange swallows the error, so the result is
+// silently zero records — the exact failure this feature exists to prevent.
+function d1Stub(onRun = async () => {}) {
+  const calls = [];
+  return {
+    calls,
+    DB: {
+      prepare(sql) {
+        const call = { sql, values: null };
+        return {
+          bind(...values) { call.values = values; calls.push(call); return this; },
+          run: () => onRun(call),
+        };
+      },
+    },
+  };
+}
+
+test('a D1 binding receives one row whose binds match db/schema.ts column order', async () => {
+  const { calls, DB } = d1Stub();
+  assert.equal(await recordExchange({ DB }, exchange), true);
+  assert.equal(calls.length, 1);
+
+  // The column list in the statement must match the order of the bound values,
+  // or every row is written with its fields shifted.
+  const columns = calls[0].sql.match(/\(([^)]+)\)\s*VALUES/i)[1].split(',').map(part => part.trim());
+  assert.deepEqual(columns, ['id', 'created_at', 'user_hash', 'model', 'payload']);
+  assert.equal(calls[0].values.length, columns.length);
+
+  const [id, createdAt, userHash, model, payload] = calls[0].values;
+  assert.match(id, /^[0-9a-f-]{36}$/);
+  assert.match(createdAt, /^\d{4}-\d{2}-\d{2}T/);
+  assert.match(userHash, /^[0-9a-f]{16}$/);
+  assert.equal(model, 'brittain4');
+  const stored = JSON.parse(payload);
+  assert.equal(stored.reply, 'It is 12°C and raining.');
+  assert.equal(stored.id, id, 'the row id and the payload id must agree');
+});
+
+test('D1 is preferred when more than one sink is bound', async () => {
+  const { calls, DB } = d1Stub();
+  const kv = [];
+  assert.equal(await recordExchange({ DB, CHAT_LOG: { put: async (k, v) => kv.push([k, v]) } }, exchange), true);
+  assert.equal(calls.length, 1);
+  assert.equal(kv.length, 0, 'one sink per exchange, not two');
+});
+
+test('a D1 failure is swallowed like any other sink', async () => {
+  const { DB } = d1Stub(async () => { throw new Error('no such table: chat_exchanges'); });
+  assert.equal(await recordExchange({ DB }, exchange), false);
+});

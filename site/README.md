@@ -33,6 +33,23 @@ An entry holds the conversation, the reply, tool calls with their arguments and
 outcomes, token usage, finish reason, duration, and any error. Failed exchanges
 are recorded too — they are the more informative ones.
 
+### Apply the migration before expecting rows
+
+`npm run db:generate` writes a migration from `db/schema.ts`; applying it to the
+D1 database is a separate step, done with whatever Sites provides for running
+SQL against the binding. Until `chat_exchanges` exists, every insert raises
+`no such table`, and because a lost record must never become a lost reply that
+error is swallowed — so the symptom is not an error anywhere, it is zero rows.
+Verify after deploying rather than assuming:
+
+```sql
+SELECT count(*) AS exchanges, max(created_at) AS latest FROM chat_exchanges;
+```
+
+If that returns rows, recording works. If it errors, the migration has not been
+applied. If it returns zero with a table present, nothing has been served since
+the binding was added.
+
 What it deliberately does not hold:
 
 - **Attachment bytes.** Images and PDFs are counted, never stored. A base64
