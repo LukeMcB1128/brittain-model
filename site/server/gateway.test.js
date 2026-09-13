@@ -168,3 +168,63 @@ test('explicit calculator and web requests are routed before the answer', async 
     assert.match(body, /"type":"done"/);
   }
 });
+
+// --- transcript records -----------------------------------------------------
+// Nothing kept a record of what the API served: vLLM logs status lines with no
+// message content, and the gateway streamed replies to the browser and forgot
+// them. These pin the wiring, which the transcript-log unit tests cannot see.
+const say = text => ({ choices: [{ index: 0, delta: { content: text }, finish_reason: null }] });
+const stop = { choices: [{ index: 0, delta: {}, finish_reason: 'stop' }], usage: { prompt_tokens: 11, completion_tokens: 5, total_tokens: 16 } };
+
+function loggingEnv() {
+  const written = [];
+  return { written, env: { ...env, CHAT_LOG: { put: async (key, value) => written.push({ key, entry: JSON.parse(value) }) } } };
+}
+
+test('a served exchange is recorded once the reply has been delivered', async () => {
+  const { written, env: logging } = loggingEnv();
+  const response = await handleApi(
+    req({ messages: [{ role: 'user', content: 'Who made you?' }] }), logging,
+    async () => sse([say('I was made by '), say('Luke Brittain.'), stop, '[DONE]']));
+  const body = await response.text();
+
+  assert.match(body, /Luke Brittain/, 'the user still gets the reply');
+  assert.equal(written.length, 1, 'exactly one record per exchange');
+  const { entry } = written[0];
+  assert.equal(entry.reply, 'I was made by Luke Brittain.');
+  assert.equal(entry.finishReason, 'stop');
+  assert.equal(entry.usage.total_tokens, 16);
+  assert.deepEqual(entry.messages, [{ role: 'user', text: 'Who made you?' }]);
+  assert.equal(entry.surface, 'web-chat');
+  // The signed-in identity must not be stored, only a grouping key.
+  assert.equal(JSON.stringify(entry).includes('test-user'), false);
+  assert.match(written[0].key, /^chat\/\d{4}-\d{2}-\d{2}T/);
+});
+
+test('a store that is not configured changes nothing about the chat', async () => {
+  const response = await handleApi(req(), env, async () => sse([say('hello'), stop, '[DONE]']));
+  assert.equal(response.status, 200);
+  assert.match(await response.text(), /"type":"done"/);
+});
+
+test('a store that throws does not break the reply', async () => {
+  const broken = { ...env, CHAT_LOG: { put: async () => { throw new Error('KV is down'); } } };
+  const response = await handleApi(req(), broken, async () => sse([say('still fine'), stop, '[DONE]']));
+  const body = await response.text();
+  assert.match(body, /still fine/);
+  assert.match(body, /"type":"done"/);
+  assert.doesNotMatch(body, /KV is down/, 'a storage failure must never reach the user');
+});
+
+test('a failed exchange is recorded with its partial reply', async () => {
+  const { written, env: logging } = loggingEnv();
+  const response = await handleApi(req(), logging, async () => sse([
+    say('I started answering'),
+    { choices: [], error: { message: 'upstream exploded' } },
+    '[DONE]',
+  ]));
+  await response.text();
+  assert.equal(written.length, 1, 'failures are worth recording too');
+  assert.match(written[0].entry.error, /upstream exploded/);
+  assert.equal(written[0].entry.reply, 'I started answering');
+});
