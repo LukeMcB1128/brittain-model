@@ -12,6 +12,44 @@ Run `npm run build:hosted` for Sites. The build emits a Worker with the frontend
 
 The ordinary `npm run build` still produces the static GitHub Pages frontend. Static hosting cannot serve the authenticated gateway; the chat reports unavailable there. Do not publish a secret using a `VITE_` variable.
 
+## Transcript records
+
+Nothing recorded what the API served. vLLM logs one status line per request with
+no message content, and the gateway streamed replies to the browser and forgot
+them, so hundreds of real exchanges were unrecoverable. Real usage is the most
+useful source of training and eval data this project has.
+
+Recording is **off unless a binding is present**, and the gateway behaves exactly
+as before when none is:
+
+| binding | effect |
+| --- | --- |
+| `CHAT_LOG` | a KV namespace; one key per exchange, `chat/<iso-timestamp>/<uuid>`, so a listing comes back in order |
+| `CHAT_LOG_URL` | an endpoint that receives the entry as a JSON POST |
+| `CHAT_LOG_TOKEN` | optional bearer token sent with `CHAT_LOG_URL` |
+
+An entry holds the conversation, the reply, tool calls with their arguments and
+outcomes, token usage, finish reason, duration, and any error. Failed exchanges
+are recorded too — they are the more informative ones.
+
+What it deliberately does not hold:
+
+- **Attachment bytes.** Images and PDFs are counted, never stored. A base64
+  payload is the bulk of a request and worthless as a record.
+- **Who sent it.** The authenticated user id is stored as a truncated SHA-256
+  digest, which groups a person's exchanges without recording their identity.
+- **Credentials.** API keys, tokens and password assignments are redacted before
+  anything is written. The existing chat corpus contained plaintext credentials,
+  and a record that preserves them outlives the chat that leaked them.
+- **The system prompt.** It is identical on every request and lives in source.
+
+Writing happens after the reply has been delivered to the client, and every
+failure is swallowed: a lost record must never become a lost reply.
+
+If the site ever takes visitors beyond people you have told, this needs a line in
+the UI saying conversations are kept, and a retention limit. Storing strangers'
+conversations indefinitely is a different thing from keeping your own.
+
 ## Chat behaviour
 
 - Replies stream over SSE. Thinking is off.
