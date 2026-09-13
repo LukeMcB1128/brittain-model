@@ -13,6 +13,7 @@
 // the host offers is not knowable from this repo, so rather than commit to one
 // and break the chat if it is absent, this detects what is there:
 //
+//   env.DB            a Sites D1 database           -> one row per exchange
 //   env.CHAT_LOG      a KV-like object with .put()  -> one key per exchange
 //   env.CHAT_LOG_URL  an endpoint                   -> POST the JSON entry
 //                     (env.CHAT_LOG_TOKEN is sent as a bearer token if set)
@@ -107,6 +108,13 @@ async function write(env, entry) {
   // A single runaway exchange should not poison the store.
   if (body.length > MAX_ENTRY_CHARS) return false;
 
+  if (env?.DB && typeof env.DB.prepare === 'function') {
+    await env.DB.prepare(`
+      INSERT INTO chat_exchanges (id, created_at, user_hash, model, payload)
+      VALUES (?, ?, ?, ?, ?)
+    `).bind(entry.id, entry.at, entry.user, entry.model, body).run();
+    return true;
+  }
   if (env?.CHAT_LOG && typeof env.CHAT_LOG.put === 'function') {
     // Sorts chronologically as a string, so a listing is in order.
     await env.CHAT_LOG.put(`chat/${entry.at}/${entry.id}`, body);
@@ -131,7 +139,7 @@ async function write(env, entry) {
 // request path and a lost record must not become a lost reply.
 export async function recordExchange(env, details) {
   try {
-    if (!env?.CHAT_LOG && !env?.CHAT_LOG_URL) return false;
+    if (!env?.DB && !env?.CHAT_LOG && !env?.CHAT_LOG_URL) return false;
     return await write(env, await buildEntry(details));
   } catch {
     return false;

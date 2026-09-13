@@ -24,6 +24,7 @@ as before when none is:
 
 | binding | effect |
 | --- | --- |
+| `DB` | the Sites D1 database; one `chat_exchanges` row per exchange |
 | `CHAT_LOG` | a KV namespace; one key per exchange, `chat/<iso-timestamp>/<uuid>`, so a listing comes back in order |
 | `CHAT_LOG_URL` | an endpoint that receives the entry as a JSON POST |
 | `CHAT_LOG_TOKEN` | optional bearer token sent with `CHAT_LOG_URL` |

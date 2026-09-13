@@ -67,6 +67,27 @@ test('a KV-shaped binding receives one chronologically sorted key', async () => 
   assert.equal(JSON.parse(written[0][1]).reply, 'It is 12°C and raining.');
 });
 
+test('a D1 binding receives one complete redacted exchange', async () => {
+  const calls = [];
+  const statement = {
+    bind(...values) { calls.push({ values }); return this; },
+    async run() { calls.at(-1).ran = true; },
+  };
+  const env = {
+    DB: {
+      prepare(sql) { calls.push({ sql }); return statement; },
+    },
+  };
+
+  assert.equal(await recordExchange(env, exchange), true);
+  assert.equal(calls.length, 2);
+  assert.match(calls[0].sql, /INSERT INTO chat_exchanges/);
+  assert.equal(calls[1].values.length, 5);
+  assert.equal(calls[1].values[3], 'brittain4');
+  assert.equal(JSON.parse(calls[1].values[4]).reply, 'It is 12°C and raining.');
+  assert.equal(calls[1].ran, true);
+});
+
 test('an HTTP sink is posted to, with the token when one is set', async () => {
   const seen = [];
   const originalFetch = globalThis.fetch;
