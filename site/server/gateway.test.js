@@ -19,6 +19,25 @@ test('accepts the standalone Worker account identity without a Sites header', as
   assert.equal(response.status, 200);
   assert.match(await response.text(), /Hello/);
 });
+test('canceling a reply aborts the upstream model request', async () => {
+  let upstreamSignal;
+  let markStarted;
+  const started = new Promise(resolve => { markStarted = resolve; });
+  const response = await handleApi(req(), env, async (_url, options) => {
+    upstreamSignal = options.signal;
+    markStarted();
+    return new Response(new ReadableStream({
+      start(controller) {
+        options.signal.addEventListener('abort', () => {
+          controller.error(new DOMException('Stopped', 'AbortError'));
+        }, { once: true });
+      },
+    }), { headers: { 'Content-Type': 'text/event-stream' } });
+  });
+  await started;
+  await response.body.cancel('stopped');
+  assert.equal(upstreamSignal.aborted, true);
+});
 test('does not trust the legacy Sites header when the standalone Worker rejects the session', async () => {
   assert.equal((await handleApi(req(), env, fetch, null)).status, 401);
 });

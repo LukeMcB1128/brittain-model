@@ -8,3 +8,4 @@ BRITTAIN4_API_KEY=replace-with-the-model-server-key
 # MODEL_API_ORIGIN=https://your-stable-model-origin.example
 # CHAT_MAX_CONCURRENT=4
 # CHAT_MAX_PER_HOUR=621
+# CHAT_LOCK_TIMEOUT_SECONDS=210

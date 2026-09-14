@@ -30,6 +30,7 @@ Wrangler keeps the local D1 data under `site/.wrangler/`. This directory and
 8. Set `TURNSTILE_SECRET_KEY` and `TURNSTILE_SITE_KEY` to protect account forms.
 9. Set `CHAT_MAX_CONCURRENT` from model-server load tests. It defaults to four.
 10. Set `CHAT_MAX_PER_HOUR` to the measured service limit. It defaults to 621.
+11. `CHAT_LOCK_TIMEOUT_SECONDS` limits stale response locks. It defaults to 210 seconds.
 
 Use `wrangler secret put NAME` for secret values. Do not add secrets to
 `wrangler.jsonc` or to a `VITE_` variable.

@@ -37,7 +37,8 @@
     "MODEL_API_ORIGIN": "https://fragility-devoutly-dazzling.ngrok-free.dev",
     "AUTH_EMAIL_FROM": "Brittain <accounts@brittain.app>",
     "CHAT_MAX_CONCURRENT": "4",
-    "CHAT_MAX_PER_HOUR": "621"
+    "CHAT_MAX_PER_HOUR": "621",
+    "CHAT_LOCK_TIMEOUT_SECONDS": "210"
   },
   "secrets": {
     "required": ["BETTER_AUTH_SECRET", "BRITTAIN4_API_KEY"]

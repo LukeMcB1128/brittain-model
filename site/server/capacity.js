@@ -15,12 +15,62 @@ export function internalChatRequest(request, userId) {
   return new Request(request, { headers });
 }
 
+export function relayResponse(response, onClose) {
+  if (!response.body) {
+    onClose();
+    return response;
+  }
+  const reader = response.body.getReader();
+  let closed = false;
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    onClose();
+  };
+  const stream = new ReadableStream({
+    async pull(controller) {
+      try {
+        const next = await reader.read();
+        if (next.done) {
+          close();
+          reader.releaseLock();
+          controller.close();
+          return;
+        }
+        controller.enqueue(next.value);
+      } catch (error) {
+        close();
+        try { reader.releaseLock(); } catch { /* The source still owns the reader. */ }
+        controller.error(error);
+      }
+    },
+    async cancel(reason) {
+      close();
+      try { await reader.cancel(reason); }
+      finally {
+        try { reader.releaseLock(); } catch { /* The source still owns the reader. */ }
+      }
+    },
+  });
+  return new Response(stream, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+}
+
 export class ChatCapacity {
   constructor(state, env) {
     this.state = state;
     this.env = env;
-    this.activeUsers = new Set();
+    this.activeUsers = new Map();
     this.hourly = null;
+  }
+
+  purgeExpired(now = Date.now()) {
+    for (const [userId, expiresAt] of this.activeUsers) {
+      if (expiresAt <= now) this.activeUsers.delete(userId);
+    }
   }
 
   async reserveHourly(maximum) {
@@ -44,6 +94,7 @@ export class ChatCapacity {
   async fetch(request) {
     const userId = request.headers.get(INTERNAL_USER_HEADER);
     if (!userId) return json({ error: 'Sign in to use chat.' }, 401);
+    this.purgeExpired();
     if (this.activeUsers.has(userId)) {
       return json({ error: 'Your account already has a response in progress.' }, 409);
     }
@@ -62,26 +113,20 @@ export class ChatCapacity {
         { 'Retry-After': String(hourly.retryAfter) },
       );
     }
-    this.activeUsers.add(userId);
+    const configuredLock = Number.parseInt(this.env.CHAT_LOCK_TIMEOUT_SECONDS || '210', 10);
+    const lockSeconds = Number.isInteger(configuredLock) && configuredLock > 0 ? Math.min(configuredLock, 900) : 210;
+    this.activeUsers.set(userId, Date.now() + lockSeconds * 1000);
     let released = false;
     const release = () => {
       if (released) return;
       released = true;
       this.activeUsers.delete(userId);
+      request.signal.removeEventListener('abort', release);
     };
+    request.signal.addEventListener('abort', release, { once: true });
     try {
       const response = await handleApi(request, this.env, fetch, userId);
-      if (!response.body) {
-        release();
-        return response;
-      }
-      const stream = new TransformStream();
-      this.state.waitUntil(response.body.pipeTo(stream.writable).finally(release));
-      return new Response(stream.readable, {
-        status: response.status,
-        statusText: response.statusText,
-        headers: response.headers,
-      });
+      return relayResponse(response, release);
     } catch (error) {
       release();
       throw error;
