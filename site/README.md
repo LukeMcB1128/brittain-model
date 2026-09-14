@@ -12,6 +12,10 @@ Run `npm run build:hosted` for Sites. The build emits a Worker with the frontend
 
 The ordinary `npm run build` still produces the static GitHub Pages frontend. Static hosting cannot serve the authenticated gateway; the chat reports unavailable there. Do not publish a secret using a `VITE_` variable.
 
+## Conversation compaction
+
+The Brittain 4 chat keeps recent turns unchanged. When the active conversation grows past the safe request budget, the gateway asks Brittain 4 to summarize the oldest complete turns. The page keeps that memory with the chat and sends it with later requests. Old attachment bytes are removed from the active request after their turns are compacted. If the summary request fails, the gateway uses the full conversation and reports the failure in the current turn.
+
 ## Transcript records
 
 Nothing recorded what the API served. vLLM logs one status line per request with

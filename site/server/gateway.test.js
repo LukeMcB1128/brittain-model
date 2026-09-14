@@ -108,6 +108,35 @@ test('session readiness verifies the model server rather than only the key', asy
   assert.equal((await up.json()).ready, true);
 });
 
+test('long chats compact older turns and send recent turns with reusable memory', async () => {
+  const messages = [];
+  for (let index = 0; index < 6; index += 1) {
+    messages.push({ role: 'user', content: `Question ${index} ${'x'.repeat(7_000)}`, turnId: `turn-${index}` });
+    messages.push({ role: 'assistant', content: `Answer ${index} ${'y'.repeat(7_000)}`, turnId: `turn-${index}` });
+  }
+  messages.push({ role: 'user', content: 'What did we decide?', turnId: 'turn-current' });
+  let calls = 0;
+  const response = await handleApi(req({ messages, memory: 'The user prefers concise replies.' }), env, async (_url, options) => {
+    const payload = JSON.parse(options.body);
+    calls += 1;
+    if (!payload.stream) {
+      assert.equal(payload.temperature, 0.1);
+      assert.match(payload.messages[1].content, /user prefers concise replies/i);
+      return Response.json({ choices: [{ message: { content: 'The user prefers concise replies. Several options were compared.' } }] });
+    }
+    assert.match(payload.messages[0].content, /Several options were compared/);
+    assert.ok(payload.messages.length < messages.length + 1);
+    assert.equal(payload.messages.at(-1).content, 'What did we decide?');
+    return sse([{ choices: [{ index: 0, delta: { content: 'You chose the second option.' }, finish_reason: 'stop' }] }, '[DONE]']);
+  });
+  const body = await response.text();
+  assert.equal(calls, 2);
+  assert.match(body, /"type":"compaction","status":"running"/);
+  assert.match(body, /"type":"compaction","status":"done"/);
+  assert.match(body, /"throughTurnId":"turn-3"/);
+  assert.match(body, /You chose the second option/);
+});
+
 function sse(events) {
   return new Response(events.map(event => event === '[DONE]' ? 'data: [DONE]\n\n' : `data: ${JSON.stringify(event)}\n\n`).join(''), { headers: { 'Content-Type': 'text/event-stream' } });
 }

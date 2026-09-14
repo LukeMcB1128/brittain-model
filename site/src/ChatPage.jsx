@@ -128,7 +128,9 @@ export default function Chat() {
     const prompt = retry ? messages.at(-1).prompt : draft.trim() || 'Review the attached content.';
     const turn = { id: crypto.randomUUID(), prompt, attachments: turnAttachments, answer: '', tools: [], artifacts: [], status: 'streaming' };
     const previous = retry ? messages.slice(0, -1) : messages;
-    const history = previous.flatMap(m => [{ role: 'user', content: messageContent(m.prompt, m.attachments) }, ...(m.answer ? [{ role: 'assistant', content: m.answer }] : [])]);
+    const contextStart = Math.min(current?.contextStart || 0, previous.length);
+    const contextTurns = previous.slice(contextStart);
+    const history = contextTurns.flatMap(m => [{ role: 'user', content: messageContent(m.prompt, m.attachments), turnId: m.id }, ...(m.answer ? [{ role: 'assistant', content: m.answer, turnId: m.id }] : [])]);
     if (active) setChats(items => items.map(chat => chat.id === id ? { ...chat, messages: [...previous, turn] } : chat));
     else { setChats(items => [{ id, title: (draft.trim() || turnAttachments[0]?.name || turn.prompt).slice(0, 60), messages: [turn] }, ...items]); setActive(id); }
     if (!retry) { setDraft(''); clearImports(); }
@@ -150,10 +152,23 @@ export default function Chat() {
     let answer = '';
     let finishReason;
     try {
-      const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: [...history, { role: 'user', content: messageContent(turn.prompt, turnAttachments) }], attachments: requestAssets([...previous, turn]) }), signal: abort.signal });
+      const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: [...history, { role: 'user', content: messageContent(turn.prompt, turnAttachments), turnId: turn.id }], attachments: requestAssets([...contextTurns, turn]), memory: current?.memory || '' }), signal: abort.signal });
       await readCompletion(response, chunk => {
         if (chunk.type === 'tool') { updateTool(chunk); return; }
         if (chunk.type === 'artifact') { updateArtifact(chunk); return; }
+        if (chunk.type === 'compaction') {
+          setChats(items => items.map(item => {
+            if (item.id !== id) return item;
+            const boundary = chunk.throughTurnId ? item.messages.findIndex(message => message.id === chunk.throughTurnId) + 1 : 0;
+            const note = chunk.status === 'running' ? 'Compressing earlier context…' : chunk.status === 'done' ? 'Earlier context was compressed for this reply.' : 'Earlier context could not be compressed. The full conversation was used.';
+            return {
+              ...item,
+              ...(chunk.status === 'done' ? { memory: chunk.memory, contextStart: Math.max(item.contextStart || 0, boundary) } : {}),
+              messages: item.messages.map(message => message.id === turn.id ? { ...message, note } : message),
+            };
+          }));
+          return;
+        }
         if (chunk.type === 'usage') { update({ usage: chunk.usage }); return; }
         answer += chunk.text || '';
         if (chunk.finishReason) finishReason = chunk.finishReason;
