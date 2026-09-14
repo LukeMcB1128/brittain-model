@@ -8,6 +8,13 @@
       "when": 1789341505140,
       "tag": "0000_sad_firebrand",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1789341900000,
+      "tag": "0001_standalone_accounts",
+      "breakpoints": true
     }
   ]
 }

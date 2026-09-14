@@ -102,7 +102,9 @@ export function messageContent(prompt, attachments = []) {
   return [
     { type: 'text', text: prompt.trim() || 'Review the attached content.' },
     ...attachments.flatMap(attachment => attachment.kind === 'image'
-      ? [{ type: 'text', text: `Attached image: ${safeName(attachment.name)}` }, { type: 'image_url', image_url: { url: attachment.dataUrl } }]
+      ? attachment.dataUrl
+        ? [{ type: 'text', text: `Attached image: ${safeName(attachment.name)}` }, { type: 'image_url', image_url: { url: attachment.dataUrl } }]
+        : [{ type: 'text', text: `An image named ${safeName(attachment.name)} was attached in an earlier request. Its binary data is no longer available.` }]
       : [{ type: 'text', text: `Attached file: ${safeName(attachment.name)}${attachment.truncated ? ' (content truncated)' : ''}\n\n${attachment.content}` }]),
   ];
 }

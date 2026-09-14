@@ -1,0 +1,46 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "brittain-app",
+  "main": "server/worker.js",
+  "compatibility_date": "2026-09-13",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist/client",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "brittain-app",
+      "database_id": "15d1a694-eeb7-4d7c-ad60-c2964086e114",
+      "migrations_dir": "drizzle"
+    }
+  ],
+  "ratelimits": [
+    {
+      "name": "CHAT_RATE_LIMITER",
+      "namespace_id": "4004",
+      "simple": { "limit": 20, "period": 60 }
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "CHAT_CAPACITY", "class_name": "ChatCapacity" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["ChatCapacity"] }
+  ],
+  "vars": {
+    "BETTER_AUTH_URL": "https://brittain.app",
+    "MODEL_API_ORIGIN": "https://fragility-devoutly-dazzling.ngrok-free.dev",
+    "AUTH_EMAIL_FROM": "Brittain <accounts@brittain.app>",
+    "CHAT_MAX_CONCURRENT": "4",
+    "CHAT_MAX_PER_HOUR": "621"
+  },
+  "secrets": {
+    "required": ["BETTER_AUTH_SECRET", "BRITTAIN4_API_KEY"]
+  },
+  "observability": { "enabled": true }
+}

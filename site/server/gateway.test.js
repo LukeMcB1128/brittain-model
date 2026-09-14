@@ -12,6 +12,16 @@ test('requires authenticated site identity, a secret, and same-origin POST', asy
   assert.equal((await handleApi(req(), {})).status, 503);
   assert.equal((await handleApi(req(undefined, { origin: 'https://evil.example' }), env)).status, 403);
 });
+test('accepts the standalone Worker account identity without a Sites header', async () => {
+  const request = req();
+  request.headers.delete('oai-authenticated-user-id');
+  const response = await handleApi(request, env, async () => sse([{ choices: [{ index: 0, delta: { content: 'Hello' }, finish_reason: 'stop' }] }, '[DONE]']), 'standalone-user');
+  assert.equal(response.status, 200);
+  assert.match(await response.text(), /Hello/);
+});
+test('does not trust the legacy Sites header when the standalone Worker rejects the session', async () => {
+  assert.equal((await handleApi(req(), env, fetch, null)).status, 401);
+});
 test('validates messages and fixes server-owned model/options', async () => {
   assert.equal((await handleApi(req({ messages: [{ role: 'system', content: 'x' }] }), env)).status, 400);
   assert.equal((await handleApi(req({ messages: [{ role: 'user', content: 'x'.repeat(500001) }] }), env)).status, 400);

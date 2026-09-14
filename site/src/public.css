@@ -116,6 +116,18 @@
   opacity:.45;
   cursor:not-allowed
 }
+.release-site .button.danger {
+  border-color:#7b3b42;
+  color:#ef9aa4
+}
+.release-site .button.danger:hover {
+  background:#351d21;
+  border-color:#a4525c
+}
+.header-account-loading {
+  color:var(--subtle);
+  font-size:var(--t1)
+}
 .release-site .full-width {
   width:100%
 }
@@ -507,6 +519,118 @@
 .signup-panel .button {
   margin:var(--s6) 0 var(--s4)
 }
+.account-form {
+  display:grid;
+  gap:var(--s4);
+  margin-top:var(--s5)
+}
+.account-form label {
+  display:grid;
+  gap:var(--s2);
+  color:var(--ink);
+  font-size:var(--t1)
+}
+.account-form input {
+  width:100%;
+  min-height:46px;
+  border:1px solid var(--line);
+  border-radius:var(--r2);
+  background:var(--input);
+  color:var(--ink);
+  padding:var(--s3) var(--s4);
+  font:inherit
+}
+.account-form input:focus {
+  border-color:var(--blue-line);
+  outline:2px solid color-mix(in srgb,var(--blue) 24%,transparent);
+  outline-offset:1px
+}
+.account-form small {
+  color:var(--subtle);
+  font-size:var(--t0)
+}
+.account-form .button {
+  margin:var(--s2) 0 0
+}
+.account-links {
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:space-between;
+  gap:var(--s3);
+  margin-top:var(--s5);
+  font-size:var(--t1)
+}
+.account-links a {
+  color:var(--blue)
+}
+.account-error,.account-notice {
+  border-radius:var(--r2);
+  padding:var(--s3) var(--s4);
+  font-size:var(--t1)
+}
+.account-error {
+  color:#ffadb6;
+  background:#351d21;
+  border:1px solid #7b3b42
+}
+.account-notice {
+  color:var(--ink);
+  background:var(--blue-soft);
+  border:1px solid var(--blue-line)
+}
+.account-turnstile {
+  min-height:65px
+}
+.account-settings {
+  padding-top:var(--s8);
+  padding-bottom:var(--s9);
+  max-width:840px
+}
+.account-settings h1 {
+  margin:var(--s3) 0
+}
+.settings-card {
+  margin-top:var(--s7);
+  padding:var(--s6);
+  border:1px solid var(--line);
+  border-radius:var(--r3);
+  background:var(--panel)
+}
+.settings-card h2 {
+  font-size:var(--t4);
+  margin-bottom:var(--s2)
+}
+.settings-card>.button {
+  margin-top:var(--s5)
+}
+.danger-card {
+  border-color:#603238
+}
+.account-loading,.chat-loading {
+  display:grid;
+  place-items:center;
+  min-height:70dvh;
+  color:var(--subtle)
+}
+.policy-page {
+  max-width:840px;
+  padding-top:var(--s8);
+  padding-bottom:var(--s9)
+}
+.policy-page h1 {
+  margin:var(--s4) 0 var(--s8)
+}
+.policy-page section {
+  padding:var(--s5) 0;
+  border-top:1px solid var(--line)
+}
+.policy-page section h2 {
+  font-size:var(--t4);
+  margin-bottom:var(--s3)
+}
+.policy-page>.secondary {
+  margin-top:var(--s6)
+}
 .signup-result h3 {
   font-size:var(--t3);
   margin:var(--s5) 0 var(--s2)
@@ -824,4 +948,3 @@
 }
 
 }
-

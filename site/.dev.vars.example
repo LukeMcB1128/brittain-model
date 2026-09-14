@@ -1,0 +1,10 @@
+BETTER_AUTH_SECRET=replace-with-at-least-32-random-characters
+BRITTAIN4_API_KEY=replace-with-the-model-server-key
+# RESEND_API_KEY=replace-to-enable-email-verification-and-password-reset
+# TURNSTILE_SECRET_KEY=replace-to-enable-sign-up-and-sign-in-protection
+# TURNSTILE_SITE_KEY=replace-with-the-public-site-key
+# AUTH_EMAIL_FROM=Brittain <accounts@brittain.app>
+# BETTER_AUTH_URL=http://localhost:5173
+# MODEL_API_ORIGIN=https://your-stable-model-origin.example
+# CHAT_MAX_CONCURRENT=4
+# CHAT_MAX_PER_HOUR=621

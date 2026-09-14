@@ -3,7 +3,11 @@ import { PDF_TOOL_DEFINITIONS } from './pdf-tools.js';
 import { recordExchange } from './transcript-log.js';
 import { MAX_MEMORY_CHARS, modelMessages, planCompaction, summarizeCompaction } from './compaction.js';
 
-const UPSTREAM = 'https://fragility-devoutly-dazzling.ngrok-free.dev/v1/chat/completions';
+const DEFAULT_API_ORIGIN = 'https://fragility-devoutly-dazzling.ngrok-free.dev';
+function upstream(env) {
+  const origin = String(env?.MODEL_API_ORIGIN || DEFAULT_API_ORIGIN).replace(/\/$/, '');
+  return `${origin}/v1/chat/completions`;
+}
 const MAX_BYTES = 30_000_000;
 const MAX_TEXT_CHARS = 500_000;
 const MAX_IMAGE_CHARS = 7_000_000;
@@ -214,6 +218,7 @@ async function readModelStream(response, onEvent) {
 }
 
 function streamChat(systemMessage, conversation, request, env, fetchUpstream, attachments = [], user = '', memory = '') {
+  const upstreamUrl = upstream(env);
   const encoder = new TextEncoder();
   // Recorded after the reply is delivered, never before it.
   const startedAt = Date.now();
@@ -239,7 +244,7 @@ function streamChat(systemMessage, conversation, request, env, fetchUpstream, at
         if (plan) {
           emit({ type: 'compaction', status: 'running' });
           try {
-            memory = await summarizeCompaction(plan, memory, fetchUpstream, UPSTREAM, env.BRITTAIN4_API_KEY, request.signal);
+            memory = await summarizeCompaction(plan, memory, fetchUpstream, upstreamUrl, env.BRITTAIN4_API_KEY, request.signal);
             conversation = plan.recentMessages;
             emit({ type: 'compaction', status: 'done', memory, throughTurnId: plan.throughTurnId });
           } catch {
@@ -258,7 +263,7 @@ function streamChat(systemMessage, conversation, request, env, fetchUpstream, at
           toolCount = 1;
         }
         for (let round = 0; round <= MAX_TOOL_ROUNDS; round += 1) {
-          const response = await fetchUpstream(UPSTREAM, {
+          const response = await fetchUpstream(upstreamUrl, {
             method: 'POST',
             headers: { Authorization: `Bearer ${env.BRITTAIN4_API_KEY}`, 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' },
             body: JSON.stringify({
@@ -330,14 +335,20 @@ function streamChat(systemMessage, conversation, request, env, fetchUpstream, at
   });
   return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', 'X-Accel-Buffering': 'no' } });
 }
-export async function handleApi(request, env, fetchUpstream = fetch) {
+export async function handleApi(request, env, fetchUpstream = fetch, authenticatedUser) {
   const path = new URL(request.url).pathname;
-  const user = request.headers.get('oai-authenticated-user-id');
+  // Sites supplies its own identity header. The standalone Worker supplies the
+  // verified Better Auth user id as the fourth argument. An explicit null means
+  // that the standalone request has no valid session, so a browser cannot copy
+  // the legacy header to bypass account checks.
+  const user = authenticatedUser === undefined
+    ? request.headers.get('oai-authenticated-user-id')
+    : authenticatedUser;
   if (!user) return json({ error: 'Sign in to use chat.' }, 401);
   if (path === '/api/session' && request.method === 'GET') {
     if (!env.BRITTAIN4_API_KEY) return json({ authenticated: true, configured: false, ready: false });
     try {
-      const response = await fetchUpstream(UPSTREAM.replace('/chat/completions', '/models'), {
+      const response = await fetchUpstream(upstream(env).replace('/chat/completions', '/models'), {
         headers: { Authorization: `Bearer ${env.BRITTAIN4_API_KEY}`, 'ngrok-skip-browser-warning': '1' },
         signal: AbortSignal.any([request.signal, AbortSignal.timeout(8000)]),
       });

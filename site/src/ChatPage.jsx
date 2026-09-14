@@ -35,7 +35,7 @@ function Icon({ name }) {
 }
 function AttachmentCards({ attachments, onRemove }) {
   if (!attachments?.length) return null;
-  return <div className={`c-attachments ${onRemove ? 'c-attachments-editable' : ''}`}>{attachments.map(attachment => <div className="c-attachment" key={attachment.id}>{attachment.kind === 'image' ? <img src={attachment.dataUrl} alt=""/> : <span className="c-attachment-file"><Icon name="file"/></span>}<span><strong>{attachment.name}</strong><small>{attachment.kind === 'image' ? 'Image' : attachment.type === 'application/pdf' ? 'PDF' : 'File text'}{attachment.truncated ? ' · Truncated' : ''}</small></span>{onRemove && <button type="button" onClick={() => onRemove(attachment.id)} aria-label={`Remove ${attachment.name}`}><Icon name="close"/></button>}</div>)}</div>;
+  return <div className={`c-attachments ${onRemove ? 'c-attachments-editable' : ''}`}>{attachments.map(attachment => <div className="c-attachment" key={attachment.id}>{attachment.kind === 'image' && attachment.dataUrl ? <img src={attachment.dataUrl} alt=""/> : <span className="c-attachment-file"><Icon name="file"/></span>}<span><strong>{attachment.name}</strong><small>{attachment.kind === 'image' ? 'Image' : attachment.type === 'application/pdf' ? 'PDF' : 'File text'}{attachment.truncated ? ' · Truncated' : ''}</small></span>{onRemove && <button type="button" onClick={() => onRemove(attachment.id)} aria-label={`Remove ${attachment.name}`}><Icon name="close"/></button>}</div>)}</div>;
 }
 function DownloadCards({ artifacts }) {
   if (!artifacts?.length) return null;
@@ -50,7 +50,7 @@ function ToolActivity({ tools }) {
     return <div className={`c-tool c-tool-${tool.status}`} key={tool.id}><span className="c-tool-icon"><Icon name={tool.name === 'calculate' ? 'calculate' : tool.name?.startsWith('pdf_') ? 'file' : 'search'}/></span><span><strong>{label}</strong><small>{detail}</small></span><span className="c-tool-status">{status}</span></div>;
   })}</div>;
 }
-export default function Chat() {
+export default function Chat({ session }) {
   const [sidebar, setSidebar] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [info, setInfo] = useState(false);
@@ -65,6 +65,7 @@ export default function Chat() {
   const [attachmentError, setAttachmentError] = useState('');
   const [importing, setImporting] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [historyStatus, setHistoryStatus] = useState('loading');
   const controller = useRef(null);
   const input = useRef(null);
   const fileInput = useRef(null);
@@ -79,7 +80,26 @@ export default function Chat() {
       setConnection(data.ready ? 'ready' : data.configured ? 'offline' : 'unconfigured');
     } catch { setConnection('offline'); }
   }
-  useEffect(() => { checkConnection(); return () => controller.current?.abort(); }, []);
+  async function loadChats() {
+    setHistoryStatus('loading');
+    try {
+      const response = await fetch('/api/chats');
+      if (!response.ok) throw new Error();
+      const data = await response.json();
+      setChats(Array.isArray(data.chats) ? data.chats : []);
+      setHistoryStatus('ready');
+    } catch { setHistoryStatus('error'); }
+  }
+  async function saveChat(chat) {
+    const response = await fetch(`/api/chats/${encodeURIComponent(chat.id)}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(chat),
+    });
+    if (!response.ok) {
+      let data; try { data = await response.json(); } catch { data = {}; }
+      throw new Error(data.error || 'The conversation could not be saved.');
+    }
+  }
+  useEffect(() => { checkConnection(); loadChats(); return () => controller.current?.abort(); }, []);
   const preview = connection === 'ready';
   const end = useRef(null);
   const current = chats.find(chat => chat.id === active);
@@ -93,11 +113,19 @@ export default function Chat() {
   }, []);
   function clearImports() { setAttachments([]); setAttachmentError(''); setDragging(false); }
   function newChat() { if (controller.current) return; setActive(null); setDraft(''); clearImports(); setSidebar(false); input.current?.focus(); }
-  function deleteChat(id) {
+  async function deleteChat(id) {
     if (controller.current) return;
+    const removed = chats.find(chat => chat.id === id);
     setChats(items => items.filter(chat => chat.id !== id));
-    setCopyNotice('Conversation deleted.');
-    if (active === id) { setActive(null); setDraft(''); clearImports(); setSidebar(false); requestAnimationFrame(() => input.current?.focus()); }
+    try {
+      const response = await fetch(`/api/chats/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error();
+      setCopyNotice('Conversation deleted.');
+      if (active === id) { setActive(null); setDraft(''); clearImports(); setSidebar(false); requestAnimationFrame(() => input.current?.focus()); }
+    } catch {
+      if (removed) setChats(items => [removed, ...items]);
+      setCopyNotice('The conversation could not be deleted.');
+    }
   }
   async function addFiles(fileList) {
     if (busy || importing || !fileList?.length) return;
@@ -131,23 +159,29 @@ export default function Chat() {
     const contextStart = Math.min(current?.contextStart || 0, previous.length);
     const contextTurns = previous.slice(contextStart);
     const history = contextTurns.flatMap(m => [{ role: 'user', content: messageContent(m.prompt, m.attachments), turnId: m.id }, ...(m.answer ? [{ role: 'assistant', content: m.answer, turnId: m.id }] : [])]);
-    if (active) setChats(items => items.map(chat => chat.id === id ? { ...chat, messages: [...previous, turn] } : chat));
-    else { setChats(items => [{ id, title: (draft.trim() || turnAttachments[0]?.name || turn.prompt).slice(0, 60), messages: [turn] }, ...items]); setActive(id); }
+    let workingChat = current ? { ...current, messages: [...previous, turn] } : { id, title: (draft.trim() || turnAttachments[0]?.name || turn.prompt).slice(0, 60), messages: [turn] };
+    if (active) setChats(items => items.map(chat => chat.id === id ? workingChat : chat));
+    else { setChats(items => [workingChat, ...items]); setActive(id); }
     if (!retry) { setDraft(''); clearImports(); }
     const abort = new AbortController();
     controller.current = abort;
     setBusy(true);
-    function update(patch) { setChats(items => items.map(chat => chat.id === id ? { ...chat, messages: chat.messages.map(m => m.id === turn.id ? { ...m, ...patch } : m) } : chat)); }
+    function update(patch) {
+      workingChat = { ...workingChat, messages: workingChat.messages.map(m => m.id === turn.id ? { ...m, ...patch } : m) };
+      setChats(items => items.map(chat => chat.id === id ? workingChat : chat));
+    }
     function updateTool(tool) {
-      setChats(items => items.map(chat => chat.id === id ? { ...chat, messages: chat.messages.map(message => {
+      workingChat = { ...workingChat, messages: workingChat.messages.map(message => {
         if (message.id !== turn.id) return message;
         const usedTools = message.tools || [];
         const index = usedTools.findIndex(item => item.id === tool.id);
         return { ...message, tools: index === -1 ? [...usedTools, tool] : usedTools.map((item, toolIndex) => toolIndex === index ? { ...item, ...tool } : item) };
-      }) } : chat));
+      }) };
+      setChats(items => items.map(chat => chat.id === id ? workingChat : chat));
     }
     function updateArtifact(artifact) {
-      setChats(items => items.map(chat => chat.id === id ? { ...chat, messages: chat.messages.map(message => message.id === turn.id ? { ...message, artifacts: [...(message.artifacts || []), { ...artifact, type: artifact.mediaType, kind: 'pdf' }] } : message) } : chat));
+      workingChat = { ...workingChat, messages: workingChat.messages.map(message => message.id === turn.id ? { ...message, artifacts: [...(message.artifacts || []), { ...artifact, type: artifact.mediaType, kind: 'pdf' }] } : message) };
+      setChats(items => items.map(chat => chat.id === id ? workingChat : chat));
     }
     let answer = '';
     let finishReason;
@@ -157,15 +191,16 @@ export default function Chat() {
         if (chunk.type === 'tool') { updateTool(chunk); return; }
         if (chunk.type === 'artifact') { updateArtifact(chunk); return; }
         if (chunk.type === 'compaction') {
+          const boundary = chunk.throughTurnId ? workingChat.messages.findIndex(message => message.id === chunk.throughTurnId) + 1 : 0;
+          const note = chunk.status === 'running' ? 'Compressing earlier context…' : chunk.status === 'done' ? 'Earlier context was compressed for this reply.' : 'Earlier context could not be compressed. The full conversation was used.';
+          workingChat = {
+            ...workingChat,
+            ...(chunk.status === 'done' ? { memory: chunk.memory, contextStart: Math.max(workingChat.contextStart || 0, boundary) } : {}),
+            messages: workingChat.messages.map(message => message.id === turn.id ? { ...message, note } : message),
+          };
           setChats(items => items.map(item => {
             if (item.id !== id) return item;
-            const boundary = chunk.throughTurnId ? item.messages.findIndex(message => message.id === chunk.throughTurnId) + 1 : 0;
-            const note = chunk.status === 'running' ? 'Compressing earlier context…' : chunk.status === 'done' ? 'Earlier context was compressed for this reply.' : 'Earlier context could not be compressed. The full conversation was used.';
-            return {
-              ...item,
-              ...(chunk.status === 'done' ? { memory: chunk.memory, contextStart: Math.max(item.contextStart || 0, boundary) } : {}),
-              messages: item.messages.map(message => message.id === turn.id ? { ...message, note } : message),
-            };
+            return workingChat;
           }));
           return;
         }
@@ -177,7 +212,11 @@ export default function Chat() {
       update({ status: 'done', note: finishReason === 'length' ? 'The reply reached its output limit. Ask the model to continue.' : !answer ? 'The model returned no text. Please retry.' : '' });
     } catch (error) {
       update({ status: abort.signal.aborted ? 'stopped' : 'error', error: abort.signal.aborted ? '' : error.message });
-    } finally { controller.current = null; setBusy(false); input.current?.focus(); }
+    } finally {
+      try { await saveChat(workingChat); setHistoryStatus('ready'); }
+      catch (saveError) { setHistoryStatus('error'); setCopyNotice(saveError.message); }
+      controller.current = null; setBusy(false); input.current?.focus();
+    }
   }
   async function copyAnswer(answer) {
     try { await navigator.clipboard.writeText(answer); setCopyNotice('Reply copied.'); }
@@ -198,19 +237,19 @@ export default function Chat() {
       <progress max={context.limit} value={context.tokens === null ? 0 : Math.min(context.limit, context.tokens)} aria-label="Context used" />
       {(busy || context.stale || draft.trim()) && <p>{busy ? '' : context.stale ? 'Latest reply usage is unavailable.' : ''}</p>}
     </div>
-    <p className="c-disclaimer">{connection === 'loading' ? 'Checking chat connection…' : preview ? 'Chats stay in this page session. Check important information.' : connection === 'signed-out' ? 'Sign in to this private site to use chat.' : connection === 'unconfigured' ? 'The server access key is not configured yet.' : 'Cannot reach the chat service.'}{!preview && connection !== 'loading' && <button type="button" className="c-inline-button" onClick={checkConnection}>Retry connection</button>}</p>
+    <p className="c-disclaimer">{connection === 'loading' ? 'Checking chat connection…' : preview ? historyStatus === 'error' ? 'Connected. Chat history could not be saved.' : 'Chats are saved to your account. Check important information.' : connection === 'signed-out' ? 'Sign in to use chat.' : connection === 'unconfigured' ? 'The server access key is not configured yet.' : 'Cannot reach the chat service.'}{!preview && connection !== 'loading' && <button type="button" className="c-inline-button" onClick={checkConnection}>Retry connection</button>}</p>
   </div>;
   return <main className={`c-app ${collapsed ? 'c-collapsed' : ''} ${sidebar ? 'c-sidebar-open' : ''}`}>
     {sidebar && <button className="c-scrim" onClick={() => setSidebar(false)} aria-label="Close navigation"/>}
     <aside className="c-sidebar" aria-label="Chat navigation">
-      <div className="c-sidebar-top"><a href="#/" className="c-brand" aria-label="Brittain home"><BrandLogo/>BRITTAIN</a><button className="c-icon c-desktop" aria-label="Collapse sidebar" onClick={() => setCollapsed(true)}><Icon name="panel"/></button><button className="c-icon c-mobile" aria-label="Close sidebar" onClick={() => setSidebar(false)}><Icon name="panel"/></button></div>
+      <div className="c-sidebar-top"><a href="/" className="c-brand" aria-label="Brittain home"><BrandLogo/>BRITTAIN</a><button className="c-icon c-desktop" aria-label="Collapse sidebar" onClick={() => setCollapsed(true)}><Icon name="panel"/></button><button className="c-icon c-mobile" aria-label="Close sidebar" onClick={() => setSidebar(false)}><Icon name="panel"/></button></div>
       <button className="c-nav-item" disabled={busy} onClick={newChat}><Icon name="edit"/>New chat</button>
-      <a href="#/models" className="c-nav-item"><Icon name="model"/>Models</a>
-      <div className="c-history"><h2>Conversations</h2>{chats.length ? chats.map(chat => <div key={chat.id} className={`c-history-row ${active === chat.id ? 'c-active' : ''}`}><button className="c-history-item" disabled={busy} aria-current={active === chat.id ? 'page' : undefined} onClick={() => { setActive(chat.id); setSidebar(false); setDraft(''); clearImports(); }}>{chat.title}</button><button className="c-history-delete" disabled={busy} onClick={() => deleteChat(chat.id)} aria-label={`Delete conversation: ${chat.title}`} title="Delete conversation"><Icon name="delete"/></button></div>) : <p>Your chats will appear here.</p>}</div>
-      <div className="c-sidebar-bottom">{preview ? <div className="c-account"><span className="c-avatar">B</span><div>Private chat<small>Local to this page</small></div></div> : <><p>Try Brittain 4 with a free account.</p><a className="button full-width" href="#/signup">Sign up free</a></>}<a href="#/" className="c-home-link">← Back to Brittain</a></div>
+      <a href="/models" className="c-nav-item"><Icon name="model"/>Models</a>
+      <div className="c-history"><h2>Conversations</h2>{historyStatus === 'loading' ? <p>Loading chats…</p> : chats.length ? chats.map(chat => <div key={chat.id} className={`c-history-row ${active === chat.id ? 'c-active' : ''}`}><button className="c-history-item" disabled={busy} aria-current={active === chat.id ? 'page' : undefined} onClick={() => { setActive(chat.id); setSidebar(false); setDraft(''); clearImports(); }}>{chat.title}</button><button className="c-history-delete" disabled={busy} onClick={() => deleteChat(chat.id)} aria-label={`Delete conversation: ${chat.title}`} title="Delete conversation"><Icon name="delete"/></button></div>) : <p>Your chats will appear here.</p>}</div>
+      <div className="c-sidebar-bottom"><a href="/account" className="c-account"><span className="c-avatar">{session.user.name?.slice(0, 1).toUpperCase() || 'B'}</span><div>{session.user.name}<small>{session.user.email}</small></div></a><a href="/" className="c-home-link">← Back to Brittain</a></div>
     </aside>
     <section className="c-main">
-      <header className="c-header"><div className="c-header-left"><button className={`c-icon c-open ${collapsed ? 'c-is-collapsed' : ''}`} aria-label="Open sidebar" aria-expanded={sidebar || !collapsed} onClick={() => { setCollapsed(false); setSidebar(true); }}><Icon name="panel"/></button><div className="c-model-wrap"><button className="c-model-button" onClick={() => setInfo(!info)} aria-expanded={info}>Brittain 4<Icon name="down"/></button>{info && <div className="c-model-info"><strong>Brittain 4</strong><p>9B dense model</p><dl><div><dt>Web chat</dt><dd>{contextLimit.toLocaleString()} tokens</dd></div><div><dt>Model maximum</dt><dd>262k</dd></div></dl><a href="#/models/brittain-4">View model details ↗</a></div>}</div></div><div className="c-header-right"><span className="c-preview">{busy ? 'Responding…' : preview ? 'Connected' : 'Not connected'}</span>{!preview && <a href="#/signup" className="button compact">Sign up free</a>}</div></header>
+      <header className="c-header"><div className="c-header-left"><button className={`c-icon c-open ${collapsed ? 'c-is-collapsed' : ''}`} aria-label="Open sidebar" aria-expanded={sidebar || !collapsed} onClick={() => { setCollapsed(false); setSidebar(true); }}><Icon name="panel"/></button><div className="c-model-wrap"><button className="c-model-button" onClick={() => setInfo(!info)} aria-expanded={info}>Brittain 4<Icon name="down"/></button>{info && <div className="c-model-info"><strong>Brittain 4</strong><p>9B dense model</p><dl><div><dt>Web chat</dt><dd>{contextLimit.toLocaleString()} tokens</dd></div><div><dt>Model maximum</dt><dd>262k</dd></div></dl><a href="/models/brittain-4">View model details ↗</a></div>}</div></div><div className="c-header-right"><span className="c-preview">{busy ? 'Responding…' : preview ? 'Connected' : 'Not connected'}</span></div></header>
       {messages.length === 0 ? <div className="c-start"><div className="c-start-inner"><h1>What can I help with?</h1>{composer}<div className="c-suggestions">{suggestions.map(([icon,label,prompt]) => <button key={icon} onClick={() => { setDraft(prompt); input.current?.focus(); }}><Icon name={icon}/>{label}</button>)}</div></div></div> : <><div className="c-conversation" role="log" aria-label="Conversation"><div className="c-message-column">{messages.map((message, index) => <div className="c-turn" key={message.id}><div className="c-user-message"><AttachmentCards attachments={message.attachments}/><span>{message.prompt}</span></div><div className="c-reply"><BrandLogo/><div className="c-response"><ToolActivity tools={message.tools}/><DownloadCards artifacts={message.artifacts}/>{message.answer ? <MarkdownReply text={message.answer}/> : message.status === 'streaming' ? <p role="status">{message.tools?.some(tool => tool.status === 'running') ? 'Using tools…' : 'Waiting for Brittain 4…'}</p> : null}{message.error && <p className="c-error" role="alert">{message.error}</p>}{message.status === 'stopped' && <p>Reply stopped.</p>}{message.note && <p>{message.note}</p>}<div className="c-reply-actions">{message.answer && <button onClick={() => copyAnswer(message.answer)}>Copy</button>}{!busy && index === messages.length - 1 && <button onClick={e => send(e, true)}>Retry</button>}</div></div></div></div>)}<span className="sr-only" role="status">{copyNotice}</span><div ref={end}/></div></div><div className="c-bottom-composer">{composer}</div></>}
     </section>
   </main>;
