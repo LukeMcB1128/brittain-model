@@ -4,7 +4,9 @@ export const MAX_ATTACHMENT_BYTES = 10_000_000;
 
 const MAX_IMAGE_BYTES = 5_000_000;
 const MAX_TEXT_BYTES = 2_000_000;
-const MAX_TEXT_CHARS = 120_000;
+// Leave space in the 32k web-chat window for the system prompt, tools,
+// conversation memory, and the model reply.
+const MAX_TEXT_CHARS = 44_000;
 const MAX_PDF_PAGES = 50;
 const MAX_RENDERED_PDF_PAGES = 4;
 const TEXT_EXTENSIONS = new Set(['txt', 'md', 'markdown', 'csv', 'tsv', 'json', 'js', 'jsx', 'ts', 'tsx', 'py', 'java', 'c', 'cpp', 'h', 'hpp', 'rs', 'go', 'html', 'css', 'xml', 'yaml', 'yml', 'toml', 'sql', 'sh', 'log']);

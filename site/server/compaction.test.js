@@ -14,9 +14,28 @@ test('compaction starts only after the trigger and preserves recent whole turns'
   const messages = Array.from({ length: 6 }, (_, index) => turn(index)).flat();
   assert.ok(messages.reduce((sum, message) => sum + message.content.length, 0) > COMPACT_TRIGGER_CHARS);
   const plan = planCompaction(messages, 'old memory');
-  assert.equal(plan.throughTurnId, 'turn-2');
-  assert.deepEqual([...new Set(plan.recentMessages.map(message => message.turnId))], ['turn-3', 'turn-4', 'turn-5']);
+  assert.equal(plan.throughTurnId, 'turn-4');
+  assert.deepEqual([...new Set(plan.recentMessages.map(message => message.turnId))], ['turn-5']);
   assert.equal(plan.olderMessages.at(-1).role, 'assistant');
+});
+
+test('large memory updates are compressed in bounded batches', async () => {
+  let calls = 0;
+  const summary = await summarizeCompaction(
+    { olderMessages: [{ role: 'user', content: 'x'.repeat(130_000) }] },
+    'Existing fact.',
+    async (_url, options) => {
+      const payload = JSON.parse(options.body);
+      assert.ok(payload.messages[1].content.length < 75_000);
+      calls += 1;
+      return Response.json({ choices: [{ message: { content: `Compressed memory ${calls}.` } }] });
+    },
+    'https://model.example/v1/chat/completions',
+    'secret',
+    new AbortController().signal,
+  );
+  assert.equal(calls, 3);
+  assert.equal(summary, 'Compressed memory 3.');
 });
 
 test('memory is placed in the server-owned system message and turn ids are removed', () => {

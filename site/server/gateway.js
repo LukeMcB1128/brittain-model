@@ -10,6 +10,8 @@ function upstream(env) {
 }
 const MAX_BYTES = 30_000_000;
 const MAX_TEXT_CHARS = 500_000;
+const MAX_MESSAGE_TEXT_CHARS = 60_000;
+const MAX_ATTACHMENT_PART_CHARS = 48_000;
 const MAX_IMAGE_CHARS = 7_000_000;
 const MAX_IMAGES = 8;
 const MAX_ASSETS = 10;
@@ -59,19 +61,30 @@ function contentText(content) {
   return content.find(part => part?.type === 'text')?.text || '';
 }
 
+function fitAttachmentText(text) {
+  if (!/^Attached file:/i.test(text) || text.length <= MAX_ATTACHMENT_PART_CHARS) return text;
+  const notice = '\n\n[Middle content omitted to fit the 32k web-chat context.]\n\n';
+  const available = MAX_ATTACHMENT_PART_CHARS - notice.length;
+  const startLength = Math.floor(available * 0.75);
+  return `${text.slice(0, startLength)}${notice}${text.slice(-(available - startLength))}`;
+}
+
 function normalizeContent(role, content, totals) {
   if (typeof content === 'string') {
     const text = content.trim();
-    if (!text || text.length > MAX_TEXT_CHARS) throw new Error('Message text is empty or too large.');
+    if (!text || text.length > MAX_MESSAGE_TEXT_CHARS) throw new Error('A message is too large for the 32k web-chat context. Shorten it or attach a smaller excerpt.');
     totals.text += text.length;
     return text;
   }
   if (role !== 'user' || !Array.isArray(content) || !content.length) throw new Error('Message content is not valid.');
   const clean = [];
+  let messageText = 0;
   for (const part of content) {
     if (part?.type === 'text' && typeof part.text === 'string' && part.text.trim()) {
-      totals.text += part.text.length;
-      clean.push({ type: 'text', text: part.text });
+      const text = fitAttachmentText(part.text);
+      messageText += text.length;
+      totals.text += text.length;
+      clean.push({ type: 'text', text });
       continue;
     }
     const url = part?.type === 'image_url' && typeof part.image_url?.url === 'string' ? part.image_url.url : '';
@@ -80,6 +93,7 @@ function normalizeContent(role, content, totals) {
     clean.push({ type: 'image_url', image_url: { url } });
   }
   if (!clean.length) throw new Error('Message content is empty.');
+  if (messageText > MAX_MESSAGE_TEXT_CHARS) throw new Error('The attached text is too large for one request. Add fewer files or attach smaller excerpts.');
   return clean;
 }
 

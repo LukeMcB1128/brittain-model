@@ -70,6 +70,20 @@ test('accepts safe image parts and rejects remote or oversized attachment conten
   assert.equal((await handleApi(req({ messages: [{ role: 'user', content: [{ type: 'text', text: 'Read it.' }, { type: 'image_url', image_url: { url: 'https://example.com/image.png' } }] }] }), env)).status, 400);
   assert.equal((await handleApi(req({ messages: [{ role: 'assistant', content }] }), env)).status, 400);
 });
+test('clips a large text attachment before it reaches the model context', async () => {
+  let payload;
+  const content = [
+    { type: 'text', text: 'Review the attached content.' },
+    { type: 'text', text: `Attached file: large.md\n\n${'x'.repeat(120_000)}` },
+  ];
+  const response = await handleApi(req({ messages: [{ role: 'user', content }] }), env, async (_url, options) => {
+    payload = JSON.parse(options.body);
+    return sse([{ choices: [{ index: 0, delta: { content: 'Reviewed.' }, finish_reason: 'stop' }] }, '[DONE]']);
+  });
+  assert.match(await response.text(), /Reviewed/);
+  assert.ok(payload.messages.at(-1).content[1].text.length <= 48_000);
+  assert.match(payload.messages.at(-1).content[1].text, /Middle content omitted/);
+});
 test('offers PDF tools only when a PDF attachment is present', async () => {
   let payload;
   const response = await handleApi(req({ messages: [{ role: 'user', content: 'Summarize the attached file.' }], attachments: [{ id: 'pdf-1', name: 'notes.pdf', type: 'application/pdf', dataUrl: `data:application/pdf;base64,${btoa('%PDF-test')}`, pageCount: 1, pageImages: [] }] }), env, async (_url, options) => {
