@@ -1,11 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PDFDocument } from 'pdf-lib';
-import { handleApi } from './gateway.js';
+import { handleApi, toolInstructions } from './gateway.js';
 const env = { BRITTAIN4_API_KEY: 'test-only-secret' };
 function req(body = { messages: [{ role: 'user', content: 'Hello' }] }, extra = {}) {
   return new Request('https://site.example/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json', 'oai-authenticated-user-id': 'test-user', ...extra }, body: JSON.stringify(body) });
 }
+test('builds the current date inside the request instead of at module initialization', () => {
+  const instructions = toolInstructions(new Date('2026-09-18T12:00:00Z'));
+  assert.match(instructions, /The current date is Friday, 2026-09-18\./);
+  assert.doesNotMatch(instructions, /1970/);
+});
 test('requires authenticated site identity, a secret, and same-origin POST', async () => {
   const request = req(); request.headers.delete('oai-authenticated-user-id');
   assert.equal((await handleApi(request, env)).status, 401);
@@ -55,6 +60,8 @@ test('validates messages and fixes server-owned model/options', async () => {
   assert.equal(payload.model, 'brittain4');
   assert.equal(payload.max_tokens, 2048);
   assert.equal(payload.chat_template_kwargs.enable_thinking, false);
+  assert.match(payload.messages[0].content, /The current date is \w+, \d{4}-\d{2}-\d{2}\./);
+  assert.doesNotMatch(payload.messages[0].content, /1970-01-01/);
   assert.deepEqual(payload.tools.map(tool => tool.function.name), ['web_search', 'web_fetch', 'calculate']);
   assert.equal((await response.text()).includes('test-only-secret'), false);
 });
