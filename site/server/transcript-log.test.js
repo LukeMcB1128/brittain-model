@@ -13,7 +13,18 @@ const exchange = {
   usage: { prompt_tokens: 120, completion_tokens: 40, total_tokens: 160 },
   finishReason: 'stop',
   startedAt: Date.now() - 1500,
+  // Which checkpoint answered. The gateway passes this through; it is not a
+  // constant in the logger, because the served adapter changes between runs.
+  model: 'brittain4',
 };
+
+test('an entry whose model was not supplied is recorded as unknown', async () => {
+  // Better an honest 'unknown' than a stale constant: these records exist to
+  // attribute behaviour to a checkpoint, and a confidently wrong name would
+  // misattribute it.
+  const { model: _model, ...noModel } = exchange;
+  assert.equal((await buildEntry(noModel)).model, 'unknown');
+});
 
 test('an entry records the exchange without the system prompt', async () => {
   const entry = await buildEntry(exchange);

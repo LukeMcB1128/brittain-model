@@ -76,7 +76,11 @@ async function anonymousUser(user) {
   }
 }
 
-export async function buildEntry({ user, messages, reply, toolCalls = [], usage, finishReason, error, startedAt, surface = 'web-chat' }) {
+// `model` records which checkpoint actually answered. It is a parameter rather
+// than a constant because the served adapter changes between training runs, and
+// a log that names the wrong model is worse than one that names none: the point
+// of these records is being able to attribute behaviour to a checkpoint.
+export async function buildEntry({ user, messages, reply, toolCalls = [], usage, finishReason, error, startedAt, surface = 'web-chat', model = 'unknown' }) {
   const conversation = (messages || [])
     // The system prompt is the same on every request and is in source control.
     .filter(message => message.role !== 'system')
@@ -86,7 +90,7 @@ export async function buildEntry({ user, messages, reply, toolCalls = [], usage,
     id: crypto.randomUUID(),
     at: new Date().toISOString(),
     surface,
-    model: 'brittain4',
+    model,
     user: await anonymousUser(user),
     durationMs: startedAt ? Date.now() - startedAt : null,
     finishReason: finishReason ?? null,

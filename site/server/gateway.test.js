@@ -57,7 +57,7 @@ test('validates messages and fixes server-owned model/options', async () => {
     return new Response('data: [DONE]\n', { headers: { 'Content-Type': 'text/event-stream' } });
   });
   assert.equal(response.status, 200);
-  assert.equal(payload.model, 'brittain4');
+  assert.equal(payload.model, 'step-0100-mm');
   assert.equal(payload.max_tokens, 2048);
   assert.equal(payload.chat_template_kwargs.enable_thinking, false);
   assert.match(payload.messages[0].content, /The current date is \w+, \d{4}-\d{2}-\d{2}\./);
@@ -154,8 +154,26 @@ test('session readiness verifies the model server rather than only the key', asy
   const session = () => new Request('https://site.example/api/session', { headers: { 'oai-authenticated-user-id': 'test-user' } });
   const down = await handleApi(session(), env, async () => new Response('', { status: 502 }));
   assert.equal((await down.json()).ready, false);
-  const up = await handleApi(session(), env, async () => Response.json({ data: [{ id: 'brittain4', max_model_len: 32768 }] }));
-  assert.equal((await up.json()).ready, true);
+  // A LoRA entry reports max_model_len: null and points at the base it runs on.
+  // Readiness must look for the adapter and take the window from its parent --
+  // reading the adapter's own null and falling through to the default is how
+  // the app once advertised a context window it did not have.
+  const up = await handleApi(session(), env, async () => Response.json({
+    data: [
+      { id: 'brittain4', max_model_len: 32768 },
+      { id: 'step-0100-mm', max_model_len: null, parent: 'brittain4' },
+    ],
+  }));
+  const ready = await up.json();
+  assert.equal(ready.ready, true);
+  // The checkpoint id stays server-side; the client renders this as the
+  // assistant's name.
+  assert.equal(ready.model, 'brittain4');
+  assert.equal(ready.context, 32768);
+
+  // The base alone is not the served model, so it is not ready.
+  const baseOnly = await handleApi(session(), env, async () => Response.json({ data: [{ id: 'brittain4', max_model_len: 32768 }] }));
+  assert.equal((await baseOnly.json()).ready, false);
 });
 
 test('long chats compact older turns and send recent turns with reusable memory', async () => {

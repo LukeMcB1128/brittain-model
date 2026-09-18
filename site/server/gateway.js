@@ -8,6 +8,19 @@ function upstream(env) {
   const origin = String(env?.MODEL_API_ORIGIN || DEFAULT_API_ORIGIN).replace(/\/$/, '');
   return `${origin}/v1/chat/completions`;
 }
+
+// The LoRA checkpoint every request runs through. 'brittain4' is the base the
+// adapter is applied to, not an alternative to it -- vLLM keeps the base
+// resident and applies the adapter per request, so the base cannot be
+// unloaded. Naming the adapter here is what keeps the raw base out of the web
+// app: nothing else in this worker sends a model name.
+const DEFAULT_MODEL = 'step-0100-mm';
+function modelName(env) {
+  return String(env?.BRITTAIN4_MODEL || DEFAULT_MODEL);
+}
+// What the browser calls it. Deliberately not the checkpoint id: the client
+// renders this as the assistant's name beside every reply.
+const DISPLAY_MODEL = 'brittain4';
 const MAX_BYTES = 30_000_000;
 const MAX_TEXT_CHARS = 500_000;
 const MAX_MESSAGE_TEXT_CHARS = 60_000;
@@ -266,7 +279,7 @@ function streamChat(systemMessage, conversation, request, env, fetchUpstream, at
         if (plan) {
           emit({ type: 'compaction', status: 'running' });
           try {
-            memory = await summarizeCompaction(plan, memory, fetchUpstream, upstreamUrl, env.BRITTAIN4_API_KEY, requestSignal);
+            memory = await summarizeCompaction(plan, memory, fetchUpstream, upstreamUrl, env.BRITTAIN4_API_KEY, requestSignal, modelName(env));
             conversation = plan.recentMessages;
             emit({ type: 'compaction', status: 'done', memory, throughTurnId: plan.throughTurnId });
           } catch {
@@ -289,7 +302,7 @@ function streamChat(systemMessage, conversation, request, env, fetchUpstream, at
             method: 'POST',
             headers: { Authorization: `Bearer ${env.BRITTAIN4_API_KEY}`, 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' },
             body: JSON.stringify({
-              model: 'brittain4', messages,
+              model: modelName(env), messages,
               tools: round === 0 && firstTool && !firstArguments ? allTools.filter(tool => tool.function.name === firstTool) : allTools,
               tool_choice: round === 0 && firstTool && !firstArguments ? 'required' : 'auto',
               max_tokens: 2048, temperature: 0.7, stream: true,
@@ -306,6 +319,7 @@ function streamChat(systemMessage, conversation, request, env, fetchUpstream, at
             await recordExchange(env, {
               user, messages, reply: result.content, toolCalls: recorded.toolCalls,
               usage: result.usage, finishReason: result.finishReason, startedAt,
+              model: modelName(env),
             });
             controller.close();
             return;
@@ -349,6 +363,7 @@ function streamChat(systemMessage, conversation, request, env, fetchUpstream, at
         await recordExchange(env, {
           user, messages, reply: recorded.reply, toolCalls: recorded.toolCalls,
           error: error?.message || String(error), startedAt,
+          model: modelName(env),
         });
         if (!cancelled) controller.close();
       }
@@ -379,9 +394,20 @@ export async function handleApi(request, env, fetchUpstream = fetch, authenticat
       });
       if (!response.ok) throw new Error();
       const data = await response.json();
-      const model = data.data?.find(m => m.id === 'brittain4');
+      // Ready means the adapter is registered, not merely that the base is up:
+      // the base alone would answer every request as an untrained model.
+      const model = data.data?.find(m => m.id === modelName(env));
       if (!model) throw new Error();
-      return json({ authenticated: true, configured: true, ready: true, model: 'brittain4', context: model.max_model_len || 32768 });
+      // A LoRA entry reports max_model_len: null and names the base it runs on
+      // in `parent`. The context window belongs to the base, so read it from
+      // there; taking the adapter's own null and falling through to the default
+      // is how the app ended up advertising a window it did not have.
+      const base = model.parent ? data.data?.find(m => m.id === model.parent) : null;
+      const context = model.max_model_len || base?.max_model_len || 32768;
+      // The checkpoint name stays server-side. The client renders this string as
+      // the assistant's name, and a checkpoint id is both meaningless to a
+      // reader and contrary to the identity the model is trained to give.
+      return json({ authenticated: true, configured: true, ready: true, model: DISPLAY_MODEL, context });
     } catch { return json({ authenticated: true, configured: true, ready: false }); }
   }
   if (path !== '/api/chat' || request.method !== 'POST') return json({ error: 'Not found.' }, 404);
