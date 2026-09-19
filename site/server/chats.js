@@ -41,6 +41,10 @@ export function cleanChat(input) {
       detail: safeString(tool?.detail, 1_000),
       result: safeString(tool?.result, 1_000),
       status: safeString(tool?.status, 20),
+      sources: Array.isArray(tool?.sources) ? tool.sources.slice(0, 10).map(source => ({
+        title: safeString(source?.title, 200),
+        url: safeString(source?.url, 2_000),
+      })).filter(source => /^https?:\/\//i.test(source.url)) : [],
     })) : [],
     usage: message?.usage && Number.isInteger(message.usage.total_tokens) ? {
       prompt_tokens: Number(message.usage.prompt_tokens) || 0,
@@ -75,11 +79,26 @@ export async function handleChats(request, env, user) {
   const id = match[1] ? decodeURIComponent(match[1]) : '';
   if (request.method === 'GET' && !id) {
     const result = await env.DB.prepare(`
-      SELECT payload FROM chats WHERE user_id = ? ORDER BY updated_at DESC LIMIT 100
+      SELECT id, title, created_at, updated_at FROM chats WHERE user_id = ? ORDER BY updated_at DESC LIMIT 100
     `).bind(user.id).all();
-    return json({ chats: (result.results || []).flatMap(row => {
-      try { return [JSON.parse(row.payload)]; } catch { return []; }
-    }) });
+    return json({ chats: (result.results || []).map(row => ({
+      id: row.id,
+      title: row.title || 'New chat',
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    })) });
+  }
+  if (request.method === 'GET' && id) {
+    if (!ID_PATTERN.test(id)) return json({ error: 'Conversation not found.' }, 404);
+    const row = await env.DB.prepare(`
+      SELECT payload, created_at, updated_at FROM chats WHERE id = ? AND user_id = ?
+    `).bind(id, user.id).first();
+    if (!row) return json({ error: 'Conversation not found.' }, 404);
+    try {
+      return json({ chat: { ...JSON.parse(row.payload), createdAt: row.created_at, updatedAt: row.updated_at } });
+    } catch {
+      return json({ error: 'The saved conversation is not valid.' }, 500);
+    }
   }
   if (!sameOrigin(request)) return json({ error: 'Request origin is not allowed.' }, 403);
   if (request.method === 'PUT' && id) {
@@ -97,7 +116,25 @@ export async function handleChats(request, env, user) {
       ON CONFLICT(id) DO UPDATE SET title = excluded.title, payload = excluded.payload, updated_at = excluded.updated_at
       WHERE chats.user_id = excluded.user_id
     `).bind(id, user.id, chat.title, JSON.stringify(chat), now, now).run();
-    return json({ chat });
+    return json({ chat: { ...chat, updatedAt: now } });
+  }
+  if (request.method === 'PATCH' && id) {
+    if (!ID_PATTERN.test(id)) return json({ error: 'Conversation not found.' }, 404);
+    if (!request.headers.get('content-type')?.includes('application/json')) return json({ error: 'Expected JSON.' }, 415);
+    let input;
+    try { input = await request.json(); } catch { return json({ error: 'Invalid request.' }, 400); }
+    const title = safeString(input?.title, 80).trim();
+    if (!title) return json({ error: 'Enter a conversation name.' }, 400);
+    const row = await env.DB.prepare('SELECT payload FROM chats WHERE id = ? AND user_id = ?').bind(id, user.id).first();
+    if (!row) return json({ error: 'Conversation not found.' }, 404);
+    let chat;
+    try { chat = cleanChat({ ...JSON.parse(row.payload), id, title }); }
+    catch { return json({ error: 'The saved conversation is not valid.' }, 500); }
+    const now = new Date().toISOString();
+    await env.DB.prepare(`
+      UPDATE chats SET title = ?, payload = ?, updated_at = ? WHERE id = ? AND user_id = ?
+    `).bind(title, JSON.stringify(chat), now, id, user.id).run();
+    return json({ chat: { id, title, updatedAt: now } });
   }
   if (request.method === 'DELETE' && id) {
     if (!ID_PATTERN.test(id)) return json({ error: 'Conversation not found.' }, 404);

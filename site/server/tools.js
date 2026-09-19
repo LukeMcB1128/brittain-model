@@ -187,7 +187,7 @@ async function searchWeb(args, fetchFn) {
     if (!results.length) throw new Error('no search results were returned');
     return {
       content: `${WEB_WARNING}\n\n${JSON.stringify({ provider: 'DuckDuckGo HTML', query, retrieved_at: new Date().toISOString(), results }, null, 2)}`,
-      display: { label: 'Web search', detail: query, result: `${results.length} result${results.length === 1 ? '' : 's'}` },
+      display: { label: 'Web search', detail: query, result: `${results.length} result${results.length === 1 ? '' : 's'}`, sources: results.map(({ title, url }) => ({ title, url })) },
     };
   } finally { clearTimeout(timer); }
 }

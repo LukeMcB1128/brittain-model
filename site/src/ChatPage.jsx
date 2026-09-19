@@ -27,6 +27,8 @@ function Icon({ name }) {
     search: 'm21 21-4.4-4.4M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0',
     calculate: 'M5 3h14v18H5zM8 7h8M8 11h2M14 11h2M8 15h2M14 15h2',
     delete: 'M4 7h16M9 7V4h6v3m3 0-1 14H7L6 7m4 4v6m4-6v6',
+    rename: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z',
+    check: 'm5 12 4 4L19 6',
     attach: 'M21.4 11.6 12 21a6 6 0 0 1-8.5-8.5l10-10a4 4 0 0 1 5.7 5.7l-10 10a2 2 0 1 1-2.9-2.8l9.5-9.5',
     file: 'M6 2h8l4 4v16H6zM14 2v5h5',
     close: 'm7 7 10 10M17 7 7 17',
@@ -35,7 +37,7 @@ function Icon({ name }) {
 }
 function AttachmentCards({ attachments, onRemove }) {
   if (!attachments?.length) return null;
-  return <div className={`c-attachments ${onRemove ? 'c-attachments-editable' : ''}`}>{attachments.map(attachment => <div className="c-attachment" key={attachment.id}>{attachment.kind === 'image' && attachment.dataUrl ? <img src={attachment.dataUrl} alt=""/> : <span className="c-attachment-file"><Icon name="file"/></span>}<span><strong>{attachment.name}</strong><small>{attachment.kind === 'image' ? 'Image' : attachment.type === 'application/pdf' ? 'PDF' : 'File text'}{attachment.truncated ? ' · Truncated' : ''}</small></span>{onRemove && <button type="button" onClick={() => onRemove(attachment.id)} aria-label={`Remove ${attachment.name}`}><Icon name="close"/></button>}</div>)}</div>;
+  return <div className={`c-attachments ${onRemove ? 'c-attachments-editable' : ''}`}>{attachments.map(attachment => <div className="c-attachment" key={attachment.id}>{attachment.kind === 'image' && attachment.dataUrl ? <img src={attachment.dataUrl} alt=""/> : <span className="c-attachment-file"><Icon name="file"/></span>}<span><strong>{attachment.name}</strong><small title={attachment.truncated ? 'Only the first 44,000 characters are added to the model context.' : undefined}>{attachment.kind === 'image' ? 'Image' : attachment.type === 'application/pdf' ? 'PDF' : 'File text'}{attachment.truncated ? ' · Shortened for context' : ''}</small></span>{onRemove && <button type="button" onClick={() => onRemove(attachment.id)} aria-label={`Remove ${attachment.name}`}><Icon name="close"/></button>}</div>)}</div>;
 }
 function DownloadCards({ artifacts }) {
   if (!artifacts?.length) return null;
@@ -47,10 +49,20 @@ function ToolActivity({ tools }) {
     const label = tool.label || (tool.name === 'web_search' ? 'Web search' : tool.name === 'web_fetch' ? 'Web page' : tool.name === 'calculate' ? 'Calculator' : tool.name?.startsWith('pdf_') ? 'PDF' : 'Tool');
     const detail = tool.detail || tool.result || (tool.status === 'running' ? 'Working…' : '');
     const status = tool.status === 'running' ? 'Working' : tool.status === 'error' ? 'Failed' : tool.result || 'Done';
-    return <div className={`c-tool c-tool-${tool.status}`} key={tool.id}><span className="c-tool-icon"><Icon name={tool.name === 'calculate' ? 'calculate' : tool.name?.startsWith('pdf_') ? 'file' : 'search'}/></span><span><strong>{label}</strong><small>{detail}</small></span><span className="c-tool-status">{status}</span></div>;
+    return <div className={`c-tool c-tool-${tool.status}`} key={tool.id}><span className="c-tool-icon"><Icon name={tool.name === 'calculate' ? 'calculate' : tool.name?.startsWith('pdf_') ? 'file' : 'search'}/></span><span><strong>{label}</strong><small>{detail}</small>{tool.sources?.length > 0 && <details className="c-tool-sources"><summary>View {tool.sources.length} source{tool.sources.length === 1 ? '' : 's'}</summary><ol>{tool.sources.map(source => <li key={source.url}><a href={source.url} target="_blank" rel="noreferrer">{source.title || source.url}</a></li>)}</ol></details>}</span><span className="c-tool-status">{status}</span></div>;
   })}</div>;
 }
-export default function Chat({ session }) {
+function groupLabel(dateValue) {
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return 'Older';
+  const today = new Date();
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const age = start.getTime() - new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  if (age <= 0) return 'Today';
+  if (age < 7 * 86400000) return 'Previous 7 days';
+  return 'Older';
+}
+export default function Chat({ session, initialChatId = '' }) {
   const [sidebar, setSidebar] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [info, setInfo] = useState(false);
@@ -66,9 +78,19 @@ export default function Chat({ session }) {
   const [importing, setImporting] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [historyStatus, setHistoryStatus] = useState('loading');
+  const [historyQuery, setHistoryQuery] = useState('');
+  const [loadingChat, setLoadingChat] = useState('');
+  const [renaming, setRenaming] = useState(null);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [notice, setNotice] = useState('');
   const controller = useRef(null);
   const input = useRef(null);
   const fileInput = useRef(null);
+  const deleteTimer = useRef(null);
+  const pendingDeleteRef = useRef(null);
+  const noticeTimer = useRef(null);
+  const modelWrap = useRef(null);
+  const chatsRef = useRef([]);
   async function checkConnection() {
     setConnection('loading');
     try {
@@ -88,7 +110,34 @@ export default function Chat({ session }) {
       const data = await response.json();
       setChats(Array.isArray(data.chats) ? data.chats : []);
       setHistoryStatus('ready');
+      if (initialChatId) await loadChat(initialChatId, false, data.chats || []);
     } catch { setHistoryStatus('error'); }
+  }
+  function setChatUrl(id, replace = false) {
+    const url = id ? `/chat/${encodeURIComponent(id)}` : '/chat';
+    window.history[replace ? 'replaceState' : 'pushState'](null, '', url);
+  }
+  async function loadChat(id, updateUrl = true, knownChats = chats) {
+    if (controller.current || !id) return;
+    const loaded = knownChats.find(chat => chat.id === id && Array.isArray(chat.messages));
+    if (loaded) {
+      setActive(id); setSidebar(false); setDraft(''); clearImports();
+      if (updateUrl) setChatUrl(id);
+      return;
+    }
+    setLoadingChat(id);
+    try {
+      const response = await fetch(`/api/chats/${encodeURIComponent(id)}`);
+      if (!response.ok) throw new Error(response.status === 404 ? 'Conversation not found.' : 'The conversation could not be loaded.');
+      const data = await response.json();
+      setChats(items => {
+        const exists = items.some(chat => chat.id === id);
+        return exists ? items.map(chat => chat.id === id ? data.chat : chat) : [data.chat, ...items];
+      });
+      setActive(id); setSidebar(false); setDraft(''); clearImports();
+      if (updateUrl) setChatUrl(id);
+    } catch (error) { showNotice(error.message); if (!updateUrl) setChatUrl('', true); }
+    finally { setLoadingChat(''); }
   }
   async function saveChat(chat) {
     const response = await fetch(`/api/chats/${encodeURIComponent(chat.id)}`, {
@@ -99,7 +148,25 @@ export default function Chat({ session }) {
       throw new Error(data.error || 'The conversation could not be saved.');
     }
   }
-  useEffect(() => { checkConnection(); loadChats(); return () => controller.current?.abort(); }, []);
+  useEffect(() => { chatsRef.current = chats; }, [chats]);
+  // This effect owns the page lifetime and must run once.
+  /* oxlint-disable react-hooks/exhaustive-deps */
+  useEffect(() => {
+    checkConnection(); loadChats();
+    const onPopState = () => {
+      const match = window.location.pathname.match(/^\/chat\/([^/]+)$/);
+      if (match) loadChat(decodeURIComponent(match[1]), false, chatsRef.current);
+      else { setActive(null); setDraft(''); clearImports(); }
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => {
+      controller.current?.abort();
+      window.removeEventListener('popstate', onPopState);
+      clearTimeout(deleteTimer.current); clearTimeout(noticeTimer.current);
+      if (pendingDeleteRef.current) commitDelete(pendingDeleteRef.current, true);
+    };
+  }, []);
+  /* oxlint-enable react-hooks/exhaustive-deps */
   const preview = connection === 'ready';
   const end = useRef(null);
   const current = chats.find(chat => chat.id === active);
@@ -108,24 +175,59 @@ export default function Chat({ session }) {
   useEffect(() => { end.current?.scrollIntoView({ block: 'nearest' }); }, [chats, active]);
   useEffect(() => {
     const onKey = e => { if (e.key === 'Escape') { setSidebar(false); setInfo(false); } };
+    const onPointer = e => { if (info && modelWrap.current && !modelWrap.current.contains(e.target)) setInfo(false); };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
+    window.addEventListener('pointerdown', onPointer);
+    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('pointerdown', onPointer); };
+  }, [info]);
   function clearImports() { setAttachments([]); setAttachmentError(''); setDragging(false); }
-  function newChat() { if (controller.current) return; setActive(null); setDraft(''); clearImports(); setSidebar(false); input.current?.focus(); }
-  async function deleteChat(id) {
-    if (controller.current) return;
-    const removed = chats.find(chat => chat.id === id);
-    setChats(items => items.filter(chat => chat.id !== id));
+  function showNotice(message, duration = 3500) {
+    clearTimeout(noticeTimer.current); setNotice(message);
+    noticeTimer.current = setTimeout(() => setNotice(''), duration);
+  }
+  function newChat(updateUrl = true) { if (controller.current) return; setActive(null); setDraft(''); clearImports(); setSidebar(false); if (updateUrl) setChatUrl(''); input.current?.focus(); }
+  async function commitDelete(item, keepalive = false) {
     try {
-      const response = await fetch(`/api/chats/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const response = await fetch(`/api/chats/${encodeURIComponent(item.chat.id)}`, { method: 'DELETE', keepalive });
       if (!response.ok) throw new Error();
-      setCopyNotice('Conversation deleted.');
-      if (active === id) { setActive(null); setDraft(''); clearImports(); setSidebar(false); requestAnimationFrame(() => input.current?.focus()); }
     } catch {
-      if (removed) setChats(items => [removed, ...items]);
-      setCopyNotice('The conversation could not be deleted.');
+      if (!keepalive) {
+        setChats(items => items.some(chat => chat.id === item.chat.id) ? items : [...items.slice(0, item.index), item.chat, ...items.slice(item.index)]);
+        showNotice('The conversation could not be deleted.');
+      }
     }
+  }
+  function deleteChat(id) {
+    if (controller.current) return;
+    if (pendingDeleteRef.current) { clearTimeout(deleteTimer.current); commitDelete(pendingDeleteRef.current); }
+    const index = chats.findIndex(chat => chat.id === id);
+    if (index < 0) return;
+    const item = { chat: chats[index], index, wasActive: active === id };
+    pendingDeleteRef.current = item; setPendingDelete(item);
+    setChats(items => items.filter(chat => chat.id !== id));
+    if (active === id) newChat();
+    deleteTimer.current = setTimeout(() => {
+      pendingDeleteRef.current = null; setPendingDelete(null); commitDelete(item); showNotice('Conversation deleted.');
+    }, 5000);
+  }
+  function undoDelete() {
+    const item = pendingDeleteRef.current;
+    if (!item) return;
+    clearTimeout(deleteTimer.current); pendingDeleteRef.current = null; setPendingDelete(null);
+    setChats(items => items.some(chat => chat.id === item.chat.id) ? items : [...items.slice(0, item.index), item.chat, ...items.slice(item.index)]);
+    if (item.wasActive) { setActive(item.chat.id); setChatUrl(item.chat.id); }
+  }
+  async function renameChat(e) {
+    e.preventDefault();
+    const title = renaming?.title.trim();
+    if (!title) return;
+    try {
+      const response = await fetch(`/api/chats/${encodeURIComponent(renaming.id)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title }) });
+      if (!response.ok) throw new Error();
+      const data = await response.json();
+      setChats(items => items.map(chat => chat.id === renaming.id ? { ...chat, ...data.chat } : chat));
+      setRenaming(null); showNotice('Conversation renamed.');
+    } catch { showNotice('The conversation could not be renamed.'); }
   }
   async function addFiles(fileList) {
     if (busy || importing || !fileList?.length) return;
@@ -159,9 +261,10 @@ export default function Chat({ session }) {
     const contextStart = Math.min(current?.contextStart || 0, previous.length);
     const contextTurns = previous.slice(contextStart);
     const history = contextTurns.flatMap(m => [{ role: 'user', content: messageContent(m.prompt, m.attachments), turnId: m.id }, ...(m.answer ? [{ role: 'assistant', content: m.answer, turnId: m.id }] : [])]);
-    let workingChat = current ? { ...current, messages: [...previous, turn] } : { id, title: (draft.trim() || turnAttachments[0]?.name || turn.prompt).slice(0, 60), messages: [turn] };
+    const changedAt = new Date().toISOString();
+    let workingChat = current ? { ...current, updatedAt: changedAt, messages: [...previous, turn] } : { id, title: (draft.trim() || turnAttachments[0]?.name || turn.prompt).slice(0, 60), createdAt: changedAt, updatedAt: changedAt, messages: [turn] };
     if (active) setChats(items => items.map(chat => chat.id === id ? workingChat : chat));
-    else { setChats(items => [workingChat, ...items]); setActive(id); }
+    else { setChats(items => [workingChat, ...items]); setActive(id); setChatUrl(id, true); }
     if (!retry) { setDraft(''); clearImports(); }
     const abort = new AbortController();
     controller.current = abort;
@@ -186,6 +289,12 @@ export default function Chat({ session }) {
     let answer = '';
     let finishReason;
     try {
+      const savedBeforeReply = {
+        ...workingChat,
+        messages: workingChat.messages.map(message => message.id === turn.id ? { ...message, status: 'stopped', note: 'Reply interrupted before completion.' } : message),
+      };
+      try { await saveChat(savedBeforeReply); }
+      catch (saveError) { setHistoryStatus('error'); showNotice(saveError.message); }
       const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: [...history, { role: 'user', content: messageContent(turn.prompt, turnAttachments), turnId: turn.id }], attachments: requestAssets([...contextTurns, turn]), memory: current?.memory || '' }), signal: abort.signal });
       await readCompletion(response, chunk => {
         if (chunk.type === 'tool') { updateTool(chunk); return; }
@@ -219,9 +328,15 @@ export default function Chat({ session }) {
     }
   }
   async function copyAnswer(answer) {
-    try { await navigator.clipboard.writeText(answer); setCopyNotice('Reply copied.'); }
-    catch { setCopyNotice('Could not copy. Select the reply and copy it manually.'); }
+    try { await navigator.clipboard.writeText(answer); setCopyNotice('Reply copied.'); showNotice('Reply copied.'); }
+    catch { setCopyNotice('Could not copy. Select the reply and copy it manually.'); showNotice('Could not copy. Select the reply and copy it manually.'); }
   }
+  const visibleChats = chats.filter(chat => chat.title?.toLowerCase().includes(historyQuery.trim().toLowerCase()));
+  const chatGroups = visibleChats.reduce((groups, chat) => {
+    const label = groupLabel(chat.updatedAt || chat.createdAt);
+    (groups[label] ||= []).push(chat);
+    return groups;
+  }, {});
   const composer = <div className="c-composer-wrap">
     <form className={`c-composer ${dragging ? 'c-dragging' : ''}`} onSubmit={send} onDragEnter={e => { e.preventDefault(); setDragging(true); }} onDragOver={e => e.preventDefault()} onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDragging(false); }} onDrop={e => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files); }}>
       <input ref={fileInput} hidden type="file" multiple accept={ACCEPTED_ATTACHMENTS} onChange={e => addFiles(e.target.files)}/>
@@ -245,12 +360,13 @@ export default function Chat({ session }) {
       <div className="c-sidebar-top"><a href="/" className="c-brand" aria-label="Brittain home"><BrandLogo/>BRITTAIN</a><button className="c-icon c-desktop" aria-label="Collapse sidebar" onClick={() => setCollapsed(true)}><Icon name="panel"/></button><button className="c-icon c-mobile" aria-label="Close sidebar" onClick={() => setSidebar(false)}><Icon name="panel"/></button></div>
       <button className="c-nav-item" disabled={busy} onClick={newChat}><Icon name="edit"/>New chat</button>
       <a href="/models" className="c-nav-item"><Icon name="model"/>Models</a>
-      <div className="c-history"><h2>Conversations</h2>{historyStatus === 'loading' ? <p>Loading chats…</p> : chats.length ? chats.map(chat => <div key={chat.id} className={`c-history-row ${active === chat.id ? 'c-active' : ''}`}><button className="c-history-item" disabled={busy} aria-current={active === chat.id ? 'page' : undefined} onClick={() => { setActive(chat.id); setSidebar(false); setDraft(''); clearImports(); }}>{chat.title}</button><button className="c-history-delete" disabled={busy} onClick={() => deleteChat(chat.id)} aria-label={`Delete conversation: ${chat.title}`} title="Delete conversation"><Icon name="delete"/></button></div>) : <p>Your chats will appear here.</p>}</div>
+      <div className="c-history"><h2>Conversations</h2><label className="sr-only" htmlFor="chat-search">Search conversations</label><input id="chat-search" className="c-history-search" type="search" placeholder="Search conversations" value={historyQuery} onChange={event => setHistoryQuery(event.target.value)}/>{historyStatus === 'loading' ? <p>Loading chats…</p> : visibleChats.length ? ['Today', 'Previous 7 days', 'Older'].map(label => chatGroups[label]?.length ? <section className="c-history-group" key={label}><h3>{label}</h3>{chatGroups[label].map(chat => <div key={chat.id} className={`c-history-row ${active === chat.id ? 'c-active' : ''}`}>{renaming?.id === chat.id ? <form className="c-rename-form" onSubmit={renameChat}><label className="sr-only" htmlFor={`rename-${chat.id}`}>Conversation name</label><input id={`rename-${chat.id}`} autoFocus maxLength={80} value={renaming.title} onChange={event => setRenaming({ ...renaming, title: event.target.value })} onKeyDown={event => { if (event.key === 'Escape') setRenaming(null); }}/><button type="submit" aria-label="Save name"><Icon name="check"/></button><button type="button" onClick={() => setRenaming(null)} aria-label="Cancel rename"><Icon name="close"/></button></form> : <><button className="c-history-item" disabled={busy || loadingChat === chat.id} aria-current={active === chat.id ? 'page' : undefined} onClick={() => loadChat(chat.id)}>{loadingChat === chat.id ? 'Loading…' : chat.title}</button><button className="c-history-action" disabled={busy} onClick={() => setRenaming({ id: chat.id, title: chat.title })} aria-label={`Rename conversation: ${chat.title}`} title="Rename conversation"><Icon name="rename"/></button><button className="c-history-action c-history-delete" disabled={busy} onClick={() => deleteChat(chat.id)} aria-label={`Delete conversation: ${chat.title}`} title="Delete conversation"><Icon name="delete"/></button></>}</div>)}</section> : null) : <p>{historyQuery ? 'No matching conversations.' : 'Your chats will appear here.'}</p>}</div>
       <div className="c-sidebar-bottom"><a href="/account" className="c-account"><span className="c-avatar">{session.user.name?.slice(0, 1).toUpperCase() || 'B'}</span><div>{session.user.name}<small>{session.user.email}</small></div></a><a href="/" className="c-home-link">← Back to Brittain</a></div>
     </aside>
     <section className="c-main">
-      <header className="c-header"><div className="c-header-left"><button className={`c-icon c-open ${collapsed ? 'c-is-collapsed' : ''}`} aria-label="Open sidebar" aria-expanded={sidebar || !collapsed} onClick={() => { setCollapsed(false); setSidebar(true); }}><Icon name="panel"/></button><div className="c-model-wrap"><button className="c-model-button" onClick={() => setInfo(!info)} aria-expanded={info}>Brittain 4<Icon name="down"/></button>{info && <div className="c-model-info"><strong>Brittain 4</strong><p>9B dense model</p><dl><div><dt>Web chat</dt><dd>{contextLimit.toLocaleString()} tokens</dd></div><div><dt>Model maximum</dt><dd>262k</dd></div></dl><a href="/models/brittain-4">View model details ↗</a></div>}</div></div><div className="c-header-right"><span className="c-preview">{busy ? 'Responding…' : preview ? 'Connected' : 'Not connected'}</span></div></header>
+      <header className="c-header"><div className="c-header-left"><button className={`c-icon c-open ${collapsed ? 'c-is-collapsed' : ''}`} aria-label="Open sidebar" aria-expanded={sidebar || !collapsed} onClick={() => { setCollapsed(false); setSidebar(true); }}><Icon name="panel"/></button><div className="c-model-wrap" ref={modelWrap}><button className="c-model-button" onClick={() => setInfo(!info)} aria-expanded={info} aria-haspopup="dialog" aria-controls="model-information">Brittain 4<Icon name="down"/></button>{info && <div id="model-information" className="c-model-info" role="dialog" aria-label="Brittain 4 information"><strong>Brittain 4</strong><p>9B dense model</p><dl><div><dt>Web chat</dt><dd>{contextLimit.toLocaleString()} tokens</dd></div><div><dt>Model maximum</dt><dd>262k</dd></div></dl><a href="/models/brittain-4">View model details ↗</a></div>}</div></div><div className="c-header-right"><span className="c-preview">{busy ? 'Responding…' : preview ? 'Connected' : 'Not connected'}</span></div></header>
       {messages.length === 0 ? <div className="c-start"><div className="c-start-inner"><h1>What can I help with?</h1>{composer}<div className="c-suggestions">{suggestions.map(([icon,label,prompt]) => <button key={icon} onClick={() => { setDraft(prompt); input.current?.focus(); }}><Icon name={icon}/>{label}</button>)}</div></div></div> : <><div className="c-conversation" role="log" aria-label="Conversation"><div className="c-message-column">{messages.map((message, index) => <div className="c-turn" key={message.id}><div className="c-user-message"><AttachmentCards attachments={message.attachments}/><span>{message.prompt}</span></div><div className="c-reply"><BrandLogo/><div className="c-response"><ToolActivity tools={message.tools}/><DownloadCards artifacts={message.artifacts}/>{message.answer ? <MarkdownReply text={message.answer}/> : message.status === 'streaming' ? <p role="status">{message.tools?.some(tool => tool.status === 'running') ? 'Using tools…' : 'Waiting for Brittain 4…'}</p> : null}{message.error && <p className="c-error" role="alert">{message.error}</p>}{message.status === 'stopped' && <p>Reply stopped.</p>}{message.note && <p>{message.note}</p>}<div className="c-reply-actions">{message.answer && <button onClick={() => copyAnswer(message.answer)}>Copy</button>}{!busy && index === messages.length - 1 && <button onClick={e => send(e, true)}>Retry</button>}</div></div></div></div>)}<span className="sr-only" role="status">{copyNotice}</span><div ref={end}/></div></div><div className="c-bottom-composer">{composer}</div></>}
     </section>
+    {(notice || pendingDelete) && <div className="c-toast" role="status"><span>{pendingDelete ? `“${pendingDelete.chat.title}” removed.` : notice}</span>{pendingDelete && <button type="button" onClick={undoDelete}>Undo</button>}</div>}
   </main>;
 }

@@ -49,9 +49,9 @@ function Turnstile({ siteKey, onToken }) {
   return siteKey ? <div className="account-turnstile" ref={host}/> : null;
 }
 
-function AccountForm({ mode, onSession }) {
+function AccountForm({ mode, onSession, nextPath }) {
   const params = new URLSearchParams(window.location.search);
-  const next = safeNext(params.get('next'));
+  const next = safeNext(nextPath || params.get('next'));
   const token = params.get('token') || '';
   const [config, setConfig] = useState({ emailVerification: false, turnstileSiteKey: '' });
   const [captchaToken, setCaptchaToken] = useState('');
@@ -113,8 +113,8 @@ function AccountForm({ mode, onSession }) {
   </section>;
 }
 
-export function AuthPage({ mode, onSession }) {
-  return <main className="signup-layout"><section><p className="eyebrow">BRITTAIN ACCOUNT</p><h1>Your Brittain account.</h1><p className="lead">Free web chat with Brittain 4.</p><div className="signup-benefits"><p><span>01</span> Use the hosted model without local setup.</p><p><span>02</span> Save conversations across visits.</p><p><span>03</span> Share server capacity through account limits.</p></div><a href="/models" className="text-link">Prefer local use? Explore models <span aria-hidden="true">↗</span></a></section><AccountForm mode={mode} onSession={onSession}/></main>;
+export function AuthPage({ mode, onSession, nextPath }) {
+  return <main className="signup-layout"><section><p className="eyebrow">BRITTAIN ACCOUNT</p><h1>Your Brittain account.</h1><p className="lead">Free web chat with Brittain 4.</p><div className="signup-benefits"><p><span>01</span> Use the hosted model without local setup.</p><p><span>02</span> Save conversations across visits.</p><p><span>03</span> Share server capacity through account limits.</p></div><a href="/models" className="text-link">Prefer local use? Explore models <span aria-hidden="true">↗</span></a></section><AccountForm mode={mode} onSession={onSession} nextPath={nextPath}/></main>;
 }
 
 export function AccountSettings({ session, onSession }) {

@@ -27,6 +27,7 @@ test('web search returns capped public results and blocks secrets', async () => 
   assert.match(result.content, /untrusted/i);
   assert.match(result.content, /https:\/\/example.com\/a/);
   assert.equal(result.display.result, '1 result');
+  assert.deepEqual(result.display.sources, [{ title: 'Example result', url: 'https://example.com/a' }]);
   assert.equal((await executeTool('web_search', { query: 'Bearer abcdefghijklmnopqrstuvwxyz' })).error, true);
 });
 

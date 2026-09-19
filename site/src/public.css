@@ -374,7 +374,7 @@
   font-size:var(--t1);
   background:transparent
 }
-.segmented button[aria-pressed=true],.prompt-tabs button[aria-pressed=true] {
+.segmented button[aria-selected=true],.prompt-tabs button[aria-pressed=true] {
   background:var(--blue-soft);
   color:var(--blue);
   border-color:var(--blue-line)
@@ -907,6 +907,9 @@
 }
 .signup-layout {
   padding:var(--s7) var(--s5)
+}
+.signup-layout>.account-panel {
+  order:-1
 }
 .draft-chat {
   display:block;
