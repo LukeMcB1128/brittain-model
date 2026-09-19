@@ -134,6 +134,26 @@ function resultUrl(href) {
   } catch { return '' ; }
 }
 
+// DuckDuckGo answers a search it thinks came from a bot with HTTP 202 and a
+// CAPTCHA page -- "Select all squares containing a duck" -- rather than an
+// error. 202 satisfies Response.ok, so the challenge page used to go straight
+// to the result parser, which found no results and reported "no search results
+// were returned". The model was then told its search had run and found nothing,
+// so it reworded and tried again, which looks more like a bot, which draws more
+// challenges. Whole conversations were spent that way: ten progressively
+// narrowed queries for one high school, every one of them answered with a duck
+// puzzle the model never saw.
+//
+// Detecting it is what stops the loop: "unavailable" tells the model to answer
+// from what it knows, where "no results" tells it to search differently. The
+// challenge is reported, never worked around.
+const SEARCH_UNAVAILABLE = 'the search provider is temporarily unavailable and this query was not run; answer from your own knowledge instead of searching again';
+
+function isBotChallenge(status, html) {
+  if (status === 202) return true;
+  return /Please complete the following challenge|containing a duck|anomaly-modal/i.test(html);
+}
+
 function parseSearchResults(html, domains, maximum) {
   const results = [];
   const anchors = /<a\b([^>]*\bclass=["'][^"']*\bresult__a\b[^"']*["'][^>]*)>([\s\S]*?)<\/a>/gi;
@@ -183,8 +203,11 @@ async function searchWeb(args, fetchFn) {
     }
     if (!response.ok) throw new Error(`search provider returned HTTP ${response.status}`);
     const downloaded = await responseTextLimited(response);
+    if (isBotChallenge(response.status, downloaded.text)) throw new Error(SEARCH_UNAVAILABLE);
     const results = parseSearchResults(downloaded.text, domains, maximum);
-    if (!results.length) throw new Error('no search results were returned');
+    // A genuinely empty result set is a fact about the query. Keep it worded so
+    // the model can tell it apart from the provider being unavailable above.
+    if (!results.length) throw new Error(`no results were found for this query: ${query}`);
     return {
       content: `${WEB_WARNING}\n\n${JSON.stringify({ provider: 'DuckDuckGo HTML', query, retrieved_at: new Date().toISOString(), results }, null, 2)}`,
       display: { label: 'Web search', detail: query, result: `${results.length} result${results.length === 1 ? '' : 's'}`, sources: results.map(({ title, url }) => ({ title, url })) },

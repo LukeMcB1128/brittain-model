@@ -21,6 +21,10 @@ function modelName(env) {
 // What the browser calls it. Deliberately not the checkpoint id: the client
 // renders this as the assistant's name beside every reply.
 const DISPLAY_MODEL = 'brittain4';
+// A tool saying it is unavailable, as opposed to failing on this input. Matches
+// the wording tools.js uses when a provider turns a request away rather than
+// answering it, so the tool can be withdrawn for the rest of the reply.
+const TOOL_UNAVAILABLE = /temporarily unavailable/i;
 const MAX_BYTES = 30_000_000;
 const MAX_TEXT_CHARS = 500_000;
 const MAX_MESSAGE_TEXT_CHARS = 60_000;
@@ -286,32 +290,52 @@ function streamChat(systemMessage, conversation, request, env, fetchUpstream, at
             emit({ type: 'compaction', status: 'error' });
           }
         }
+        // A tool that has reported itself unavailable is withdrawn for the rest
+        // of the reply. Offering it again invites the model to keep trying
+        // something that cannot work: search was answered with a bot challenge
+        // ten times in a row in one real conversation, and the user got an
+        // error instead of an answer.
+        const unavailableTools = new Set();
+        let toolBudgetSpent = false;
         messages = modelMessages(systemMessage, conversation, memory);
         if (firstTool && firstArguments) {
           const id = `tool-routed-${crypto.randomUUID()}`;
           emit({ type: 'tool', id, name: firstTool, status: 'running', detail: firstTool === 'web_search' ? firstArguments.query : firstTool === 'web_fetch' ? firstArguments.url : firstArguments.expression });
           const output = await executeTool(firstTool, firstArguments, fetchUpstream, context);
           recorded.toolCalls.push({ name: firstTool, arguments: firstArguments, ok: !output.error, result: output.content });
+          if (output.error && TOOL_UNAVAILABLE.test(output.content || '')) unavailableTools.add(firstTool);
           emit({ type: 'tool', id, name: firstTool, status: output.error ? 'error' : 'done', ...output.display });
           messages.push({ role: 'assistant', content: null, tool_calls: [{ id, type: 'function', function: { name: firstTool, arguments: JSON.stringify(firstArguments) } }] });
           messages.push({ role: 'tool', tool_call_id: id, content: output.content });
           toolCount = 1;
         }
         for (let round = 0; round <= MAX_TOOL_ROUNDS; round += 1) {
+          // The last round is answered with no tools at all, so the model has
+          // to reply with what it has. Running out of rounds used to throw away
+          // everything gathered so far -- in one session, five successful page
+          // reads -- and show the user a failure instead.
+          const offered = allTools.filter(tool => !unavailableTools.has(tool.function.name));
+          const finalRound = round === MAX_TOOL_ROUNDS || toolBudgetSpent || !offered.length;
+          const forcing = round === 0 && firstTool && !firstArguments && !finalRound;
+          const body = {
+            model: modelName(env), messages,
+            max_tokens: 2048, temperature: 0.7, stream: true,
+            stream_options: { include_usage: true }, chat_template_kwargs: { enable_thinking: false },
+          };
+          if (!finalRound) {
+            body.tools = forcing ? offered.filter(tool => tool.function.name === firstTool) : offered;
+            body.tool_choice = forcing ? 'required' : 'auto';
+          }
           const response = await fetchUpstream(upstreamUrl, {
             method: 'POST',
             headers: { Authorization: `Bearer ${env.BRITTAIN4_API_KEY}`, 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' },
-            body: JSON.stringify({
-              model: modelName(env), messages,
-              tools: round === 0 && firstTool && !firstArguments ? allTools.filter(tool => tool.function.name === firstTool) : allTools,
-              tool_choice: round === 0 && firstTool && !firstArguments ? 'required' : 'auto',
-              max_tokens: 2048, temperature: 0.7, stream: true,
-              stream_options: { include_usage: true }, chat_template_kwargs: { enable_thinking: false },
-            }),
+            body: JSON.stringify(body),
             signal: AbortSignal.any([requestSignal, AbortSignal.timeout(180000)]),
           });
           const result = await readModelStream(response, emit);
-          if (!result.toolCalls.length) {
+          // finalRound also ends the loop when the model still asks for a tool,
+          // which guarantees the reply terminates rather than erroring out.
+          if (!result.toolCalls.length || finalRound) {
             if (result.usage) emit({ type: 'usage', usage: result.usage });
             emit({ type: 'done', finishReason: result.finishReason });
             // After the client has the whole reply: a slow or failing store
@@ -324,9 +348,10 @@ function streamChat(systemMessage, conversation, request, env, fetchUpstream, at
             controller.close();
             return;
           }
-          if (round === MAX_TOOL_ROUNDS) throw new Error('The tool limit was reached before the model produced an answer. Please refine the request.');
           toolCount += result.toolCalls.length;
-          if (toolCount > MAX_TOOL_CALLS) throw new Error('The tool call limit was reached. Please refine the request.');
+          // Spending the call budget ends tool use, but not the reply: the next
+          // round runs without tools and the model answers from what it has.
+          if (toolCount > MAX_TOOL_CALLS) toolBudgetSpent = true;
           const toolCalls = result.toolCalls.map((call, index) => ({ ...call, id: call.id || `tool-${round}-${toolCount}-${index}` }));
           messages.push({ role: 'assistant', content: result.content || null, tool_calls: toolCalls });
           const renderedImages = [];
@@ -339,6 +364,7 @@ function streamChat(systemMessage, conversation, request, env, fetchUpstream, at
             emit({ type: 'tool', id, name, status: 'running', detail: name === 'web_search' ? args?.query : name === 'web_fetch' ? args?.url : name === 'calculate' ? args?.expression : '' });
             const output = args ? await executeTool(name, args, fetchUpstream, context) : { content: 'Error: tool arguments were not valid JSON', error: true, display: { label: 'Tool', detail: '', result: 'Invalid arguments' } };
             recorded.toolCalls.push({ name, arguments: call.function?.arguments || '{}', ok: !output.error, result: output.content });
+            if (output.error && TOOL_UNAVAILABLE.test(output.content || '')) unavailableTools.add(name);
             emit({ type: 'tool', id, name, status: output.error ? 'error' : 'done', ...output.display });
             messages.push({ role: 'tool', tool_call_id: id, content: output.content });
             if (output.artifact) {

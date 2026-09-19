@@ -209,6 +209,68 @@ function sse(events) {
   return new Response(events.map(event => event === '[DONE]' ? 'data: [DONE]\n\n' : `data: ${JSON.stringify(event)}\n\n`).join(''), { headers: { 'Content-Type': 'text/event-stream' } });
 }
 
+test('a tool reporting itself unavailable is withdrawn for the rest of the reply', async () => {
+  // Real transcript: ten progressively reworded searches for one high school,
+  // every one answered with a bot challenge, and the user got an error rather
+  // than an answer. Withdrawing the tool is what makes the model stop.
+  const challenge = '<html><body>Please complete the following challenge to confirm this search was made by a human. Select all squares containing a duck</body></html>';
+  let searches = 0;
+  let modelRounds = 0;
+  const offeredPerRound = [];
+  const response = await handleApi(req(), env, async (url, options) => {
+    if (String(url).includes('duckduckgo')) {
+      searches += 1;
+      return new Response(challenge, { status: 202, headers: { 'Content-Type': 'text/html' } });
+    }
+    modelRounds += 1;
+    offeredPerRound.push((JSON.parse(options.body).tools || []).map(tool => tool.function.name));
+    if (modelRounds === 1) {
+      return sse([
+        { choices: [{ index: 0, delta: { tool_calls: [{ index: 0, id: 's1', type: 'function', function: { name: 'web_search', arguments: '{"query":"Austin High School Texas football"}' } }] }, finish_reason: 'tool_calls' }] },
+        '[DONE]',
+      ]);
+    }
+    return sse([
+      { choices: [{ index: 0, delta: { content: 'Austin High School is in Austin, Texas.' } }] },
+      { choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] },
+      '[DONE]',
+    ]);
+  });
+  const body = await response.text();
+  assert.equal(searches, 1, 'a challenge must not be retried within one reply');
+  assert.equal(offeredPerRound[0].includes('web_search'), true);
+  assert.equal(offeredPerRound[1].includes('web_search'), false, 'web_search must be withdrawn after it reports unavailability');
+  assert.equal(offeredPerRound[1].includes('calculate'), true, 'other tools stay available');
+  assert.match(body, /Austin High School is in Austin/);
+});
+
+test('running out of tool rounds ends with an answer instead of an error', async () => {
+  // The cap used to throw, discarding everything gathered. One real session
+  // lost five successful page reads that way.
+  let sawToollessRound = false;
+  let rounds = 0;
+  const response = await handleApi(req(), env, async (url, options) => {
+    const payload = JSON.parse(options.body);
+    rounds += 1;
+    if (payload.tools === undefined) {
+      sawToollessRound = true;
+      return sse([
+        { choices: [{ index: 0, delta: { content: 'Here is what I found before running out of steps.' } }] },
+        { choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] },
+        '[DONE]',
+      ]);
+    }
+    return sse([
+      { choices: [{ index: 0, delta: { tool_calls: [{ index: 0, id: `c${rounds}`, type: 'function', function: { name: 'calculate', arguments: '{"expression":"1+1"}' } }] }, finish_reason: 'tool_calls' }] },
+      '[DONE]',
+    ]);
+  });
+  const body = await response.text();
+  assert.equal(sawToollessRound, true, 'the final round must be sent with no tools');
+  assert.match(body, /Here is what I found before running out of steps/);
+  assert.doesNotMatch(body, /tool limit was reached/i);
+});
+
 test('executes only declared tools and returns the final streamed reply', async () => {
   let round = 0;
   const response = await handleApi(req(), env, async (url, options) => {

@@ -20,6 +20,31 @@ test('web URLs reject local, private, credential-bearing, and non-HTTPS targets'
   assert.equal(validatePublicUrl('https://example.com/page').hostname, 'example.com');
 });
 
+test('a search answered with a bot challenge reports unavailability, not emptiness', async () => {
+  // DuckDuckGo returns 202 and a CAPTCHA page when it decides a request came
+  // from a bot. 202 passes Response.ok, so the challenge used to reach the
+  // result parser and come back as "no search results were returned" -- which
+  // told the model its search had run and found nothing, so it reworded and
+  // tried again, drawing more challenges. The distinction is what stops that.
+  const challenge = '<html><body>Please complete the following challenge to confirm this search was made by a human. Select all squares containing a duck</body></html>';
+
+  const byStatus = await executeTool('web_search', { query: 'Austin High School Texas football' }, async () => new Response(challenge, { status: 202, headers: { 'Content-Type': 'text/html' } }));
+  assert.equal(byStatus.error, true);
+  assert.match(byStatus.content, /temporarily unavailable/i);
+
+  // Also caught when the challenge arrives with a 200.
+  const byBody = await executeTool('web_search', { query: 'Austin High School Texas football' }, async () => new Response(challenge, { headers: { 'Content-Type': 'text/html' } }));
+  assert.equal(byBody.error, true);
+  assert.match(byBody.content, /temporarily unavailable/i);
+
+  // A real empty result set is a fact about the query and must stay distinct,
+  // or withdrawing the tool would punish an honest "nothing found".
+  const empty = await executeTool('web_search', { query: 'zzzz no such thing' }, async () => new Response('<html><body>no matches</body></html>', { headers: { 'Content-Type': 'text/html' } }));
+  assert.equal(empty.error, true);
+  assert.match(empty.content, /no results were found/i);
+  assert.doesNotMatch(empty.content, /temporarily unavailable/i);
+});
+
 test('web search returns capped public results and blocks secrets', async () => {
   const html = '<a class="result__a" href="https://example.com/a">Example result</a><a class="result__snippet">Useful extract</a>';
   const result = await executeTool('web_search', { query: 'test query', max_results: 1 }, async () => new Response(html, { headers: { 'Content-Type': 'text/html' } }));
