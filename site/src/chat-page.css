@@ -184,5 +184,5 @@
 .c-context progress::-webkit-progress-value { background: var(--blue); }
 .c-context progress::-moz-progress-bar { background: var(--blue); }
 .c-context p { font-size: var(--t0); margin-top: var(--s1); }
-.c-toast { position: fixed; z-index: 8; left: 50%; bottom: var(--s5); transform: translateX(-50%); display: flex; align-items: center; gap: var(--s5); max-width: calc(100vw - var(--s6)); padding: var(--s3) var(--s4); border: 1px solid var(--line); border-radius: var(--r2); background: var(--ink); color: var(--page); box-shadow: 0 8px 24px #0003; font-size: var(--t1); }
-.c-toast button { border: 0; background: transparent; color: var(--blue-soft); font: inherit; font-weight: var(--bold); }
+.c-toast { position: fixed; z-index: 8; left: 50%; bottom: var(--s5); transform: translateX(-50%); display: flex; align-items: center; gap: var(--s5); max-width: calc(100vw - var(--s6)); padding: var(--s3) var(--s4); border: 1px solid var(--line); border-radius: var(--r2); background: var(--input); color: var(--ink); box-shadow: 0 8px 24px #0008; font-size: var(--t1); }
+.c-toast button { border: 0; background: transparent; color: var(--blue); font: inherit; font-weight: var(--bold); }
