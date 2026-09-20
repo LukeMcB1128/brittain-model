@@ -43,8 +43,8 @@ The user approved the production export on 2026-09-20. The backup was saved unde
 
 ## Verified deployment
 
-- Active Worker version: `89994f30-9ea3-412b-8af5-2a9ea695abac`. It includes the Brave runtime fix, the bounded web-evidence final-answer flow, safe currency rendering, and keyboard navigation fixes.
-- Previous known-good Worker version: `2d761c54-7b9c-4041-8389-51e75f9ba0ed`. It includes the search and currency fixes but not the latest keyboard changes.
+- Active Worker version: `af9fd012-ebdd-41da-9d6d-2a191940f7db`. It includes the Brave runtime fix, the bounded web-evidence final-answer flow, safe currency rendering, and keyboard navigation fixes.
+- Previous known-good Worker version: `89994f30-9ea3-412b-8af5-2a9ea695abac`. It includes the same chat and tool fixes but not the public-page skip link.
 - Previous release before this update: `63e9c12b-8b54-4b17-8dfe-950233a73e02`. Rolling back to it also reverts the new account protection; assess that tradeoff before rollback.
 - Tests: 114 passing. Lint and the production build pass. The build warns that production secrets are absent locally; live health checks confirm the deployed configuration is present.
 - Live release check: 19 of 20 checks pass on the Workers address. Email verification/password recovery is the remaining failed check.
@@ -53,6 +53,7 @@ The user approved the production export on 2026-09-20. The backup was saved unde
 - Static pages return the security headers. Chat URLs return `noindex`, including direct conversation links.
 - Responsive checks at 320 px and 390 px cover the home, account, and model pages. No horizontal overflow was found.
 - The Models tabs support Left Arrow, Right Arrow, Home, and End. A live browser check confirmed that Right Arrow selects and focuses Experimental models. The production page reported no browser warnings or errors.
+- Public pages include a keyboard skip link. A live browser check confirmed that it moves focus past the header to the start of page content.
 - The chat sidebar now reports its mobile open state correctly. Escape, the close button, and the scrim return focus to the open-sidebar button.
 - Currency amounts no longer become accidental LaTeX spans. Inline and display equations continue to use KaTeX.
 
