@@ -29,6 +29,14 @@ test('inline and display LaTeX render as formatted math', () => {
   assert.match(sameLine, /<mfrac>/);
   assert.doesNotMatch(sameLine, /\$\$/);
 });
+test('currency prices do not become one long math expression', () => {
+  const html = render("Texas regular is $3.9480, California regular is $6.1533. So an average of $5.05065 for the whole trip. That's 225 * $5.05065 = $1136.39 dollars, so about $1,136.");
+  assert.doesNotMatch(html, /class="katex"/);
+  assert.match(html, /Texas regular is \$3\.9480, California regular is \$6\.1533/);
+  assert.match(html, /225 \* \$5\.05065 = \$1136\.39 dollars/);
+  assert.doesNotMatch(render('Prices range from $5 to $6 today.'), /class="katex"/);
+  assert.match(render('The result is $2 + 2 = 4$.'), /class="katex"/);
+});
 test('context uses latest server total without double-counting history', () => {
   assert.equal(contextUsage([{usage:{total_tokens:100}}, {usage:{total_tokens:250}}]).tokens,250);
   assert.equal(contextUsage([]).tokens,0);
