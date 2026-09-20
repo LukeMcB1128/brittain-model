@@ -54,5 +54,34 @@
   "secrets": {
     "required": ["BETTER_AUTH_SECRET", "BRITTAIN4_API_KEY"]
   },
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  "env": {
+    "staging": {
+      "name": "brittain-app-staging",
+      "d1_databases": [{
+        "binding": "DB",
+        "database_name": "brittain-app-staging",
+        "database_id": "f0376451-2abf-47e9-b938-dfb007402221",
+        "migrations_dir": "drizzle"
+      }],
+      "durable_objects": {
+        "bindings": [{ "name": "CHAT_CAPACITY", "class_name": "ChatCapacity" }]
+      },
+      "ratelimits": [
+        { "name": "AUTH_RATE_LIMITER", "namespace_id": "4007", "simple": { "limit": 20, "period": 60 } },
+        { "name": "AUTH_EMAIL_RATE_LIMITER", "namespace_id": "4008", "simple": { "limit": 3, "period": 60 } },
+        { "name": "CHAT_RATE_LIMITER", "namespace_id": "4009", "simple": { "limit": 5, "period": 60 } }
+      ],
+      "vars": {
+        "BETTER_AUTH_URL": "https://brittain-app-staging.luke-brittain.workers.dev",
+        "AUTH_EMAIL_FROM": "",
+        "MODEL_API_ORIGIN": "https://model-not-configured.invalid",
+        "CHAT_ENABLED": "false",
+        "CHAT_MAX_CONCURRENT": "1",
+        "CHAT_MAX_PER_HOUR": "20",
+        "CHAT_LOCK_TIMEOUT_SECONDS": "210"
+      },
+      "secrets": { "required": ["BETTER_AUTH_SECRET", "TURNSTILE_SITE_KEY", "TURNSTILE_SECRET_KEY"] }
+    }
+  }
 }

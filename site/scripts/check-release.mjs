@@ -1,5 +1,6 @@
 // Read-only: no login attempts, email, chat generation, or database changes.
 const origin = new URL(process.argv[2] || 'https://brittain.app').origin;
+const staging = process.argv.includes('--staging');
 let failures = 0;
 function check(ok, message) { console.log(`${ok ? 'PASS' : 'FAIL'} ${message}`); if (!ok) failures++; }
 async function get(path) {
@@ -11,16 +12,17 @@ try {
     const html = await response.text();
     check(response.status === 200 && html.includes('id="root"') && !html.includes('signin-with-chatgpt'), `${path} serves the standalone application`);
     check(Boolean(response.headers.get('Content-Security-Policy')) && Boolean(response.headers.get('Strict-Transport-Security')), `${path} includes security headers`);
-    if (path.startsWith('/chat')) check(response.headers.get('X-Robots-Tag')?.includes('noindex'), `${path} is excluded from indexing`);
+    if (staging || path.startsWith('/chat')) check(response.headers.get('X-Robots-Tag')?.includes('noindex'), `${path} is excluded from indexing`);
   }
   const health = await get('/api/health');
   const status = await health.json();
   check(health.ok && status.status === 'ok', 'Worker configuration and database are available (does not test model inference)');
-  check(status.chatPaused === false, 'Chat maintenance mode is off');
+  check(status.chatPaused === staging, staging ? 'Staging chat generation is paused' : 'Chat maintenance mode is off');
   const response = await get('/api/account/config');
   const config = await response.json();
   check(response.ok && Boolean(config.turnstileSiteKey), 'Turnstile is configured');
-  check(response.ok && config.emailVerification === true, 'Email verification and password recovery are configured');
+  if (staging) console.log('SKIP email delivery is not configured on staging; required for production release.');
+  else check(response.ok && config.emailVerification === true, 'Email verification and password recovery are configured');
   check((await get('/api/chats')).status === 401, 'Anonymous users cannot read chat history');
   for (const path of ['/robots.txt', '/sitemap.xml', '/brittain-favicon.svg']) {
     const response = await get(path);

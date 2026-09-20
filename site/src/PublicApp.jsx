@@ -13,7 +13,7 @@ if (window.location.hash.startsWith('#/')) {
 const path = () => `${window.location.pathname}${window.location.search}`;
 const Arrow = () => <span aria-hidden="true">↗</span>;
 function Link({ to, children, className = '', ...props }) { return <a href={to} className={className} {...props}>{children}</a>; }
-function Brand() { return <Link to="/" className="brand-link" aria-label="Brittain home"><BrandLogo/><span>BRITTAIN</span></Link>; }
+function Brand() { return <Link to="/" className="brand-link" aria-label="Brittain home"><BrandLogo/><span>{import.meta.env.MODE === 'staging' ? 'BRITTAIN / TEST SITE' : 'BRITTAIN'}</span></Link>; }
 function Header({ route, session, sessionLoading }) {
   return <header className="site-header"><Brand/><nav aria-label="Main navigation">{[['/', 'Home'], ['/chat', 'Chat'], ['/models', 'Models']].map(([to, label]) => <Link key={to} to={to} aria-current={(route === to || (to === '/chat' && route.startsWith('/chat/')) || (to === '/models' && route.startsWith('/models/'))) ? 'page' : undefined}>{label}</Link>)}</nav>{session ? <Link to="/account" className="button compact">{session.user.name}</Link> : sessionLoading ? <span className="header-account-loading">Checking account…</span> : route === '/signup' ? <Link to="/login" className="button compact">Sign in <Arrow/></Link> : <Link to="/signup" className="button compact">Sign up free <Arrow/></Link>}</header>;
 }
@@ -41,7 +41,7 @@ export default function PublicApp() {
   const current = route.split('?')[0];
   useEffect(() => {
     const title = current === '/' ? 'Brittain 4' : current.startsWith('/chat') ? 'Chat' : current === '/models' ? 'Models' : current === '/models/brittain-4' ? 'Brittain 4 model' : current === '/privacy' ? 'Privacy' : ['/signup', '/login', '/forgot-password', '/reset-password'].includes(current) ? 'Account' : current === '/account' ? 'Settings' : 'Page not found';
-    document.title = `${title} | BRITTAIN`;
+    document.title = `${import.meta.env.MODE === 'staging' ? '[Test site] ' : ''}${title} | BRITTAIN`;
   }, [current]);
   if (current === '/experimental-chat') return <Suspense fallback={<main className="chat-loading">Loading experimental chat…</main>}><ExperimentalChat/></Suspense>;
   const authMode = current === '/signup' ? 'signup' : current === '/login' ? 'login' : current === '/forgot-password' ? 'forgot' : current === '/reset-password' ? 'reset' : null;

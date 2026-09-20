@@ -7,7 +7,7 @@ process.chdir(fileURLToPath(new URL('..', import.meta.url)));
 process.umask(0o077);
 mkdirSync('backups', { recursive: true, mode: 0o700 });
 const output = join('backups', `brittain-${new Date().toISOString().replace(/[:.]/g, '-')}.sql`);
-const exported = spawnSync('npx', ['--no-install', 'wrangler', 'd1', 'export', 'DB', '--remote', '--output', output], { stdio: 'inherit' });
+const exported = spawnSync('npx', ['--no-install', 'wrangler', 'd1', 'export', 'DB', '--remote', '--config', 'wrangler.jsonc', '--env', '', '--output', output], { stdio: 'inherit' });
 if (exported.status !== 0) process.exit(exported.status || 1);
 chmodSync(output, 0o600);
 if (!statSync(output).size) throw new Error('The database export is empty.');

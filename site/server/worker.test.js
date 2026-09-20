@@ -31,3 +31,13 @@ test('account throttling runs before authentication and returns browser-readable
   assert.equal(response.status, 429);
   assert.match((await response.json()).message, /one minute/);
 });
+
+test('paused staging can check its database without a model credential', async () => {
+  const env = { CHAT_ENABLED: 'false', BETTER_AUTH_SECRET: 'test', DB: { prepare: () => ({ first: async () => ({ ok: 1 }) }) } };
+  const request = new Request('https://staging.example/api/health');
+  const response = await worker.fetch(request, env);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { status: 'ok', chatPaused: true });
+  assert.equal((await worker.fetch(request, { ...env, CHAT_ENABLED: 'true' })).status, 503);
+  assert.equal((await worker.fetch(request, { ...env, DB: { prepare() { throw new Error('Database unavailable'); } } })).status, 503);
+});

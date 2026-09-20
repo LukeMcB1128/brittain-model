@@ -33,4 +33,5 @@ jobs:
       - run: npm test
       - run: npm audit --audit-level=high
       - run: npm run build
+      - run: npm run build:staging
       # Production is deployed to Cloudflare. Never publish the Worker bundle to Pages.

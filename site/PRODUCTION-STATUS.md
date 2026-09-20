@@ -1,6 +1,6 @@
 # Production preparation
 
-Updated 2026-09-19 (America/Chicago).
+Updated 2026-09-20 (America/Chicago).
 
 ## Completed in this update
 
@@ -17,6 +17,9 @@ Updated 2026-09-19 (America/Chicago).
 - Added indexing exclusions for account/chat routes, a robots file, and a sitemap.
 - Replaced obsolete GitHub Pages deployment with tests, lint, dependency audit, and a Cloudflare build. This workflow will run after the commit is pushed to GitHub.
 - Added read-only release checks and a private database backup/restore-check command.
+- Committed the deployed production preparation as `6cb3ef7`.
+- Created and deployed a separate staging Worker, empty D1 database, Turnstile widget, and account secret. No production data or credentials were copied.
+- Added separate staging build, deployment, migration, and check commands. Production database commands use an explicit target.
 
 ## External setup still needed
 
@@ -24,7 +27,7 @@ Updated 2026-09-19 (America/Chicago).
 - Model host: access to the WSL machine is needed to install and supervise Cloudflare Tunnel and the model process. Keep the existing ngrok origin until the replacement works.
 - Policies: select a support/privacy mailbox, retention periods, and final terms. No contact address or retention promise has been invented.
 - Domain: `brittain.app` still needs the planned cutover from Sites after the account and model checks pass. This update does not change its binding.
-- Staging: a separate Worker/database and independent test secrets still need setup.
+- Staging model/email tests: the separate site is live, but chat is paused and model/email credentials are absent. Add test service configuration before testing those flows.
 - Release assets: model files, license, hardware requirements, and evaluation results.
 - Monitoring: health endpoint is available, but external uptime checks and alert recipients are not configured.
 
@@ -47,6 +50,17 @@ The backup command is implemented; its full-data restore check has not been run.
 ## Dependency audit
 
 The audit found four moderate findings in the transitive `drizzle-kit` / `@esbuild-kit` / older `esbuild` chain, and no high or critical findings. These concern development-server tooling. Do not expose the database tooling server publicly. A breaking downgrade suggested by npm was not applied. CI fails on high or critical findings; the moderate tooling update remains follow-up work.
+
+## Staging verification
+
+- Site: https://brittain-app-staging.luke-brittain.workers.dev.
+- Worker version: `13300e38-78d1-4db5-842b-29701079cc29`.
+- Database: `brittain-app-staging` (`f0376451-2abf-47e9-b938-dfb007402221`). Both schema migrations applied.
+- All 103 tests pass. Lint, staging build, and production build pass. The production build was checked for the correct Worker, database, and enabled chat setting.
+- `npm run check:staging`: 22 checks pass; email readiness is explicitly skipped.
+- Live requests confirm that chat generation returns maintenance status and login without CAPTCHA is rejected.
+- Browser shows the test-site label and a successful managed CAPTCHA. No account was created or email sent.
+- The staging health check allows an absent model key only while chat is paused. This change is deployed on staging; production still uses the version listed above.
 
 ## Remaining launch checks
 

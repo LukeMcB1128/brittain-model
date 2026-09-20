@@ -32,13 +32,13 @@ Wrangler keeps the local D1 data under `site/.wrangler/`. This directory and
 10. Set `CHAT_MAX_PER_HOUR` to the measured service limit. It defaults to 621.
 11. `CHAT_LOCK_TIMEOUT_SECONDS` limits stale response locks. It defaults to 210 seconds.
 
-Use `wrangler secret put NAME` for secret values. Do not add secrets to
+Use `wrangler secret put NAME --config wrangler.jsonc --env ""` for production secret values. Do not add secrets to
 `wrangler.jsonc` or to a `VITE_` variable.
 
 ## Web search
 
 Set `BRAVE_SEARCH_API_KEY` as a Worker secret with
-`npx wrangler secret put BRAVE_SEARCH_API_KEY`. For local development, add it
+`npx wrangler secret put BRAVE_SEARCH_API_KEY --config wrangler.jsonc --env ""`. For local development, add it
 to `.dev.vars`. Get the key from <https://api-dashboard.search.brave.com/>.
 The server uses the Brave Search API when this secret is set. The key is never
 sent to the browser or model.
@@ -52,7 +52,35 @@ facts. A valid empty result set does not disable search for other queries.
 
 ## Staging and release
 
-Deploy and test a staging Worker before the domain change. Check these flows:
+The staging site is https://brittain-app-staging.luke-brittain.workers.dev.
+It has a separate D1 database, account secret, Turnstile widget, rate limits,
+and Durable Object namespace. Production accounts and chats are not copied.
+The page title and public header identify it as a test site. All staging pages
+have a `noindex` header.
+
+Run these commands from `site/`:
+
+```sh
+npm run db:migrate:staging
+npm run deploy:staging
+npm run check:staging
+```
+
+Staging starts with `CHAT_ENABLED=false`. It has no model or email credentials.
+The staging check verifies this paused state and skips email readiness. It is
+not a production release check. To test model responses later, set a test model
+origin and add its key to the staging Worker, then enable chat in `env.staging`.
+Use test data only. Complete the email service setup before testing delivery.
+
+Use `npx wrangler secret put NAME --config wrangler.jsonc --env staging` for
+staging secrets. For production, use `--env ""`. Use `npm run deploy` for
+production. Both deploy commands build the selected environment first.
+Do not run plain `wrangler deploy` after a staging build: Vite records the last
+build as the deployment target. Database commands select their environment
+explicitly so the last build does not change the database they use.
+
+Before the domain change, check these flows on staging after its model and
+email services are configured:
 
 - Create an account, verify the email, sign in, and sign out.
 - Save, reload, and delete a conversation.
@@ -93,13 +121,13 @@ The auth limits use the Cloudflare client IP header. They are per-location burst
 
 To pause new replies, set `CHAT_ENABLED` to `"false"` in `wrangler.jsonc` and deploy. Set it back to `"true"` to resume. This does not cancel active replies or prevent users from reading saved chats.
 
-`GET /api/health` returns 200 only when required Worker secrets are present and the database responds. The authenticated `/api/session` check verifies the model connection. Neither endpoint sends a model generation request.
+`GET /api/health` checks the account secret and database. When chat is enabled, it also requires the model key. A paused site can return 200 without a model key and reports `chatPaused: true`. The authenticated `/api/session` check verifies the model connection. Neither endpoint sends a model generation request.
 
 Before a release, record recovery information:
 
 ```sh
-npx wrangler deployments list
-npx wrangler d1 time-travel info DB --json
+npx wrangler deployments list --config wrangler.jsonc --env ""
+npx wrangler d1 time-travel info DB --json --config wrangler.jsonc --env ""
 ```
 
 After approval to copy account/chat data to this Mac:
@@ -110,9 +138,10 @@ npm run db:backup
 
 This exports D1 to `backups/` with private file permissions and restores the SQL into an in-memory SQLite database for integrity and foreign-key checks. Keep exports out of Git and public storage. Move retained backups to encrypted storage under the owner's control. The script requires Python 3.
 
-For an application-only rollback, use `npx wrangler rollback <known-good-version-id>` and rerun the release checks. A database restore is separate and can discard newer writes. Pause chat, preserve the current database, and obtain explicit approval before using `wrangler d1 time-travel restore` with the recorded bookmark. Check the account's available recovery window first.
+For an application-only rollback, use `npx wrangler rollback <known-good-version-id> --config wrangler.jsonc --env ""` and rerun the release checks. A database restore is separate and can discard newer writes. Pause chat, preserve the current database, and obtain explicit approval before using `wrangler d1 time-travel restore` with the recorded bookmark. Check the account's available recovery window first.
 
 References:
 - https://developers.cloudflare.com/turnstile/get-started/
 - https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/
 - https://developers.cloudflare.com/d1/reference/time-travel/
+- https://developers.cloudflare.com/workers/vite-plugin/reference/cloudflare-environments/

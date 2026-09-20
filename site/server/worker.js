@@ -36,7 +36,7 @@ export default {
       }
       if (url.pathname === '/api/health' && request.method === 'GET') {
         try {
-          if (!env.DB || !env.BETTER_AUTH_SECRET || !env.BRITTAIN4_API_KEY) throw new Error('Missing configuration');
+          if (!env.DB || !env.BETTER_AUTH_SECRET || (env.CHAT_ENABLED !== 'false' && !env.BRITTAIN4_API_KEY)) throw new Error('Missing configuration');
           await env.DB.prepare('SELECT 1 AS ok').first();
           return securityHeaders(Response.json({ status: 'ok', chatPaused: env.CHAT_ENABLED === 'false' }, { headers: { 'Cache-Control': 'no-store' } }));
         } catch {

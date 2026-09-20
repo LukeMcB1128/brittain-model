@@ -26,3 +26,6 @@
 
 https://brittain-app.luke-brittain.workers.dev/*
   X-Robots-Tag: noindex, nofollow
+
+https://brittain-app-staging.luke-brittain.workers.dev/*
+  X-Robots-Tag: noindex, nofollow
