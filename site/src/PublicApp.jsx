@@ -5,7 +5,6 @@ import { AccountSettings, AuthPage } from './AccountPage.jsx';
 import { getAccountSession } from './auth-client.js';
 
 const Chat = lazy(() => import('./ChatPage.jsx'));
-const ExperimentalChat = lazy(() => import('./App.jsx'));
 
 if (window.location.hash.startsWith('#/')) {
   window.history.replaceState(null, '', window.location.hash.slice(1));
@@ -65,7 +64,6 @@ export default function PublicApp() {
     const title = current === '/' ? 'Brittain 4' : current.startsWith('/chat') ? 'Chat' : current === '/models' ? 'Models' : current === '/models/brittain-4' ? 'Brittain 4 model' : current === '/privacy' ? 'Privacy' : ['/signup', '/login', '/forgot-password', '/reset-password'].includes(current) ? 'Account' : current === '/account' ? 'Settings' : 'Page not found';
     document.title = `${import.meta.env.MODE === 'staging' ? '[Test site] ' : ''}${title} | BRITTAIN`;
   }, [current]);
-  if (current === '/experimental-chat') return <Suspense fallback={<main className="chat-loading">Loading experimental chat…</main>}><ExperimentalChat/></Suspense>;
   const authMode = current === '/signup' ? 'signup' : current === '/login' ? 'login' : current === '/forgot-password' ? 'forgot' : current === '/reset-password' ? 'reset' : null;
   const chatMatch = current.match(/^\/chat(?:\/([^/]+))?$/);
   const chat = Boolean(chatMatch);
