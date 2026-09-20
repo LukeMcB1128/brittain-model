@@ -244,6 +244,27 @@ test('a tool reporting itself unavailable is withdrawn for the rest of the reply
   assert.match(body, /Austin High School is in Austin/);
 });
 
+test('routed web search uses the configured API and sends results, never its key, to the model', async () => {
+  let searches = 0;
+  let modelCalls = 0;
+  const response = await handleApi(req({ messages: [{ role: 'user', content: 'Search the web for current model releases.' }] }), { ...env, BRAVE_SEARCH_API_KEY: 'search-only-secret' }, async (url, options) => {
+    if (new URL(url).hostname === 'api.search.brave.com') {
+      searches++;
+      assert.equal(options.headers['X-Subscription-Token'], 'search-only-secret');
+      return Response.json({ type: 'search', web: { results: [{ title: 'Release', url: 'https://example.com/release', description: 'Release details' }] } });
+    }
+    modelCalls++;
+    assert.doesNotMatch(options.body, /search-only-secret/);
+    assert.match(JSON.parse(options.body).messages.at(-1).content, /Release details/);
+    return sse([{ choices: [{ index: 0, delta: { content: 'Here is the release.' }, finish_reason: 'stop' }] }, '[DONE]']);
+  });
+  const body = await response.text();
+  assert.equal(searches, 1);
+  assert.equal(modelCalls, 1);
+  assert.match(body, /Here is the release/);
+  assert.doesNotMatch(body, /search-only-secret/);
+});
+
 test('running out of tool rounds ends with an answer instead of an error', async () => {
   // The cap used to throw, discarding everything gathered. One real session
   // lost five successful page reads that way.

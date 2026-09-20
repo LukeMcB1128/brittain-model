@@ -1,5 +1,6 @@
 BETTER_AUTH_SECRET=replace-with-at-least-32-random-characters
 BRITTAIN4_API_KEY=replace-with-the-model-server-key
+# BRAVE_SEARCH_API_KEY=replace-to-enable-reliable-web-search
 # RESEND_API_KEY=replace-to-enable-email-verification-and-password-reset
 # TURNSTILE_SECRET_KEY=replace-to-enable-sign-up-and-sign-in-protection
 # TURNSTILE_SITE_KEY=replace-with-the-public-site-key

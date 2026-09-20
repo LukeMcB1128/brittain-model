@@ -261,7 +261,7 @@ function streamChat(systemMessage, conversation, request, env, fetchUpstream, at
   // Recorded after the reply is delivered, never before it.
   const startedAt = Date.now();
   const recorded = { toolCalls: [], reply: '' };
-  const context = { pdfs: attachments.filter(item => item.type === 'application/pdf'), images: attachments.filter(item => item.type.startsWith('image/')) };
+  const context = { pdfs: attachments.filter(item => item.type === 'application/pdf'), images: attachments.filter(item => item.type.startsWith('image/')), braveSearchApiKey: env.BRAVE_SEARCH_API_KEY, signal: requestSignal };
   const allTools = context.pdfs.length ? [...TOOL_DEFINITIONS, ...PDF_TOOL_DEFINITIONS] : TOOL_DEFINITIONS;
   const firstTool = requestedTool(conversation, context.pdfs.length > 0);
   const firstArguments = firstTool ? requestedArguments(conversation, firstTool, context) : null;

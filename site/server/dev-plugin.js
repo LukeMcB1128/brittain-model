@@ -20,7 +20,7 @@ export function brittainDevGateway(values) {
             method: req.method, headers, signal: abort.signal,
             ...(!['GET', 'HEAD'].includes(req.method) ? { body: Readable.toWeb(req), duplex: 'half' } : {}),
           });
-          const response = await handleApi(request, { BRITTAIN4_API_KEY: values.BRITTAIN4_API_KEY || values.BRITTAIN_API_KEY });
+          const response = await handleApi(request, { BRITTAIN4_API_KEY: values.BRITTAIN4_API_KEY || values.BRITTAIN_API_KEY, BRAVE_SEARCH_API_KEY: values.BRAVE_SEARCH_API_KEY });
           res.writeHead(response.status, Object.fromEntries(response.headers));
           if (response.body) await pipeline(Readable.fromWeb(response.body), res);
           else res.end();

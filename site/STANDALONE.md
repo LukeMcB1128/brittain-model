@@ -35,6 +35,21 @@ Wrangler keeps the local D1 data under `site/.wrangler/`. This directory and
 Use `wrangler secret put NAME` for secret values. Do not add secrets to
 `wrangler.jsonc` or to a `VITE_` variable.
 
+## Web search
+
+Set `BRAVE_SEARCH_API_KEY` as a Worker secret with
+`npx wrangler secret put BRAVE_SEARCH_API_KEY`. For local development, add it
+to `.dev.vars`. Get the key from <https://api-dashboard.search.brave.com/>.
+The server uses the Brave Search API when this secret is set. The key is never
+sent to the browser or model.
+
+If the API fails, the server tries DuckDuckGo HTML once. Without the secret,
+only DuckDuckGo is used. This fallback can return bot challenges, especially
+from hosted servers, so it is not a reliable production search provider.
+Each provider has an eight-second timeout. Stopping the reply cancels search.
+If search is unavailable, the model is told not to claim it verified current
+facts. A valid empty result set does not disable search for other queries.
+
 ## Staging and release
 
 Deploy and test a staging Worker before the domain change. Check these flows:

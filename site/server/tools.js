@@ -147,7 +147,7 @@ function resultUrl(href) {
 // Detecting it is what stops the loop: "unavailable" tells the model to answer
 // from what it knows, where "no results" tells it to search differently. The
 // challenge is reported, never worked around.
-const SEARCH_UNAVAILABLE = 'the search provider is temporarily unavailable and this query was not run; answer from your own knowledge instead of searching again';
+const SEARCH_UNAVAILABLE = 'web search is temporarily unavailable; do not repeat this search in this reply. Explain that current information could not be verified. Do not invent results or sources';
 
 function isBotChallenge(status, html) {
   if (status === 202) return true;
@@ -164,14 +164,50 @@ function parseSearchResults(html, domains, maximum) {
     if (!hrefValue) continue;
     const url = new URL(hrefValue);
     if (domains.length && !domains.some(domain => url.hostname === domain || url.hostname.endsWith(`.${domain}`))) continue;
-    const following = html.slice(anchors.lastIndex, anchors.lastIndex + 5000);
+    const remaining = html.slice(anchors.lastIndex);
+    const nextResult = remaining.search(/<h2\b|<a\b[^>]*class=["'][^"']*\bresult__a\b/i);
+    const following = remaining.slice(0, nextResult < 0 ? 5000 : Math.min(nextResult, 5000));
     const snippet = following.match(/class=["'][^"']*result__snippet[^"']*["'][^>]*>([\s\S]*?)<\/(?:a|div)>/i)?.[1];
     results.push({ title: htmlToText(match[2]), url: url.toString(), snippet: snippet ? htmlToText(snippet) : '' });
   }
   return results;
 }
 
-async function searchWeb(args, fetchFn) {
+async function searchBrave(query, domains, maximum, fetchFn, context) {
+  const url = new URL('https://api.search.brave.com/res/v1/web/search');
+  url.searchParams.set('q', query);
+  url.searchParams.set('count', String(maximum));
+  url.searchParams.set('result_filter', 'web');
+  const timeout = AbortSignal.timeout(8000);
+  const signal = context.signal ? AbortSignal.any([context.signal, timeout]) : timeout;
+  const response = await fetchFn(url, {
+    method: 'GET', redirect: 'error', signal,
+    headers: { Accept: 'application/json', 'X-Subscription-Token': context.braveSearchApiKey },
+  });
+  if (!response.ok) {
+    await response.body?.cancel();
+    throw new Error('search API unavailable');
+  }
+  const downloaded = await responseTextLimited(response);
+  if (downloaded.truncated) throw new Error('search API response too large');
+  const data = JSON.parse(downloaded.text);
+  if (data.type !== 'search' || (data.web && !Array.isArray(data.web.results))) throw new Error('invalid search API response');
+  const results = [];
+  const seen = new Set();
+  for (const item of data.web?.results || []) {
+    let result;
+    try { result = validatePublicUrl(item.url); } catch { continue; }
+    if (domains.length && !domains.some(domain => result.hostname === domain || result.hostname.endsWith(`.${domain}`))) continue;
+    const href = result.toString();
+    if (seen.has(href)) continue;
+    seen.add(href);
+    results.push({ title: htmlToText(item.title || '').slice(0, 500), url: href, snippet: htmlToText(item.description || '').slice(0, 3000) });
+    if (results.length === maximum) break;
+  }
+  return results;
+}
+
+async function searchWeb(args, fetchFn, context) {
   const query = String(args?.query || '').trim();
   if (!query) throw new Error('query must not be empty');
   if (query.length > 500) throw new Error('query exceeds 500 characters');
@@ -182,8 +218,24 @@ async function searchWeb(args, fetchFn) {
   if (domains.some(domain => !domain)) throw new Error('allowed_domains contains an invalid domain');
   const maximum = clampInteger(args.max_results, 1, 8, 5);
   const domainFilter = domains.length ? ` (${domains.map(domain => `site:${domain}`).join(' OR ')})` : '';
+  function output(provider, results) {
+    return {
+      content: `${WEB_WARNING}\n\n${JSON.stringify({ provider, query, retrieved_at: new Date().toISOString(), results }, null, 2)}`,
+      display: { label: 'Web search', detail: query, result: `${results.length} result${results.length === 1 ? '' : 's'}`, sources: results.map(({ title, url }) => ({ title, url })) },
+    };
+  }
+  context.signal?.throwIfAborted();
+  if (context.braveSearchApiKey) {
+    try {
+      return output('Brave Search', await searchBrave(query + domainFilter, domains, maximum, fetchFn, context));
+    } catch {
+      // A provider failure permits one independent fallback, never a retry loop.
+      context.signal?.throwIfAborted();
+    }
+  }
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15_000);
+  const timer = setTimeout(() => controller.abort(), 8000);
+  const signal = context.signal ? AbortSignal.any([context.signal, controller.signal]) : controller.signal;
   try {
     let current = new URL('https://html.duckduckgo.com/html/');
     let method = 'POST';
@@ -191,27 +243,26 @@ async function searchWeb(args, fetchFn) {
     let response;
     for (let redirects = 0; redirects <= 3; redirects += 1) {
       response = await fetchFn(current, {
-        method, body: method === 'POST' ? body : undefined, redirect: 'manual', signal: controller.signal,
+        method, body: method === 'POST' ? body : undefined, redirect: 'manual', signal,
         headers: { Accept: 'text/html', 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'BrittainWebChat/1.0' },
       });
       if (![301, 302, 303, 307, 308].includes(response.status)) break;
+      await response.body?.cancel();
       const location = response.headers.get('location');
       if (!location || redirects === 3) throw new Error('search provider redirect failed');
       current = validatePublicUrl(new URL(location, current));
       if (!['duckduckgo.com', 'html.duckduckgo.com'].includes(current.hostname)) throw new Error('search provider redirected to an unexpected host');
       if ([301, 302, 303].includes(response.status)) { method = 'GET'; body = undefined; }
     }
-    if (!response.ok) throw new Error(`search provider returned HTTP ${response.status}`);
+    if (!response.ok) { await response.body?.cancel(); throw new Error(SEARCH_UNAVAILABLE); }
     const downloaded = await responseTextLimited(response);
     if (isBotChallenge(response.status, downloaded.text)) throw new Error(SEARCH_UNAVAILABLE);
     const results = parseSearchResults(downloaded.text, domains, maximum);
-    // A genuinely empty result set is a fact about the query. Keep it worded so
-    // the model can tell it apart from the provider being unavailable above.
-    if (!results.length) throw new Error(`no results were found for this query: ${query}`);
-    return {
-      content: `${WEB_WARNING}\n\n${JSON.stringify({ provider: 'DuckDuckGo HTML', query, retrieved_at: new Date().toISOString(), results }, null, 2)}`,
-      display: { label: 'Web search', detail: query, result: `${results.length} result${results.length === 1 ? '' : 's'}`, sources: results.map(({ title, url }) => ({ title, url })) },
-    };
+    if (!results.length && !/\bno-results\b|No results found|No more results found/i.test(downloaded.text)) throw new Error(SEARCH_UNAVAILABLE);
+    return output('DuckDuckGo HTML', results);
+  } catch {
+    context.signal?.throwIfAborted();
+    throw new Error(SEARCH_UNAVAILABLE);
   } finally { clearTimeout(timer); }
 }
 
@@ -343,7 +394,7 @@ function calculate(args) {
 
 export async function executeTool(name, args, fetchFn = fetch, context = {}) {
   try {
-    if (name === 'web_search') return await searchWeb(args, fetchFn);
+    if (name === 'web_search') return await searchWeb(args, fetchFn, context);
     if (name === 'web_fetch') return await fetchWebPage(args, fetchFn);
     if (name === 'calculate') return calculate(args);
     if (name.startsWith('pdf_')) return await executePdfTool(name, args, context);
