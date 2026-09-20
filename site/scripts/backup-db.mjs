@@ -6,8 +6,13 @@ import { join } from 'node:path';
 process.chdir(fileURLToPath(new URL('..', import.meta.url)));
 process.umask(0o077);
 mkdirSync('backups', { recursive: true, mode: 0o700 });
+chmodSync('backups', 0o700);
 const output = join('backups', `brittain-${new Date().toISOString().replace(/[:.]/g, '-')}.sql`);
-const exported = spawnSync('npx', ['--no-install', 'wrangler', 'd1', 'export', 'DB', '--remote', '--config', 'wrangler.jsonc', '--env', '', '--output', output], { stdio: 'inherit' });
+// Wrangler prints a signed download URL. Keep it out of terminal and task logs.
+const exported = spawnSync('npx', ['--no-install', 'wrangler', 'd1', 'export', 'DB', '--remote', '--config', 'wrangler.jsonc', '--env', '', '--output', output], { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 });
+for (const message of [exported.stdout, exported.stderr, exported.error?.message]) {
+  if (message) console.log(message.replace(/https?:\/\/\S+/g, '[private URL omitted]'));
+}
 if (exported.status !== 0) process.exit(exported.status || 1);
 chmodSync(output, 0o600);
 if (!statSync(output).size) throw new Error('The database export is empty.');

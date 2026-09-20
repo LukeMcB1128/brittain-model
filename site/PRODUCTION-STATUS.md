@@ -15,7 +15,7 @@ Updated 2026-09-20 (America/Chicago).
 - Added `/api/health`. It checks Worker configuration and D1. It does not check model inference.
 - Added security headers for static pages. The existing Worker headers only covered API responses.
 - Added indexing exclusions for account/chat routes, a robots file, and a sitemap.
-- Replaced obsolete GitHub Pages deployment with tests, lint, dependency audit, and a Cloudflare build. This workflow will run after the commit is pushed to GitHub.
+- Replaced obsolete GitHub Pages deployment with tests, lint, dependency audit, and Cloudflare builds. The [GitHub check for the staging commit](https://github.com/LukeMcB1128/brittain-model/actions/runs/35520840151) passed.
 - Added read-only release checks and a private database backup/restore-check command.
 - Committed the deployed production preparation as `6cb3ef7`.
 - Created and deployed a separate staging Worker, empty D1 database, Turnstile widget, and account secret. No production data or credentials were copied.
@@ -33,9 +33,13 @@ Updated 2026-09-20 (America/Chicago).
 
 ## Recovery status
 
-Cloudflare returned a D1 recovery bookmark during preparation. No production data was restored or changed.
-The attempted full backup was blocked by automatic approval review because it would copy production account/chat data to this Mac. Explicit approval is needed to run `npm run db:backup`.
-The backup command is implemented; its full-data restore check has not been run. It writes a private SQL export under ignored `site/backups/`, then verifies it in an in-memory SQLite database.
+The user approved the production export on 2026-09-20. The backup was saved under ignored `site/backups/` and restored into an in-memory SQLite database. Database integrity, foreign keys, and all six required tables passed. No production data was restored or changed.
+
+- Backup file: `backups/brittain-2026-09-20T15-51-44-459Z.sql`, 1,214,929 bytes.
+- Permissions checked: directory `0700`, file `0600`. Git ignores the backup.
+- Recovery bookmark recorded after export: `0000002e-00000000-000050ec-2c64a6fb72c2abea94ed8283374c3a65`.
+- The backup command now hides signed download URLs in both success and error output. Two tests verify URL filtering and private file permissions with synthetic data.
+- This is a local backup with a SQLite restore check. Remote D1 restore, encrypted off-device storage, and scheduled backups have not been tested or configured.
 
 ## Verified deployment
 
@@ -49,7 +53,9 @@ The backup command is implemented; its full-data restore check has not been run.
 
 ## Dependency audit
 
-The audit found four moderate findings in the transitive `drizzle-kit` / `@esbuild-kit` / older `esbuild` chain, and no high or critical findings. These concern development-server tooling. Do not expose the database tooling server publicly. A breaking downgrade suggested by npm was not applied. CI fails on high or critical findings; the moderate tooling update remains follow-up work.
+The four moderate findings were removed with a scoped override: `@esbuild-kit/core-utils` uses the project's existing `esbuild` version, currently `0.28.2`. Other locked package versions are unchanged. The [esbuild advisory](https://github.com/advisories/GHSA-67mh-4wv8-2f99) covers versions through `0.24.2`.
+
+`npm audit` now reports zero vulnerabilities. Database tooling loaded the TypeScript schema, generated all six tables, and passed a SQLite integrity check on the generated SQL. All 105 tests, lint, and both environment builds pass. CI now fails on moderate or higher findings. These tooling and backup changes do not need a Worker deployment.
 
 ## Staging verification
 
@@ -68,8 +74,8 @@ The audit found four moderate findings in the transitive `drizzle-kit` / `@esbui
 - [x] Verify Turnstile in a real browser and recover after a wrong password.
 - [ ] Load-test the model with four concurrent requests and tool calls.
 - [ ] Test tab close, disconnection, Stop, compaction, and reload with a signed-in test account.
-- [ ] Approve and execute the database backup/restore check.
+- [x] Approve and execute the local database backup/restore check.
 - [ ] Configure uptime/error/capacity alerts.
 - [ ] Check mobile browsers, keyboard use, and screen readers.
 - [ ] Run `npm run check:release -- https://brittain.app` after cutover.
-- [ ] Keep a known-good Worker version and D1 bookmark for rollback.
+- [x] Record a known-good Worker version and D1 bookmark for rollback.

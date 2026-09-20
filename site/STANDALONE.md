@@ -138,7 +138,13 @@ npm run db:backup
 
 This exports D1 to `backups/` with private file permissions and restores the SQL into an in-memory SQLite database for integrity and foreign-key checks. Keep exports out of Git and public storage. Move retained backups to encrypted storage under the owner's control. The script requires Python 3.
 
+The command hides signed export URLs from terminal output. Cloudflare can briefly pause database queries during export. Run it at a suitable time. The in-memory restore verifies the SQL dump; it does not test a remote D1 restore or change the production database.
+
 For an application-only rollback, use `npx wrangler rollback <known-good-version-id> --config wrangler.jsonc --env ""` and rerun the release checks. A database restore is separate and can discard newer writes. Pause chat, preserve the current database, and obtain explicit approval before using `wrangler d1 time-travel restore` with the recorded bookmark. Check the account's available recovery window first.
+
+## Database tooling dependency
+
+The scoped `@esbuild-kit/core-utils` override uses the project's patched `esbuild` dependency. It removes an old nested version from the database tooling. Keep this override until the upstream loader dependency is replaced. When changing it, check TypeScript schema generation, tests, both builds, and `npm audit`. Do not use the breaking Drizzle downgrade suggested by `npm audit fix --force`.
 
 References:
 - https://developers.cloudflare.com/turnstile/get-started/
