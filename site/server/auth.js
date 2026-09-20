@@ -1,5 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { captcha } from 'better-auth/plugins';
+import { accountFeatures } from './account-protection.js';
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, character => ({
@@ -45,12 +46,16 @@ export function createAuth(env, requestUrl) {
   const configuredOrigin = env.BETTER_AUTH_URL || requestOrigin;
   const configuredHost = new URL(configuredOrigin).hostname;
   const origin = localRequest || hostname !== configuredHost ? requestOrigin : configuredOrigin;
-  const emailEnabled = Boolean(env.RESEND_API_KEY && env.AUTH_EMAIL_FROM);
+  const emailEnabled = accountFeatures(env).emailVerification;
   const plugins = [];
+  if (Boolean(env.TURNSTILE_SECRET_KEY) !== Boolean(env.TURNSTILE_SITE_KEY)) {
+    throw new Error('Both Turnstile keys must be configured.');
+  }
   if (env.TURNSTILE_SECRET_KEY) {
     plugins.push(captcha({
       provider: 'cloudflare-turnstile',
       secretKey: env.TURNSTILE_SECRET_KEY,
+      allowedHostnames: [...new Set([hostname, configuredHost])],
     }));
   }
   return betterAuth({
@@ -104,7 +109,7 @@ export function createAuth(env, requestUrl) {
         },
       },
     },
-    advanced: { cookiePrefix: 'brittain' },
+    advanced: { cookiePrefix: 'brittain', ipAddress: { ipAddressHeaders: ['cf-connecting-ip'] } },
     plugins,
   });
 }

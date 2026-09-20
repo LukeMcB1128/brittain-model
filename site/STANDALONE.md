@@ -72,3 +72,47 @@ D1 stores accounts, sessions, saved conversation text, compacted memory, tool
 summaries, and redacted exchange records. It does not store image or PDF binary
 data in saved chat payloads. Attached PDF text can remain in a saved chat so the
 conversation stays understandable after reload.
+
+## Release and recovery commands
+
+Run these from `site/`:
+
+```sh
+npm test
+npm run lint
+npm run build
+npm run check:release -- https://brittain-app.luke-brittain.workers.dev
+```
+
+Release checks are read-only. They report a failure while email or Turnstile is not configured. They do not test real email delivery or model inference.
+See `PRODUCTION-STATUS.md` for the remaining launch work.
+
+The account forms use two Turnstile keys. Upload both together with `wrangler secret bulk` from a private JSON file. Never put the secret in a `VITE_` variable. The widget must allow the exact hostnames used for signup and login. Do not add localhost to the production widget; use Cloudflare test keys for local testing.
+
+The auth limits use the Cloudflare client IP header. They are per-location burst protection, not a global daily quota. The chat capacity gate is the separate global limit.
+
+To pause new replies, set `CHAT_ENABLED` to `"false"` in `wrangler.jsonc` and deploy. Set it back to `"true"` to resume. This does not cancel active replies or prevent users from reading saved chats.
+
+`GET /api/health` returns 200 only when required Worker secrets are present and the database responds. The authenticated `/api/session` check verifies the model connection. Neither endpoint sends a model generation request.
+
+Before a release, record recovery information:
+
+```sh
+npx wrangler deployments list
+npx wrangler d1 time-travel info DB --json
+```
+
+After approval to copy account/chat data to this Mac:
+
+```sh
+npm run db:backup
+```
+
+This exports D1 to `backups/` with private file permissions and restores the SQL into an in-memory SQLite database for integrity and foreign-key checks. Keep exports out of Git and public storage. Move retained backups to encrypted storage under the owner's control. The script requires Python 3.
+
+For an application-only rollback, use `npx wrangler rollback <known-good-version-id>` and rerun the release checks. A database restore is separate and can discard newer writes. Pause chat, preserve the current database, and obtain explicit approval before using `wrangler d1 time-travel restore` with the recorded bookmark. Check the account's available recovery window first.
+
+References:
+- https://developers.cloudflare.com/turnstile/get-started/
+- https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/
+- https://developers.cloudflare.com/d1/reference/time-travel/

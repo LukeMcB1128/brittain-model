@@ -105,26 +105,32 @@ export class ChatCapacity {
     }
     const configuredHourly = Number.parseInt(this.env.CHAT_MAX_PER_HOUR || '621', 10);
     const hourlyMaximum = Number.isInteger(configuredHourly) && configuredHourly > 0 ? configuredHourly : 621;
-    const hourly = await this.reserveHourly(hourlyMaximum);
-    if (!hourly.allowed) {
-      return json(
-        { error: 'Brittain 4 has reached its hourly demo capacity. Please try again later.' },
-        503,
-        { 'Retry-After': String(hourly.retryAfter) },
-      );
-    }
     const configuredLock = Number.parseInt(this.env.CHAT_LOCK_TIMEOUT_SECONDS || '210', 10);
     const lockSeconds = Number.isInteger(configuredLock) && configuredLock > 0 ? Math.min(configuredLock, 900) : 210;
-    this.activeUsers.set(userId, Date.now() + lockSeconds * 1000);
+    // Reserve before the first await: simultaneous requests must see the slot.
+    const expiresAt = Date.now() + lockSeconds * 1000;
+    this.activeUsers.set(userId, expiresAt);
     let released = false;
     const release = () => {
       if (released) return;
       released = true;
-      this.activeUsers.delete(userId);
+      // An expired request must not release a newer request for the same user.
+      if (this.activeUsers.get(userId) === expiresAt) this.activeUsers.delete(userId);
       request.signal.removeEventListener('abort', release);
     };
     request.signal.addEventListener('abort', release, { once: true });
     try {
+      if (request.signal.aborted) { release(); return json({ error: 'Request canceled.' }, 499); }
+      const hourly = await this.reserveHourly(hourlyMaximum);
+      if (request.signal.aborted) { release(); return json({ error: 'Request canceled.' }, 499); }
+      if (!hourly.allowed) {
+        release();
+        return json(
+          { error: `Brittain 4 has reached its hourly demo capacity. Try again in ${Math.ceil(hourly.retryAfter / 60)} minutes.` },
+          503,
+          { 'Retry-After': String(hourly.retryAfter) },
+        );
+      }
       const response = await handleApi(request, this.env, fetch, userId);
       return relayResponse(response, release);
     } catch (error) {

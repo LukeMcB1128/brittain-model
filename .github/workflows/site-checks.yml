@@ -1,0 +1,36 @@
+name: Site checks
+
+on:
+  pull_request:
+    paths: ['site/**', '.github/workflows/site-checks.yml']
+  push:
+    branches: [main]
+    paths: ['site/**', '.github/workflows/site-checks.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: site
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm audit --audit-level=high
+      - run: npm run build
+      # Production is deployed to Cloudflare. Never publish the Worker bundle to Pages.

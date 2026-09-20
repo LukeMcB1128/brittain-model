@@ -1,0 +1,10 @@
+User-agent: *
+Disallow: /api/
+Disallow: /chat
+Disallow: /account
+Disallow: /login
+Disallow: /signup
+Disallow: /forgot-password
+Disallow: /reset-password
+
+Sitemap: https://brittain.app/sitemap.xml

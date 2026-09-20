@@ -54,3 +54,39 @@ test('hourly capacity is stored and survives a new gate instance', async () => {
   assert.equal(full.allowed, false);
   assert.ok(full.retryAfter > 0);
 });
+
+test('parallel requests cannot bypass the user or global limit during storage writes', async () => {
+  const gate = new ChatCapacity({}, { CHAT_MAX_CONCURRENT: '1' });
+  let resolve;
+  gate.reserveHourly = () => new Promise(done => { resolve = done; });
+  const first = gate.fetch(internalChatRequest(new Request('https://site.example/api/chat', { method: 'POST' }), 'user-1'));
+  assert.equal((await gate.fetch(internalChatRequest(new Request('https://site.example/api/chat'), 'user-1'))).status, 409);
+  assert.equal((await gate.fetch(internalChatRequest(new Request('https://site.example/api/chat'), 'user-2'))).status, 503);
+  resolve({ allowed: false, retryAfter: 60 });
+  assert.equal((await first).status, 503);
+  assert.equal(gate.activeUsers.size, 0);
+});
+
+test('a failed capacity write and an already canceled request release the slot', async () => {
+  const gate = new ChatCapacity({}, {});
+  gate.reserveHourly = async () => { throw new Error('storage unavailable'); };
+  await assert.rejects(gate.fetch(internalChatRequest(new Request('https://site.example/api/chat'), 'user-1')), /storage unavailable/);
+  assert.equal(gate.activeUsers.size, 0);
+  const controller = new AbortController();
+  controller.abort();
+  const canceled = await gate.fetch(internalChatRequest(new Request('https://site.example/api/chat', { signal: controller.signal }), 'user-1'));
+  assert.equal(canceled.status, 499);
+  assert.equal(gate.activeUsers.size, 0);
+});
+
+test('finishing an expired request does not remove a replacement slot', async () => {
+  const gate = new ChatCapacity({}, {});
+  let resolve;
+  gate.reserveHourly = () => new Promise(done => { resolve = done; });
+  const first = gate.fetch(internalChatRequest(new Request('https://site.example/api/chat'), 'user-1'));
+  const replacement = Date.now() + 900000;
+  gate.activeUsers.set('user-1', replacement);
+  resolve({ allowed: false, retryAfter: 60 });
+  await first;
+  assert.equal(gate.activeUsers.get('user-1'), replacement);
+});

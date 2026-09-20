@@ -1,3 +1,9 @@
+export function safeNextPath(value) {
+  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//') || value.includes('\\')) return '/chat';
+  if ([...value].some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)) return '/chat';
+  return value;
+}
+
 async function request(path, body, captchaToken) {
   const response = await fetch(`/api/auth${path}`, {
     method: 'POST',
@@ -46,7 +52,7 @@ export function deleteAccount(password) {
 }
 
 export async function accountConfig() {
-  const response = await fetch('/api/account/config');
-  if (!response.ok) return { emailVerification: false, turnstileSiteKey: '' };
+  const response = await fetch('/api/account/config', { signal: AbortSignal.timeout(10000) });
+  if (!response.ok) throw new Error('Account settings could not be loaded.');
   return response.json();
 }
