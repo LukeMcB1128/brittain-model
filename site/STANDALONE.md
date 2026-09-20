@@ -58,6 +58,11 @@ conversation. The call limit also applies within a batch. If the model still
 requests tools in the final round, the reply reports an error instead of being
 marked complete.
 
+The Brave request uses `redirect: 'manual'` and rejects non-success responses.
+Cloudflare's runtime rejects `redirect: 'error'` before sending a request, even
+though Node accepts it. A runtime regression test covers request construction
+and confirms that a redirect cannot forward the search key to another host.
+
 ## Staging and release
 
 The staging site is https://brittain-app-staging.luke-brittain.workers.dev.

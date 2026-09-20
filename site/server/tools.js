@@ -189,7 +189,9 @@ async function searchBrave(query, domains, maximum, fetchFn, context) {
   const timeout = AbortSignal.timeout(8000);
   const signal = context.signal ? AbortSignal.any([context.signal, timeout]) : timeout;
   const response = await fetchFn(url, {
-    method: 'GET', redirect: 'error', signal,
+    // workerd rejects redirect: 'error' before making a request. Manual mode
+    // keeps the key on this host; the non-OK check below rejects redirects.
+    method: 'GET', redirect: 'manual', signal,
     headers: { Accept: 'application/json', 'X-Subscription-Token': context.braveSearchApiKey },
   });
   if (!response.ok) {

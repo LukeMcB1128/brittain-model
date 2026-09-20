@@ -52,7 +52,7 @@ test('Brave search uses the server key, filters results, and preserves source te
     assert.equal(url.origin, 'https://api.search.brave.com');
     assert.equal(url.searchParams.get('q'), 'current facts (site:example.com)');
     assert.equal(options.headers['X-Subscription-Token'], 'server-search-secret');
-    assert.equal(options.redirect, 'error');
+    assert.equal(options.redirect, 'manual');
     return Response.json({ type: 'search', web: { results: [
       { title: 'Private', url: 'https://localhost/a' },
       { title: 'Wrong domain', url: 'https://other.com/a' },

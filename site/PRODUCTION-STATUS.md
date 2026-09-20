@@ -43,9 +43,9 @@ The user approved the production export on 2026-09-20. The backup was saved unde
 
 ## Verified deployment
 
-- Active Worker version after the search recovery fix: `19a64245-d5d9-41fa-b7a1-63e663e1b686`. Previous version with account protection: `1fb032e3-9219-4321-a5cc-f2c0e3a8d7c8`.
+- Active Worker version after the Brave request fix: `49a55997-0dd2-4a91-b6ec-8841d2788d58`. Previous version with search retry controls: `19a64245-d5d9-41fa-b7a1-63e663e1b686`.
 - Previous release before this update: `63e9c12b-8b54-4b17-8dfe-950233a73e02`. Rolling back to it also reverts the new account protection; assess that tradeoff before rollback.
-- Tests: 111 passing. Lint and both builds pass. The build warns that production secrets are absent locally; live health checks confirm the deployed configuration is present.
+- Tests: 112 passing. Lint and both builds pass. The build warns that production secrets are absent locally; live health checks confirm the deployed configuration is present.
 - Live release check: 19 of 20 checks pass on the Workers address. Email verification/password recovery is the remaining failed check.
 - Live negative login check: HTTP 400 with `MISSING_RESPONSE` when no CAPTCHA token is supplied.
 - Browser check: the managed widget completed automatically. A deliberately invalid login returned the expected error, refreshed the token, and enabled another attempt. No account was created and no email was sent.
@@ -60,7 +60,7 @@ The four moderate findings were removed with a scoped override: `@esbuild-kit/co
 ## Staging verification
 
 - Site: https://brittain-app-staging.luke-brittain.workers.dev.
-- Worker version: `74e22f64-f0f1-49d2-a70a-80e73a780f41`.
+- Worker version: `3e150745-ad15-4a3a-ab89-8689c478d812`.
 - Database: `brittain-app-staging` (`f0376451-2abf-47e9-b938-dfb007402221`). Both schema migrations applied.
 - All 103 tests pass. Lint, staging build, and production build pass. The production build was checked for the correct Worker, database, and enabled chat setting.
 - `npm run check:staging`: 22 checks pass; email readiness is explicitly skipped.
@@ -78,7 +78,9 @@ A supplied chat record showed four failed searches, six HTTP 404 page reads, and
 - A model that still requests tools in the final round gets an explicit error; the reply is not marked complete.
 - Failed searches include safe provider status codes. Response bodies, keys, and raw network errors are excluded.
 - Six regression tests cover these cases. Both environments are deployed and staging checks pass.
-- The production Brave secret exists. The original record did not retain provider status, so the initial search outage remains undiagnosed. A live signed-in search still needs verification; the available test browser is signed out.
+- The production Brave secret exists. A later record reported a Brave request failure and a DuckDuckGo timeout. The cause was `redirect: 'error'`: Cloudflare's runtime rejects that option before sending the Brave request. A local workerd check reproduced the exact error.
+- The request now uses `redirect: 'manual'`. Redirect responses are rejected, so the key cannot be forwarded to another host. A regression test uses the real Cloudflare Request constructor with synthetic provider responses; all 112 tests pass.
+- A live signed-in search with the production provider key still needs verification; the available test browser is signed out.
 
 ## Remaining launch checks
 

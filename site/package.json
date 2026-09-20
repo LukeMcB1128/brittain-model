@@ -47,6 +47,7 @@
     "@vitejs/plugin-react": "^6.0.4",
     "drizzle-kit": "^0.31.10",
     "esbuild": "^0.28.2",
+    "miniflare": "5.20260911.0-alpha",
     "oxlint": "^1.75.0",
     "vite": "^8.2.0",
     "wrangler": "^4.131.1"
