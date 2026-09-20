@@ -229,7 +229,7 @@ test('failed search cannot run again even when the model ignores the withdrawn t
     }
     if (rounds === 3) return modelToolCalls([['web_fetch', { url: 'https://example.com/missing' }]]);
     assert.equal(payload.tools, undefined);
-    assert.match(payload.messages[0].content, /Complete the user's original task now/);
+    assert.match(payload.messages[0].content, /Answer the user's original question now/);
     return sse([{ choices: [{ index: 0, delta: { content: 'Here is code based on your example.' }, finish_reason: 'stop' }] }, '[DONE]']);
   });
   const body = await response.text();
@@ -271,14 +271,55 @@ test('a single batch cannot exceed the tool execution budget', async () => {
 });
 
 test('tool calls in the final answer round produce an error rather than false completion', async () => {
-  const response = await handleApi(req(), env, async (url) => {
+  const response = await handleApi(req(), env, async (url, options) => {
     if (String(url).startsWith('https://example.com/')) return new Response('', { status: 404 });
-    return modelToolCalls([['web_fetch', { url: 'https://example.com/missing' }]], 'I will write the code.');
+    const payload = JSON.parse(options.body);
+    return modelToolCalls(
+      [['web_fetch', { url: 'https://example.com/missing' }]],
+      payload.tools ? '' : 'I will write the code.',
+    );
   });
   const body = await response.text();
   assert.match(body, /"type":"error"/);
   assert.match(body, /did not complete the answer/);
   assert.doesNotMatch(body, /"type":"done"/);
+  assert.doesNotMatch(body, /I will write the code/, 'an unfinished final-round fragment must not reach the user');
+});
+
+test('repeated successful web lookups end with a clean evidence-only answer request', async () => {
+  let modelRounds = 0;
+  let webCalls = 0;
+  const response = await handleApi(req({ messages: [{ role: 'user', content: 'Where is the concert next Friday?' }] }), { ...env, BRAVE_SEARCH_API_KEY: 'test-search-key' }, async (url, options) => {
+    const parsed = new URL(url);
+    if (parsed.hostname === 'api.search.brave.com') {
+      webCalls++;
+      return Response.json({ type: 'search', web: { results: [{ title: 'Concert schedule', url: 'https://events.example.org/schedule', description: 'Tour schedule' }] } });
+    }
+    if (parsed.hostname === 'events.example.org') {
+      webCalls++;
+      return new Response('<h1>Concert schedule</h1><p>Friday, September 25, 2026 at Gruene Hall in New Braunfels, Texas.</p>', { headers: { 'Content-Type': 'text/html' } });
+    }
+    const payload = JSON.parse(options.body);
+    modelRounds++;
+    if (modelRounds <= 6) {
+      return modelRounds % 2
+        ? modelToolCalls([['web_search', { query: `concert schedule attempt ${modelRounds}` }]])
+        : modelToolCalls([['web_fetch', { url: 'https://events.example.org/schedule' }]], 'Let me check again.');
+    }
+    assert.equal(payload.tools, undefined);
+    assert.equal(payload.messages.some(message => message.role === 'tool' || message.tool_calls), false, 'final answer input must not contain tool protocol messages');
+    assert.match(payload.messages.at(-1).content, /September 25, 2026 at Gruene Hall/);
+    assert.match(payload.messages[0].content, /Answer the user's original question now/);
+    return sse([
+      { choices: [{ index: 0, delta: { content: 'It is at Gruene Hall in New Braunfels, Texas.' }, finish_reason: 'stop' }] },
+      '[DONE]',
+    ]);
+  });
+  const body = await response.text();
+  assert.equal(webCalls, 6);
+  assert.equal(modelRounds, 7);
+  assert.match(body, /It is at Gruene Hall/);
+  assert.match(body, /"type":"done"/);
 });
 
 test('successful tool use resets the consecutive failure count', async () => {
