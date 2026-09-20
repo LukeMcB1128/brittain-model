@@ -116,6 +116,21 @@ test('stopping a search cancels its request and skips fallback', async () => {
   assert.equal(calls, 1);
 });
 
+test('search failures retain safe provider status without response bodies or credentials', async () => {
+  for (const status of [401, 403, 429, 500]) {
+    const result = await executeTool('web_search', { query: 'reference' }, async url => url.hostname === 'api.search.brave.com'
+      ? new Response('private-provider-response', { status })
+      : new Response('challenge', { status: 202 }), { braveSearchApiKey: 'private-key' });
+    assert.equal(result.error, true);
+    assert.match(result.content, new RegExp(`Brave: HTTP ${status}`));
+    assert.match(result.display.result, /DuckDuckGo: bot challenge/);
+    assert.doesNotMatch(JSON.stringify(result), /private-provider-response|private-key/);
+  }
+  const result = await executeTool('web_search', { query: 'reference' }, async () => { throw new Error('secret-key-in-network-error'); }, { braveSearchApiKey: 'private-key' });
+  assert.match(result.content, /network failure or invalid response/);
+  assert.doesNotMatch(JSON.stringify(result), /secret-key|private-key/);
+});
+
 test('a search result never borrows the next result snippet', async () => {
   const result = await executeTool('web_search', { query: 'example' }, async () => new Response(
     '<h2><a class="result__a" href="https://example.com/a">First</a></h2><h2><a class="result__a" href="https://example.com/b">Second</a></h2><a class="result__snippet">Second only</a>',

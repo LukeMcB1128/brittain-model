@@ -50,6 +50,14 @@ Each provider has an eight-second timeout. Stopping the reply cancels search.
 If search is unavailable, the model is told not to claim it verified current
 facts. A valid empty result set does not disable search for other queries.
 
+If both providers fail, the tool result includes a safe status for each provider.
+It does not include provider response bodies or credentials. Search is then
+blocked for the rest of that reply, even if the model requests it again. Three
+consecutive tool failures end tool use and request an answer from the available
+conversation. The call limit also applies within a batch. If the model still
+requests tools in the final round, the reply reports an error instead of being
+marked complete.
+
 ## Staging and release
 
 The staging site is https://brittain-app-staging.luke-brittain.workers.dev.

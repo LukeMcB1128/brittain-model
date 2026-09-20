@@ -149,6 +149,14 @@ function resultUrl(href) {
 // challenge is reported, never worked around.
 const SEARCH_UNAVAILABLE = 'web search is temporarily unavailable; do not repeat this search in this reply. Explain that current information could not be verified. Do not invent results or sources';
 
+class SearchProviderError extends Error {}
+function searchFailureReason(error) {
+  if (error instanceof SearchProviderError) return error.message;
+  if (['AbortError', 'TimeoutError'].includes(error?.name)) return 'request timed out';
+  // Fetch and JSON errors can contain URLs, credentials, or response text.
+  return 'network failure or invalid response';
+}
+
 function isBotChallenge(status, html) {
   if (status === 202) return true;
   return /Please complete the following challenge|containing a duck|anomaly-modal/i.test(html);
@@ -186,12 +194,12 @@ async function searchBrave(query, domains, maximum, fetchFn, context) {
   });
   if (!response.ok) {
     await response.body?.cancel();
-    throw new Error('search API unavailable');
+    throw new SearchProviderError(`HTTP ${response.status}`);
   }
   const downloaded = await responseTextLimited(response);
-  if (downloaded.truncated) throw new Error('search API response too large');
+  if (downloaded.truncated) throw new SearchProviderError('response too large');
   const data = JSON.parse(downloaded.text);
-  if (data.type !== 'search' || (data.web && !Array.isArray(data.web.results))) throw new Error('invalid search API response');
+  if (data.type !== 'search' || (data.web && !Array.isArray(data.web.results))) throw new SearchProviderError('invalid response');
   const results = [];
   const seen = new Set();
   for (const item of data.web?.results || []) {
@@ -225,12 +233,14 @@ async function searchWeb(args, fetchFn, context) {
     };
   }
   context.signal?.throwIfAborted();
+  let primaryFailure = 'not configured';
   if (context.braveSearchApiKey) {
     try {
       return output('Brave Search', await searchBrave(query + domainFilter, domains, maximum, fetchFn, context));
-    } catch {
+    } catch (error) {
       // A provider failure permits one independent fallback, never a retry loop.
       context.signal?.throwIfAborted();
+      primaryFailure = searchFailureReason(error);
     }
   }
   const controller = new AbortController();
@@ -254,15 +264,15 @@ async function searchWeb(args, fetchFn, context) {
       if (!['duckduckgo.com', 'html.duckduckgo.com'].includes(current.hostname)) throw new Error('search provider redirected to an unexpected host');
       if ([301, 302, 303].includes(response.status)) { method = 'GET'; body = undefined; }
     }
-    if (!response.ok) { await response.body?.cancel(); throw new Error(SEARCH_UNAVAILABLE); }
+    if (!response.ok) { await response.body?.cancel(); throw new SearchProviderError(`HTTP ${response.status}`); }
     const downloaded = await responseTextLimited(response);
-    if (isBotChallenge(response.status, downloaded.text)) throw new Error(SEARCH_UNAVAILABLE);
+    if (isBotChallenge(response.status, downloaded.text)) throw new SearchProviderError('bot challenge');
     const results = parseSearchResults(downloaded.text, domains, maximum);
-    if (!results.length && !/\bno-results\b|No results found|No more results found/i.test(downloaded.text)) throw new Error(SEARCH_UNAVAILABLE);
+    if (!results.length && !/\bno-results\b|No results found|No more results found/i.test(downloaded.text)) throw new SearchProviderError('unrecognized response');
     return output('DuckDuckGo HTML', results);
-  } catch {
+  } catch (error) {
     context.signal?.throwIfAborted();
-    throw new Error(SEARCH_UNAVAILABLE);
+    throw new Error(`${SEARCH_UNAVAILABLE}. Provider status: Brave: ${primaryFailure}; DuckDuckGo: ${searchFailureReason(error)}.`);
   } finally { clearTimeout(timer); }
 }
 

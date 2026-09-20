@@ -209,6 +209,93 @@ function sse(events) {
   return new Response(events.map(event => event === '[DONE]' ? 'data: [DONE]\n\n' : `data: ${JSON.stringify(event)}\n\n`).join(''), { headers: { 'Content-Type': 'text/event-stream' } });
 }
 
+function modelToolCalls(calls, content = '') {
+  return sse([{ choices: [{ index: 0, delta: { content, tool_calls: calls.map(([name, args], index) => ({ index, id: `call-${index}`, type: 'function', function: { name, arguments: JSON.stringify(args) } })) }, finish_reason: 'tool_calls' }] }, '[DONE]']);
+}
+
+test('failed search cannot run again even when the model ignores the withdrawn tool', async () => {
+  let searches = 0;
+  let pages = 0;
+  let rounds = 0;
+  const response = await handleApi(req(), env, async (url, options) => {
+    if (String(url).includes('duckduckgo')) { searches++; return new Response('challenge', { status: 202 }); }
+    if (String(url) === 'https://example.com/missing') { pages++; return new Response('', { status: 404 }); }
+    const payload = JSON.parse(options.body);
+    rounds++;
+    if (rounds === 1) return modelToolCalls([['web_search', { query: 'language reference' }]]);
+    if (rounds === 2) {
+      assert.ok(!payload.tools.some(tool => tool.function.name === 'web_search'));
+      return modelToolCalls([['web_search', { query: 'language reference again' }]]);
+    }
+    if (rounds === 3) return modelToolCalls([['web_fetch', { url: 'https://example.com/missing' }]]);
+    assert.equal(payload.tools, undefined);
+    assert.match(payload.messages[0].content, /Complete the user's original task now/);
+    return sse([{ choices: [{ index: 0, delta: { content: 'Here is code based on your example.' }, finish_reason: 'stop' }] }, '[DONE]']);
+  });
+  const body = await response.text();
+  assert.equal(searches, 1);
+  assert.equal(pages, 1);
+  assert.equal(rounds, 4);
+  assert.match(body, /Here is code based on your example/);
+  assert.match(body, /"type":"done"/);
+});
+
+test('routed search failure counts toward the failure limit within a batch', async () => {
+  let searches = 0;
+  let pages = 0;
+  let rounds = 0;
+  const response = await handleApi(req({ messages: [{ role: 'user', content: 'Search the web for a language reference.' }] }), env, async (url, options) => {
+    if (String(url).includes('duckduckgo')) { searches++; return new Response('', { status: 202 }); }
+    if (String(url).startsWith('https://example.com/')) { pages++; return new Response('', { status: 404 }); }
+    const payload = JSON.parse(options.body);
+    if (++rounds === 1) return modelToolCalls(Array.from({ length: 5 }, (_, i) => ['web_fetch', { url: `https://example.com/missing-${i}` }]));
+    assert.equal(payload.tools, undefined);
+    return sse([{ choices: [{ index: 0, delta: { content: 'I could not verify the reference.' }, finish_reason: 'stop' }] }, '[DONE]']);
+  });
+  await response.text();
+  assert.equal(searches, 1);
+  assert.equal(pages, 2, 'later calls in the batch must not execute after three failures');
+  assert.equal(rounds, 2);
+});
+
+test('a single batch cannot exceed the tool execution budget', async () => {
+  let rounds = 0;
+  const response = await handleApi(req(), env, async (_url, options) => {
+    if (++rounds === 1) return modelToolCalls(Array.from({ length: 18 }, () => ['calculate', { expression: '1+1' }]));
+    assert.equal(JSON.parse(options.body).tools, undefined);
+    return sse([{ choices: [{ index: 0, delta: { content: 'The answer is 2.' }, finish_reason: 'stop' }] }, '[DONE]']);
+  });
+  const events = (await response.text()).split('\n\n').filter(Boolean).map(line => JSON.parse(line.slice(6)));
+  assert.equal(events.filter(event => event.type === 'tool' && event.status === 'done').length, 15);
+  assert.equal(events.filter(event => event.type === 'tool' && event.status === 'error').length, 3);
+});
+
+test('tool calls in the final answer round produce an error rather than false completion', async () => {
+  const response = await handleApi(req(), env, async (url) => {
+    if (String(url).startsWith('https://example.com/')) return new Response('', { status: 404 });
+    return modelToolCalls([['web_fetch', { url: 'https://example.com/missing' }]], 'I will write the code.');
+  });
+  const body = await response.text();
+  assert.match(body, /"type":"error"/);
+  assert.match(body, /did not complete the answer/);
+  assert.doesNotMatch(body, /"type":"done"/);
+});
+
+test('successful tool use resets the consecutive failure count', async () => {
+  let rounds = 0;
+  const response = await handleApi(req(), env, async (url, options) => {
+    if (String(url).startsWith('https://example.com/')) return new Response('', { status: 404 });
+    const payload = JSON.parse(options.body);
+    assert.ok(payload.tools, 'isolated failures must not disable useful tools');
+    if (++rounds <= 4) return modelToolCalls([
+      ['web_fetch', { url: `https://example.com/missing-${rounds}` }], ['calculate', { expression: '2+2' }],
+    ]);
+    return sse([{ choices: [{ index: 0, delta: { content: '4' }, finish_reason: 'stop' }] }, '[DONE]']);
+  });
+  assert.match(await response.text(), /"type":"done"/);
+  assert.equal(rounds, 5);
+});
+
 test('a tool reporting itself unavailable is withdrawn for the rest of the reply', async () => {
   // Real transcript: ten progressively reworded searches for one high school,
   // every one answered with a bot challenge, and the user got an error rather
