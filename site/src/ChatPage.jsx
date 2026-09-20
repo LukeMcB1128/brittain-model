@@ -87,6 +87,7 @@ export default function Chat({ session, initialChatId = '' }) {
   const pendingDeleteRef = useRef(null);
   const noticeTimer = useRef(null);
   const modelWrap = useRef(null);
+  const sidebarToggle = useRef(null);
   const chatsRef = useRef([]);
   async function checkConnection() {
     setConnection('loading');
@@ -171,16 +172,20 @@ export default function Chat({ session, initialChatId = '' }) {
   const context = contextUsage(messages, contextLimit);
   useEffect(() => { end.current?.scrollIntoView({ block: 'nearest' }); }, [chats, active]);
   useEffect(() => {
-    const onKey = e => { if (e.key === 'Escape') { setSidebar(false); setInfo(false); } };
+    const onKey = e => { if (e.key === 'Escape') { if (sidebar) closeSidebar(); setInfo(false); } };
     const onPointer = e => { if (info && modelWrap.current && !modelWrap.current.contains(e.target)) setInfo(false); };
     window.addEventListener('keydown', onKey);
     window.addEventListener('pointerdown', onPointer);
     return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('pointerdown', onPointer); };
-  }, [info]);
+  }, [info, sidebar]);
   function clearImports() { setAttachments([]); setAttachmentError(''); setDragging(false); }
   function showNotice(message, duration = 3500) {
     clearTimeout(noticeTimer.current); setNotice(message);
     noticeTimer.current = setTimeout(() => setNotice(''), duration);
+  }
+  function closeSidebar() {
+    setSidebar(false);
+    requestAnimationFrame(() => sidebarToggle.current?.focus());
   }
   function newChat(updateUrl = true) { if (controller.current) return; setActive(null); setDraft(''); clearImports(); setSidebar(false); if (updateUrl) setChatUrl(''); input.current?.focus(); }
   async function commitDelete(item, keepalive = false) {
@@ -352,16 +357,16 @@ export default function Chat({ session, initialChatId = '' }) {
     <p className="c-disclaimer">{connection === 'loading' ? 'Checking chat connection…' : preview ? historyStatus === 'error' ? 'Connected. Chat history could not be saved.' : 'Chats are saved to your account. Check important information.' : connection === 'signed-out' ? 'Sign in to use chat.' : connection === 'unconfigured' ? 'The server access key is not configured yet.' : 'Cannot reach the chat service.'}{!preview && connection !== 'loading' && <button type="button" className="c-inline-button" onClick={checkConnection}>Retry connection</button>}</p>
   </div>;
   return <main className={`c-app ${collapsed ? 'c-collapsed' : ''} ${sidebar ? 'c-sidebar-open' : ''}`}>
-    {sidebar && <button className="c-scrim" onClick={() => setSidebar(false)} aria-label="Close navigation"/>}
-    <aside className="c-sidebar" aria-label="Chat navigation">
-      <div className="c-sidebar-top"><a href="/" className="c-brand" aria-label="Brittain home"><BrandLogo/>BRITTAIN</a><button className="c-icon c-desktop" aria-label="Collapse sidebar" onClick={() => setCollapsed(true)}><Icon name="panel"/></button><button className="c-icon c-mobile" aria-label="Close sidebar" onClick={() => setSidebar(false)}><Icon name="panel"/></button></div>
+    {sidebar && <button className="c-scrim" onClick={closeSidebar} aria-label="Close navigation"/>}
+    <aside id="chat-navigation" className="c-sidebar" aria-label="Chat navigation">
+      <div className="c-sidebar-top"><a href="/" className="c-brand" aria-label="Brittain home"><BrandLogo/>BRITTAIN</a><button className="c-icon c-desktop" aria-label="Collapse sidebar" onClick={() => { setCollapsed(true); setSidebar(false); requestAnimationFrame(() => sidebarToggle.current?.focus()); }}><Icon name="panel"/></button><button className="c-icon c-mobile" aria-label="Close sidebar" onClick={closeSidebar}><Icon name="panel"/></button></div>
       <button className="c-nav-item" disabled={busy} onClick={newChat}><Icon name="edit"/>New chat</button>
       <a href="/models" className="c-nav-item"><Icon name="model"/>Models</a>
       <div className="c-history"><h2>Conversations</h2><label className="sr-only" htmlFor="chat-search">Search conversations</label><input id="chat-search" className="c-history-search" type="search" placeholder="Search conversations" value={historyQuery} onChange={event => setHistoryQuery(event.target.value)}/>{historyStatus === 'loading' ? <p>Loading chats…</p> : visibleChats.length ? ['Today', 'Previous 7 days', 'Older'].map(label => chatGroups[label]?.length ? <section className="c-history-group" key={label}><h3>{label}</h3>{chatGroups[label].map(chat => <div key={chat.id} className={`c-history-row ${active === chat.id ? 'c-active' : ''}`}>{renaming?.id === chat.id ? <form className="c-rename-form" onSubmit={renameChat}><label className="sr-only" htmlFor={`rename-${chat.id}`}>Conversation name</label><input id={`rename-${chat.id}`} autoFocus maxLength={80} value={renaming.title} onChange={event => setRenaming({ ...renaming, title: event.target.value })} onKeyDown={event => { if (event.key === 'Escape') setRenaming(null); }}/><button type="submit" aria-label="Save name"><Icon name="check"/></button><button type="button" onClick={() => setRenaming(null)} aria-label="Cancel rename"><Icon name="close"/></button></form> : <><button className="c-history-item" disabled={busy || loadingChat === chat.id} aria-current={active === chat.id ? 'page' : undefined} onClick={() => loadChat(chat.id)}>{loadingChat === chat.id ? 'Loading…' : chat.title}</button><button className="c-history-action" disabled={busy} onClick={() => setRenaming({ id: chat.id, title: chat.title })} aria-label={`Rename conversation: ${chat.title}`} title="Rename conversation"><Icon name="rename"/></button><button className="c-history-action c-history-delete" disabled={busy} onClick={() => deleteChat(chat.id)} aria-label={`Delete conversation: ${chat.title}`} title="Delete conversation"><Icon name="delete"/></button></>}</div>)}</section> : null) : <p>{historyQuery ? 'No matching conversations.' : 'Your chats will appear here.'}</p>}</div>
       <div className="c-sidebar-bottom"><a href="/account" className="c-account"><span className="c-avatar">{session.user.name?.slice(0, 1).toUpperCase() || 'B'}</span><div>{session.user.name}<small>{session.user.email}</small></div></a><a href="/" className="c-home-link">← Back to Brittain</a></div>
     </aside>
     <section className="c-main">
-      <header className="c-header"><div className="c-header-left"><button className={`c-icon c-open ${collapsed ? 'c-is-collapsed' : ''}`} aria-label="Open sidebar" aria-expanded={sidebar || !collapsed} onClick={() => { setCollapsed(false); setSidebar(true); }}><Icon name="panel"/></button><div className="c-model-wrap" ref={modelWrap}><button className="c-model-button" onClick={() => setInfo(!info)} aria-expanded={info} aria-haspopup="dialog" aria-controls="model-information">Brittain 4<Icon name="down"/></button>{info && <div id="model-information" className="c-model-info" role="dialog" aria-label="Brittain 4 information"><strong>Brittain 4</strong><p>9B dense model</p><dl><div><dt>Web chat</dt><dd>{contextLimit.toLocaleString()} tokens</dd></div><div><dt>Model maximum</dt><dd>262k</dd></div></dl><a href="/models/brittain-4">View model details ↗</a></div>}</div></div><div className="c-header-right"><span className="c-preview">{busy ? 'Responding…' : preview ? 'Connected' : 'Not connected'}</span></div></header>
+      <header className="c-header"><div className="c-header-left"><button ref={sidebarToggle} className={`c-icon c-open ${collapsed ? 'c-is-collapsed' : ''}`} aria-label="Open sidebar" aria-expanded={sidebar} aria-controls="chat-navigation" onClick={() => { setCollapsed(false); setSidebar(true); }}><Icon name="panel"/></button><div className="c-model-wrap" ref={modelWrap}><button className="c-model-button" onClick={() => setInfo(!info)} aria-expanded={info} aria-controls="model-information">Brittain 4<Icon name="down"/></button>{info && <div id="model-information" className="c-model-info" role="region" aria-label="Brittain 4 information"><strong>Brittain 4</strong><p>9B dense model</p><dl><div><dt>Web chat</dt><dd>{contextLimit.toLocaleString()} tokens</dd></div><div><dt>Model maximum</dt><dd>262k</dd></div></dl><a href="/models/brittain-4">View model details ↗</a></div>}</div></div><div className="c-header-right"><span className="c-preview">{busy ? 'Responding…' : preview ? 'Connected' : 'Not connected'}</span></div></header>
       {messages.length === 0 ? <div className="c-start"><div className="c-start-inner"><h1>What can I help with?</h1>{composer}<div className="c-suggestions">{suggestions.map(([icon,label,prompt]) => <button key={icon} onClick={() => { setDraft(prompt); input.current?.focus(); }}><Icon name={icon}/>{label}</button>)}</div></div></div> : <><div className="c-conversation" role="log" aria-label="Conversation"><div className="c-message-column">{messages.map((message, index) => <div className="c-turn" key={message.id}><div className="c-user-message"><AttachmentCards attachments={message.attachments}/><span>{message.prompt}</span></div><div className="c-reply"><BrandLogo/><div className="c-response"><DownloadCards artifacts={message.artifacts}/>{message.answer && <MarkdownReply text={message.answer}/>}<ToolActivity tools={message.tools}/>{!message.answer && message.status === 'streaming' && !message.tools?.some(tool => tool.status === 'running') ? <p role="status">Waiting for Brittain 4…</p> : null}{message.error && <p className="c-error" role="alert">{message.error}</p>}{message.status === 'stopped' && <p>Reply stopped.</p>}{message.note && <p>{message.note}</p>}<div className="c-reply-actions">{message.answer && <button onClick={() => copyAnswer(message.answer)}>Copy</button>}{!busy && index === messages.length - 1 && <button onClick={e => send(e, true)}>Retry</button>}</div></div></div></div>)}<span className="sr-only" role="status">{copyNotice}</span><div ref={end}/></div></div><div className="c-bottom-composer">{composer}</div></>}
     </section>
     {(notice || pendingDelete) && <div className="c-toast" role="status"><span>{pendingDelete ? `“${pendingDelete.chat.title}” removed.` : notice}</span>{pendingDelete && <button type="button" onClick={undoDelete}>Undo</button>}</div>}
