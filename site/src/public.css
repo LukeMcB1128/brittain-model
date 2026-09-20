@@ -80,6 +80,27 @@
   outline:2px solid var(--blue);
   outline-offset:var(--s1)
 }
+.skip-link {
+  position:fixed;
+  z-index:20;
+  top:var(--s3);
+  left:var(--s3);
+  padding:var(--s3) var(--s4);
+  border:1px solid var(--blue-line);
+  border-radius:var(--r2);
+  background:var(--input);
+  color:var(--ink);
+  transform:translateY(calc(-100% - var(--s5)))
+}
+.skip-link:focus {
+  transform:translateY(0)
+}
+.skip-target {
+  position:absolute;
+  width:1px;
+  height:1px;
+  overflow:hidden
+}
 
 .release-site .button {
   display:inline-flex;
