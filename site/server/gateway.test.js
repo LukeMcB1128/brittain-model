@@ -586,6 +586,90 @@ test('a greeting carrying an attachment keeps its tools', async () => {
   assert.equal(Array.isArray(payload.tools), true);
 });
 
+// Minimal D1 for the re-grounding tests: one course, and a record of what
+// was asked for.
+function courseDb(rows, calls = []) {
+  return {
+    calls,
+    prepare(sql) {
+      const call = { sql, binds: null };
+      calls.push(call);
+      return {
+        bind(...binds) { call.binds = binds; return this; },
+        async all() { return { results: rows }; },
+        async first() { return rows[0] ?? null; },
+      };
+    },
+  };
+}
+const APES = {
+  slug: 'science/ap-environmental-science', subject: 'science',
+  title: 'AP Environmental Science', credit: '1 (Science)', grade_level: '10-12',
+  course_number: '3070.P000.Y', peims: 'A3080100', teks_cite: '19 TAC Chapter 112',
+  body: '# AP Environmental Science\n\nNine units from the College Board CED.\n',
+};
+
+test('a follow-up turn gets the course file back, read from the database', async () => {
+  // The file is in context only on the turn that fetched it, and afterwards
+  // the model answered about the course from memory and invented specifics.
+  let payload;
+  const calls = [];
+  const history = {
+    messages: [
+      { role: 'user', content: 'rundown of ap environmental science' },
+      { role: 'assistant', content: 'Nine units.', tools: [{ name: 'search_curriculum', detail: 'AP Environmental Science' }] },
+      { role: 'user', content: 'how hard is the ap test' },
+    ],
+  };
+  await handleApi(req(history), { ...env, DB: courseDb([APES], calls) }, async (_url, options) => {
+    payload = JSON.parse(options.body);
+    return sse([{ choices: [{ index: 0, delta: { content: 'It is demanding.' }, finish_reason: 'stop' }] }, '[DONE]']);
+  });
+  // Only the course NAME came from the browser; the text came from D1.
+  assert.equal(calls[0].binds[0], 'AP Environmental Science');
+  // One file, not the three a loose lookup would return.
+  assert.equal(calls[0].binds.at(-1), 1);
+  const grounding = payload.messages.find(message => /Nine units from the College Board/.test(message.content || ''));
+  assert.ok(grounding, 'the course file should be in the prompt');
+  assert.equal(grounding.role, 'user');
+  assert.match(grounding.content, /supplied again so you can answer from it/);
+  // It goes before the question, not after it.
+  assert.equal(payload.messages.at(-1).content, 'how hard is the ap test');
+});
+
+test('re-grounding is skipped when there is nothing to re-ground', async () => {
+  const send = async (history, db) => {
+    let payload;
+    await handleApi(req(history), { ...env, DB: db }, async (_url, options) => {
+      payload = JSON.parse(options.body);
+      return sse([{ choices: [{ index: 0, delta: { content: 'ok' }, finish_reason: 'stop' }] }, '[DONE]']);
+    });
+    return payload;
+  };
+  const grounded = payload => payload.messages.some(m => /supplied again/.test(m.content || ''));
+
+  // No curriculum lookup anywhere in the conversation.
+  assert.equal(grounded(await send({ messages: [
+    { role: 'user', content: 'hello there friend' },
+    { role: 'assistant', content: 'Hi.', tools: [{ name: 'web_search', detail: 'weather' }] },
+    { role: 'user', content: 'and now' },
+  ] }, courseDb([APES]))), false);
+
+  // The detail was a subject listing, so no single course matches it.
+  assert.equal(grounded(await send({ messages: [
+    { role: 'user', content: 'what science classes are there' },
+    { role: 'assistant', content: 'A list.', tools: [{ name: 'search_curriculum', detail: 'science' }] },
+    { role: 'user', content: 'which is hardest' },
+  ] }, courseDb([]))), false);
+
+  // A deployment with no database still answers.
+  assert.equal(grounded(await send({ messages: [
+    { role: 'user', content: 'rundown of ap environmental science' },
+    { role: 'assistant', content: 'Nine units.', tools: [{ name: 'search_curriculum', detail: 'AP Environmental Science' }] },
+    { role: 'user', content: 'how hard is it' },
+  ] }, undefined)), false);
+});
+
 test('executes only declared tools and returns the final streamed reply', async () => {
   let round = 0;
   const response = await handleApi(req(), env, async (url, options) => {

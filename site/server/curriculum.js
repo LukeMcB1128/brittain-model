@@ -75,7 +75,7 @@ function snippet(body, needle) {
   return `${from ? '...' : ''}${body.slice(from, from + SNIPPET_CHARS).trim()}...`;
 }
 
-export async function searchCurriculum(args, context = {}) {
+export async function searchCurriculum(args, context = {}, options = {}) {
   const db = context.db;
   if (!db || typeof db.prepare !== 'function') {
     throw new Error('the curriculum database is not available in this deployment');
@@ -115,7 +115,7 @@ export async function searchCurriculum(args, context = {}) {
       + 'OR slug LIKE lower(?3) OR title LIKE ?3 '
       + 'ORDER BY CASE WHEN slug = ?1 OR lower(title) = lower(?2) THEN 0 ELSE 1 END, length(title) '
       + 'LIMIT ?4',
-    ).bind(course, course, like, MAX_FULL).all();
+    ).bind(course, course, like, options.limit || MAX_FULL).all();
     if (!results?.length) throw new Error(`no course matches ${course}`);
     const body = `${HEADER}\n\n${results.map(courseBlock).join('\n\n---\n\n')}`;
     return {

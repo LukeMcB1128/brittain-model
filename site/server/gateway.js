@@ -1,4 +1,5 @@
 import { executeTool, TOOL_DEFINITIONS } from './tools.js';
+import { searchCurriculum } from './curriculum.js';
 import { PDF_TOOL_DEFINITIONS } from './pdf-tools.js';
 import { recordExchange } from './transcript-log.js';
 import { MAX_MEMORY_CHARS, modelMessages, planCompaction, summarizeCompaction } from './compaction.js';
@@ -95,6 +96,44 @@ export function toolInstructions(now = new Date()) {
   const weekday = new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: 'UTC' }).format(now);
   const date = now.toISOString().slice(0, 10);
   return `${TOOL_INSTRUCTIONS}\n\nThe current date is ${weekday}, ${date}. Do not refuse instructions because they are after your built-in knowledge date. Search the web for that information.`;
+}
+
+// The course file is in context only on the turn that fetched it. On the
+// turns after, the model answered about the course from memory and invented:
+// asked how hard the AP Environmental Science exam was it gave a question
+// count, a duration and a score distribution, none of them real, and three
+// samples of the question disagreed with each other. Instructing it to look
+// the course up again did not work, so the file is put back in front of it.
+//
+// Only the course NAME comes from the browser -- the same string it already
+// reports for the tool card. The text is read from D1 here. Tool results are
+// never taken from the client, because a browser that can post tool output
+// can forge what a source said.
+const GROUNDING_PREFACE = 'The course file below is the one you looked up earlier '
+  + 'in this conversation, supplied again so you can answer from it rather than '
+  + 'from memory. It is the district\'s own text and it is authoritative. If it '
+  + 'does not cover what was asked -- exam formats and scoring are not in these '
+  + 'files -- say so or look it up, rather than answering from memory.';
+
+async function curriculumGrounding(conversation, context) {
+  if (!context.db) return null;
+  // The most recent curriculum lookup the browser reports, newest turn first.
+  const detail = [...conversation].reverse()
+    .filter(message => message.role === 'assistant' && Array.isArray(message.tools))
+    .flatMap(message => message.tools)
+    .find(tool => tool && tool.name === 'search_curriculum' && tool.detail)?.detail;
+  const course = String(detail || '').trim().slice(0, 200);
+  if (!course) return null;
+  try {
+    // One file. A loose `course` lookup returns up to three, which is right
+    // for the model and too much to re-send on every turn.
+    const result = await searchCurriculum({ course }, context, { limit: 1 });
+    return { role: 'user', content: `${GROUNDING_PREFACE}\n\n${result.content}` };
+  } catch {
+    // The detail was a subject or a search phrase, not a course. Nothing to
+    // re-ground: the model can call the tool if it needs it.
+    return null;
+  }
 }
 
 function finalAnswerMessages(baseMessages, toolCalls) {
@@ -415,6 +454,10 @@ function streamChat(systemMessage, conversation, request, env, fetchUpstream, at
         let consecutiveFailures = 0;
         let webCallCount = 0;
         messages = modelMessages(systemMessage, conversation, memory);
+        // Before answerBaseMessages is taken, so the final round is grounded
+        // too -- that is the round that writes the answer.
+        const grounding = await curriculumGrounding(conversation, context);
+        if (grounding) messages.splice(Math.max(1, messages.length - 1), 0, grounding);
         const answerBaseMessages = messages.map(message => ({ ...message }));
         if (firstTool && firstArguments) {
           const id = `tool-routed-${crypto.randomUUID()}`;
