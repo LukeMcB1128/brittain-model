@@ -20,12 +20,12 @@ Updated 2026-09-21 (America/Chicago).
 - Committed the deployed production preparation as `6cb3ef7`.
 - Created and deployed a separate staging Worker, empty D1 database, Turnstile widget, and account secret. No production data or credentials were copied.
 - Added separate staging build, deployment, migration, and check commands. Production database commands use an explicit target.
+- Verified `brittain.app` with Resend, stored `RESEND_API_KEY` as a Worker secret, and confirmed account email delivery and password recovery.
+- Replaced the old ChatGPT Sites root records with a Worker Custom Domain for `brittain.app`. The `workers.dev` address stays enabled as a fallback.
 
 ## External setup still needed
 
-- Resend: create or select the account, verify the sending domain, and supply `RESEND_API_KEY`. The current sending address is `accounts@brittain.app`. Configure the DNS records supplied by Resend and test actual delivery with an authorized recipient. No emails were sent by this preparation work.
 - Policies: select a support/privacy mailbox, retention periods, and final terms. No contact address or retention promise has been invented.
-- Domain: `brittain.app` still needs the planned cutover from Sites after the account and model checks pass. This update does not change its binding.
 - Staging model/email tests: the separate site is live, but chat is paused and model/email credentials are absent. Add test service configuration before testing those flows.
 - Release assets: model files, license, hardware requirements, and evaluation results.
 - Monitoring: health endpoint is available, but external uptime checks and alert recipients are not configured.
@@ -42,11 +42,11 @@ The user approved the production export on 2026-09-20. The backup was saved unde
 
 ## Verified deployment
 
-- Active Worker version: `e2f963c8-ed08-4835-b60b-3d4943da0ffe`. It uses the Cloudflare Tunnel model origin, serves `run3-step-0116`, and sends bounded earlier tool-call metadata from the active chat to the model.
-- Previous known-good Worker version: `ddd5dacb-aa67-43c1-bb6c-4c18a1d21ce3`. It uses the Cloudflare Tunnel and `run3-step-0116`, but the active chat does not send earlier tool-call metadata.
+- Active Worker version: `acce1f3b-807c-4133-ba57-76f4e1fe7615`. It serves `brittain.app` as a Custom Domain and keeps `brittain-app.luke-brittain.workers.dev` enabled as a fallback.
+- Previous known-good Worker version: `6715dbf2-4053-446b-ac9e-06dc2b69b6e4`. It includes the email secret and tunnel integration but only serves the `workers.dev` address.
 - Previous release before this update: `63e9c12b-8b54-4b17-8dfe-950233a73e02`. Rolling back to it also reverts the new account protection; assess that tradeoff before rollback.
 - Tests: 116 passing. Lint and the production build pass. The build warns that production secrets are absent locally; live health checks confirm the deployed configuration is present.
-- Live release check: 19 of 20 checks pass on the Workers address. Email verification/password recovery is the remaining failed check.
+- Live release check: all 20 checks pass on `https://brittain.app`. Email verification and password recovery are configured.
 - Live negative login check: HTTP 400 with `MISSING_RESPONSE` when no CAPTCHA token is supplied.
 - Browser check: the managed widget completed automatically. A deliberately invalid login returned the expected error, refreshed the token, and enabled another attempt. No account was created and no email was sent.
 - Static pages return the security headers. Chat URLs return `noindex`, including direct conversation links.
@@ -60,6 +60,7 @@ The user approved the production export on 2026-09-20. The backup was saved unde
 - The model API now uses the supervised Cloudflare Tunnel at `https://api.brittain.app`. The protected model-list route returns HTTP 401 without a key, with valid TLS. Production no longer sends ngrok-specific headers.
 - An authenticated tunnel check returns HTTP 200 and lists `brittain4`, `run3-step-0116`, and `run2-step-0116`. The API key stayed in the private `.env` file during this check.
 - Earlier tool calls now reach the model from the active chat page. Only bounded tool names and arguments are sent. Tool results remain server-side.
+- A live browser check confirms that `https://brittain.app` serves the public Brittain 4 home page without the previous ChatGPT account gate. `/api/health` also returns HTTP 200.
 
 ## Dependency audit
 
@@ -94,12 +95,12 @@ A supplied chat record showed four failed searches, six HTTP 404 page reads, and
 
 ## Remaining launch checks
 
-- [ ] Complete email verification and password recovery on the final domain.
+- [x] Complete email verification and password recovery on the final domain.
 - [x] Verify Turnstile in a real browser and recover after a wrong password.
 - [ ] Load-test the model with four concurrent requests and tool calls.
 - [ ] Test tab close, disconnection, Stop, compaction, and reload with a signed-in test account.
 - [x] Approve and execute the local database backup/restore check.
 - [ ] Configure uptime/error/capacity alerts.
 - [ ] Complete a screen-reader check. Mobile widths and the main keyboard interactions have been checked.
-- [ ] Run `npm run check:release -- https://brittain.app` after cutover.
+- [x] Run `npm run check:release -- https://brittain.app` after cutover.
 - [x] Record a known-good Worker version and D1 bookmark for rollback.
