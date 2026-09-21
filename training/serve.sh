@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Serve BRITTAIN-4 with an API key, in the FOREGROUND.
+#
+# The key comes from BRITTAIN_API_KEY in the environment and is never written
+# into the repo. Generate one once and keep it in your shell profile:
+#   export BRITTAIN_API_KEY="$(openssl rand -hex 24)"
+#
+# Do not background this: WSL reaps the process group when the invoking shell
+# returns, so a backgrounded `vllm serve` reaches "Application startup
+# complete" and is killed a moment later -- a log that reads like success and a
+# port that answers nothing.
+#
+# --reasoning-parser moves the thinking trace out of message.content and into
+# reasoning_content. Without it the trace renders as visible chat: a plain
+# "hello" came back as "The user is greeting me. I should respond in a
+# friendly, natural way" followed by the real reply. Brittain Code already
+# reads delta.reasoning_content on its openai transport, so this is the fix
+# rather than switching thinking off -- the reasoning is doing useful work.
+#
+# --allowed-origins is deliberately NOT "*" here. A wildcard plus a public
+# tunnel means any page on the internet can call this endpoint from a visitor's
+# browser. Set SITE_ORIGIN to the real site before going public.
+source "$HOME/venv-vllm/bin/activate"
+export VLLM_USE_FLASHINFER_SAMPLER=0
+pkill -9 -f "VLLM::Engine""Core" 2>/dev/null
+sleep 2
+
+# Read the key here rather than taking it through the caller's environment:
+# passing $(cat ...) through PowerShell -> wsl -> bash gets interpolated by the
+# outermost shell, which resolved it against the Windows filesystem and failed.
+if [ -z "${BRITTAIN_API_KEY:-}" ] && [ -f "$HOME/.brittain4_key" ]; then
+    BRITTAIN_API_KEY=$(cat "$HOME/.brittain4_key")
+fi
+if [ -z "${BRITTAIN_API_KEY:-}" ]; then
+    echo "No API key. Set BRITTAIN_API_KEY or create ~/.brittain4_key." >&2
+    echo "  openssl rand -hex 24 > ~/.brittain4_key && chmod 600 ~/.brittain4_key" >&2
+    exit 1
+fi
+
+ORIGINS="${SITE_ORIGIN:-*}"
+if [ "$ORIGINS" = "*" ]; then
+    ORIGIN_ARG='["*"]'
+    echo "WARNING: CORS is open to any origin. Set SITE_ORIGIN before this is public."
+else
+    ORIGIN_ARG="[\"$ORIGINS\"]"
+fi
+
+export VLLM_API_KEY="$BRITTAIN_API_KEY"
+
+# vLLM registers /v1/load_lora_adapter and /v1/unload_lora_adapter only
+# when this is set. Without it --enable-lora still serves adapters named at
+# startup, but the runtime endpoints 404 against a server that otherwise
+# looks perfectly healthy -- which cost a whole scoring pass.
+export VLLM_ALLOW_RUNTIME_LORA_UPDATING=1
+
+exec vllm serve \
+    --model /home/lukeb/brittain4/models/brittain4-base-w4a16 \
+    --served-model-name brittain4 \
+    --host 0.0.0.0 \
+    --port 11435 \
+    --max-model-len 32768 \
+    --gpu-memory-utilization 0.90 \
+    --max-num-batched-tokens 2048 \
+    --max-num-seqs 4 \
+    --attention-backend TRITON_ATTN \
+    --enable-lora \
+    --max-lora-rank 32 \
+    --enable-auto-tool-choice \
+    --tool-call-parser qwen3_xml \
+    --reasoning-parser "${REASONING_PARSER:-qwen3}" \
+    --chat-template /home/lukeb/brittain4/chat_template_brittain4.jinja \
+    --allowed-origins "$ORIGIN_ARG"

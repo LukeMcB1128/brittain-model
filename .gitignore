@@ -45,3 +45,8 @@ tools/typescript/node_modules/
 .vscode/
 
 .env
+
+# Scrub rules hold literal personal data (usernames, private addresses).
+# They live beside the corpus, never here: this repository is public.
+scrub_rules.json
+training/**/scrub_rules.json
