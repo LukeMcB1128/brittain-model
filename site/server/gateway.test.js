@@ -337,6 +337,35 @@ test('successful tool use resets the consecutive failure count', async () => {
   assert.equal(rounds, 5);
 });
 
+test('prose written before a tool call is superseded, not shown', async () => {
+  // Three rounds each opened with an announcement -- "Let me pull those",
+  // "Alright, let me pull the remaining courses" -- and the model then ran out
+  // of rounds without answering. The announcements were the whole reply.
+  let round = 0;
+  const response = await handleApi(req(), env, async (url) => {
+    if (String(url).includes('duckduckgo')) {
+      return new Response('<a class="result__a" href="https://example.com/a">Result</a>', { headers: { 'Content-Type': 'text/html' } });
+    }
+    round += 1;
+    if (round === 1) {
+      return sse([
+        { choices: [{ index: 0, delta: { content: 'Let me look that up for you.' } }] },
+        { choices: [{ index: 0, delta: { tool_calls: [{ index: 0, id: 's1', type: 'function', function: { name: 'web_search', arguments: '{"query":"anything"}' } }] }, finish_reason: 'tool_calls' }] },
+        '[DONE]',
+      ]);
+    }
+    return sse([
+      { choices: [{ index: 0, delta: { content: 'The answer is 42.' } }] },
+      { choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] },
+      '[DONE]',
+    ]);
+  });
+  const body = await response.text();
+  // The client is told to discard what came before the tool call.
+  assert.match(body, /"type":"reset"/);
+  assert.match(body, /The answer is 42/);
+});
+
 test('a tool reporting itself unavailable is withdrawn for the rest of the reply', async () => {
   // Real transcript: ten progressively reworded searches for one high school,
   // every one answered with a bot challenge, and the user got an error rather

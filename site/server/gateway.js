@@ -408,6 +408,14 @@ function streamChat(systemMessage, conversation, request, env, fetchUpstream, at
             controller.close();
             return;
           }
+          // This round is going round again, so whatever prose it produced was
+          // a preamble rather than an answer. Three of those accumulated into
+          // one live reply -- "Let me pull those", "Alright, let me pull the
+          // remaining courses" -- and the model then ran out of rounds without
+          // answering, leaving the announcements as the whole reply. The
+          // activity chips already show what is happening; the narration adds
+          // nothing and outlives the answer it promised.
+          emit({ type: 'reset' });
           const toolCalls = result.toolCalls.map((call, index) => ({ ...call, id: call.id || `tool-${round}-${toolCount}-${index}` }));
           messages.push({ role: 'assistant', content: result.content || null, tool_calls: toolCalls });
           const renderedImages = [];

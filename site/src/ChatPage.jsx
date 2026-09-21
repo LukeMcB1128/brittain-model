@@ -330,6 +330,9 @@ export default function Chat({ session, initialChatId = '' }) {
           return;
         }
         if (chunk.type === 'usage') { update({ usage: chunk.usage }); return; }
+        // The server superseded what it has sent: that text was a preamble
+        // before a tool call, not part of the answer.
+        if (chunk.type === 'reset') { answer = ''; update({ answer }); return; }
         answer += chunk.text || '';
         if (chunk.finishReason) finishReason = chunk.finishReason;
         update({ answer, ...(chunk.text ? { activityPhase: 'answering' } : {}), ...(chunk.usage ? { usage: chunk.usage } : {}) });
