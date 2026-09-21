@@ -62,9 +62,20 @@ export function modelLabel(name = "") {
 export function requestMessages(messages) {
   const result = messages
     .filter((m) => m.role === "user" || (m.content && m.status !== "error"))
-    .map(({ role, content }) => ({ role, content }));
+    // `tools` carries what an earlier turn CALLED -- names and the short
+    // detail already shown in the UI. Not results: the server refuses tool
+    // output from the browser, because a client that can post it can forge
+    // what a page said. Without this the model has no record of its own tool
+    // use and will say, honestly and wrongly, that it never searched.
+    .map(({ role, content, tools }) => {
+      const used = (tools || [])
+        .filter((t) => t && t.name && t.status !== "error")
+        .slice(0, 10)
+        .map((t) => ({ name: String(t.name).slice(0, 40), detail: String(t.detail || "").slice(0, 80) }));
+      return used.length ? { role, content, tools: used } : { role, content };
+    });
   while (
-    result.reduce((n, m) => n + m.content.length, 0) > 20000 &&
+    result.reduce((n, m) => n + (m.content || "").length, 0) > 20000 &&
     result.length > 1
   ) {
     result.shift();

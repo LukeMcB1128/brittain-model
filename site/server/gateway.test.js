@@ -420,6 +420,40 @@ test('running out of tool rounds ends with an answer instead of an error', async
   assert.doesNotMatch(body, /tool limit was reached/i);
 });
 
+test('an earlier turn: tool use is replayed to the model, results are not', async () => {
+  // The client used to send only {role, content}, so the model had no record of
+  // its own tool calls. Asked "why did you search", it answered honestly that it
+  // had not -- and then invented a reason when shown otherwise. Names and
+  // arguments go back; results never do, because a browser that can post tool
+  // output can forge what a web page said.
+  let payload;
+  const history = {
+    messages: [
+      { role: 'user', content: 'write me a python script that reverses a string' },
+      {
+        role: 'assistant',
+        content: 'Here is text[::-1].',
+        tools: [
+          { name: 'web_search', detail: 'python reverse string' },
+          { name: 'totally_made_up_tool', detail: 'should be dropped' },
+        ],
+      },
+      { role: 'user', content: 'why did you search for that' },
+    ],
+  };
+  await handleApi(req(history), env, async (_url, options) => {
+    payload = JSON.parse(options.body);
+    return sse([{ choices: [{ index: 0, delta: { content: 'I did.' }, finish_reason: 'stop' }] }, '[DONE]']);
+  });
+  const assistant = payload.messages.find(message => message.role === 'assistant');
+  assert.match(assistant.content, /Tools you used on this turn/);
+  assert.match(assistant.content, /web_search\(python reverse string\)/);
+  // An unknown name is not echoed back into the prompt.
+  assert.doesNotMatch(assistant.content, /totally_made_up_tool/);
+  // Nothing claiming to be tool output reaches the model from the browser.
+  assert.equal(payload.messages.some(message => message.role === 'tool'), false);
+});
+
 test('executes only declared tools and returns the final streamed reply', async () => {
   let round = 0;
   const response = await handleApi(req(), env, async (url, options) => {

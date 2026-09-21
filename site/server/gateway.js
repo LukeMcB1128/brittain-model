@@ -62,7 +62,7 @@ const TOOL_INSTRUCTIONS = `You are BRITTAIN, a general-purpose assistant made by
 
 You can do everything an assistant does: write, explain, analyse, reason, and write code. Three tools extend your reach — web_search, web_fetch and calculate — and they add to what you can do rather than limiting it. Having no tool for something is never a reason to decline it.
 
-Use calculate for arithmetic rather than working it out yourself. Search the web whenever the answer could have changed since you last saw it or depends on a specific outside fact — versions, prices, weather, news, who holds a post, dates, or any factual lookup a reader would want a source for — and use web_fetch when a page must be read in detail. Prefer checking over recalling for anything of that kind. Never claim you used a tool when you did not, and include source links for claims that came from the web.
+Use calculate for arithmetic rather than working it out yourself. Do not search for settled technical knowledge you already have, such as language syntax, standard library behaviour, or how to write a common function — answer those directly. Search the web whenever the answer could have changed since you last saw it or depends on a specific outside fact â versions, prices, weather, news, who holds a post, dates, or any factual lookup a reader would want a source for â and use web_fetch when a page must be read in detail. Prefer checking over recalling for anything of that kind. Never claim you used a tool when you did not, and never deny one you did use — any tools you used on a turn are listed at the end of that reply. Include source links for claims that came from the web.
 
 When a web tool fails, do not repeat the failed request or guess replacement URLs. If enough information is already in the conversation, complete the user's task from that information and state any uncertainty briefly. Do not keep announcing that you will answer. Do not invent facts about unfamiliar libraries or languages.
 
@@ -99,6 +99,28 @@ function finalAnswerMessages(baseMessages, toolCalls) {
   });
   return messages;
 }
+// What an earlier assistant turn called, as the browser reports it. Names and
+// arguments only -- never results, which stay server-side, because a forged
+// tool result would be evidence the model is told to trust. Rendered into the
+// assistant's text rather than as protocol tool_calls, which would each need a
+// matching tool response to keep the sequence valid.
+const TOOL_NAMES = new Set([
+  ...TOOL_DEFINITIONS.map(tool => tool.function.name),
+  ...PDF_TOOL_DEFINITIONS.map(tool => tool.function.name),
+]);
+function toolUseNote(tools) {
+  if (!Array.isArray(tools) || !tools.length) return '';
+  const used = tools
+    .filter(tool => tool && TOOL_NAMES.has(tool.name))
+    .slice(0, 10)
+    .map(tool => {
+      const detail = String(tool.detail || '').replace(/[\r\n]+/g, ' ').slice(0, 80);
+      return detail ? `${tool.name}(${detail})` : tool.name;
+    });
+  if (!used.length) return '';
+  return `\n\n[Tools you used on this turn: ${used.join('; ')}]`;
+}
+
 function json(body, status = 200) {
   return Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 }
@@ -516,7 +538,14 @@ export async function handleApi(request, env, fetchUpstream = fetch, authenticat
       if (!message || !['user', 'assistant'].includes(message.role)) throw new Error('Message role is not valid.');
       if (message.role === 'user') fallbackTurn += 1;
       const turnId = typeof message.turnId === 'string' && /^[A-Za-z0-9-]{1,100}$/.test(message.turnId) ? message.turnId : `legacy-${fallbackTurn}`;
-      return { role: message.role, content: normalizeContent(message.role, message.content, totals), turnId };
+      const content = normalizeContent(message.role, message.content, totals);
+      // Only assistant turns can have called anything.
+      const note = message.role === 'assistant' ? toolUseNote(message.tools) : '';
+      return {
+        role: message.role,
+        content: note && typeof content === 'string' ? content + note : content,
+        turnId,
+      };
     });
   } catch (error) { return json({ error: error.message }, 400); }
   const memory = body.memory === undefined ? '' : typeof body.memory === 'string' ? body.memory.trim() : null;
