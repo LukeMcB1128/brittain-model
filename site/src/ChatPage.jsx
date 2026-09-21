@@ -5,6 +5,7 @@ import { readCompletion } from './brittain4.js';
 import MarkdownReply from './MarkdownReply.js';
 import { contextUsage } from './context-usage.js';
 import { ACCEPTED_ATTACHMENTS, importAttachment, MAX_ATTACHMENT_BYTES, MAX_ATTACHMENT_COUNT, messageContent, requestAssets } from './attachments.js';
+import { assistantToolHistory } from './chat-history.js';
 import { toolActivityMessage } from './tool-activity.js';
 
 const suggestions = [
@@ -262,7 +263,10 @@ export default function Chat({ session, initialChatId = '' }) {
     const previous = retry ? messages.slice(0, -1) : messages;
     const contextStart = Math.min(current?.contextStart || 0, previous.length);
     const contextTurns = previous.slice(contextStart);
-    const history = contextTurns.flatMap(m => [{ role: 'user', content: messageContent(m.prompt, m.attachments), turnId: m.id }, ...(m.answer ? [{ role: 'assistant', content: m.answer, turnId: m.id }] : [])]);
+    const history = contextTurns.flatMap(m => {
+      const tools = assistantToolHistory(m.tools);
+      return [{ role: 'user', content: messageContent(m.prompt, m.attachments), turnId: m.id }, ...(m.answer ? [{ role: 'assistant', content: m.answer, turnId: m.id, ...(tools.length ? { tools } : {}) }] : [])];
+    });
     const changedAt = new Date().toISOString();
     let workingChat = current ? { ...current, updatedAt: changedAt, messages: [...previous, turn] } : { id, title: (draft.trim() || turnAttachments[0]?.name || turn.prompt).slice(0, 60), createdAt: changedAt, updatedAt: changedAt, messages: [turn] };
     if (active) setChats(items => items.map(chat => chat.id === id ? workingChat : chat));
@@ -280,7 +284,7 @@ export default function Chat({ session, initialChatId = '' }) {
         if (message.id !== turn.id) return message;
         const usedTools = message.tools || [];
         const index = usedTools.findIndex(item => item.id === tool.id);
-        return { ...message, tools: index === -1 ? [...usedTools, tool] : usedTools.map((item, toolIndex) => toolIndex === index ? { ...item, ...tool } : item) };
+        return { ...message, tools: index === -1 ? [...usedTools, tool] : usedTools.map((item, toolIndex) => toolIndex === index ? { ...item, ...tool, detail: tool.detail || item.detail } : item) };
       }) };
       setChats(items => items.map(chat => chat.id === id ? workingChat : chat));
     }

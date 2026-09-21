@@ -78,7 +78,7 @@ ap.add_argument("--keep-awake", action="store_true",
                      "and GPU load does not count -- so the machine sleeps on its "
                      "usual timeout and the tunnel goes dead. Released on exit.")
 ap.add_argument("--host", default="127.0.0.1",
-                help="127.0.0.1 keeps it local; ngrok tunnels to it either way")
+                help="127.0.0.1 keeps it local; a configured tunnel can still reach it")
 ap.add_argument("--cors-origin", action="append", default=None,
                 help="allowed browser origin, repeatable. Defaults to '*'. A "
                      "GitHub Pages site should name its own origin — that does "
@@ -269,7 +269,7 @@ now = lambda: time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
 # ---------------------------------------------------------------- public limits
-# Tunnelled through ngrok, this endpoint is reachable by anyone who has the URL,
+# Through a public tunnel, this endpoint is reachable by anyone who has the URL,
 # and every request runs on Luke's laptop. Three bounds, none of which a normal
 # user or Continue.dev will ever touch:
 #
@@ -455,7 +455,7 @@ def stream_pieces(M, prompt, raw, opts):
         stops = opts.get("stop") or []
         rep = opts.get("repeat_penalty", 1.12)
     top_p = opts.get("top_p", 0.95)
-    # Clamp, don't trust. Reachable from the public internet through ngrok, an
+    # Clamp, don't trust. Reachable from the public internet through a tunnel, an
     # unbounded num_predict holds the one GPU for as long as the caller asks.
     max_new = max(1, min(int(max_new), M.max_new_tokens))
 

@@ -1,6 +1,6 @@
 # Production preparation
 
-Updated 2026-09-20 (America/Chicago).
+Updated 2026-09-21 (America/Chicago).
 
 ## Completed in this update
 
@@ -24,7 +24,6 @@ Updated 2026-09-20 (America/Chicago).
 ## External setup still needed
 
 - Resend: create or select the account, verify the sending domain, and supply `RESEND_API_KEY`. The current sending address is `accounts@brittain.app`. Configure the DNS records supplied by Resend and test actual delivery with an authorized recipient. No emails were sent by this preparation work.
-- Model host: access to the WSL machine is needed to install and supervise Cloudflare Tunnel and the model process. Keep the existing ngrok origin until the replacement works.
 - Policies: select a support/privacy mailbox, retention periods, and final terms. No contact address or retention promise has been invented.
 - Domain: `brittain.app` still needs the planned cutover from Sites after the account and model checks pass. This update does not change its binding.
 - Staging model/email tests: the separate site is live, but chat is paused and model/email credentials are absent. Add test service configuration before testing those flows.
@@ -43,10 +42,10 @@ The user approved the production export on 2026-09-20. The backup was saved unde
 
 ## Verified deployment
 
-- Active Worker version: `e3fcb13a-b71d-4e3c-9e97-cfc4052c504b`. It includes the Brave runtime fix, the bounded web-evidence final-answer flow, safe currency rendering, keyboard navigation fixes, removal of the obsolete experimental chat route, and the hosted-only Brittain 4 release policy.
-- Previous known-good Worker version: `42355249-f5aa-4166-bfb9-3250ce1bfac1`. It includes the same features but still shows the 262k model maximum on the home-page model card.
+- Active Worker version: `e2f963c8-ed08-4835-b60b-3d4943da0ffe`. It uses the Cloudflare Tunnel model origin, serves `run3-step-0116`, and sends bounded earlier tool-call metadata from the active chat to the model.
+- Previous known-good Worker version: `ddd5dacb-aa67-43c1-bb6c-4c18a1d21ce3`. It uses the Cloudflare Tunnel and `run3-step-0116`, but the active chat does not send earlier tool-call metadata.
 - Previous release before this update: `63e9c12b-8b54-4b17-8dfe-950233a73e02`. Rolling back to it also reverts the new account protection; assess that tradeoff before rollback.
-- Tests: 114 passing. Lint and the production build pass. The build warns that production secrets are absent locally; live health checks confirm the deployed configuration is present.
+- Tests: 116 passing. Lint and the production build pass. The build warns that production secrets are absent locally; live health checks confirm the deployed configuration is present.
 - Live release check: 19 of 20 checks pass on the Workers address. Email verification/password recovery is the remaining failed check.
 - Live negative login check: HTTP 400 with `MISSING_RESPONSE` when no CAPTCHA token is supplied.
 - Browser check: the managed widget completed automatically. A deliberately invalid login returned the expected error, refreshed the token, and enabled another attempt. No account was created and no email was sent.
@@ -58,12 +57,15 @@ The user approved the production export on 2026-09-20. The backup was saved unde
 - Currency amounts no longer become accidental LaTeX spans. Inline and display equations continue to use KaTeX.
 - The obsolete `/experimental-chat` route and its direct browser-to-ngrok client are no longer in the production bundle. A live browser check confirmed that the route returns the standard Page not found screen.
 - Brittain 4 is now described as web-chat only across the home, account, Models, and model-detail pages. Experimental model downloads remain separate. A live browser check confirmed both model views and the direct Experimental models link.
+- The model API now uses the supervised Cloudflare Tunnel at `https://api.brittain.app`. The protected model-list route returns HTTP 401 without a key, with valid TLS. Production no longer sends ngrok-specific headers.
+- An authenticated tunnel check returns HTTP 200 and lists `brittain4`, `run3-step-0116`, and `run2-step-0116`. The API key stayed in the private `.env` file during this check.
+- Earlier tool calls now reach the model from the active chat page. Only bounded tool names and arguments are sent. Tool results remain server-side.
 
 ## Dependency audit
 
 The four moderate findings were removed with a scoped override: `@esbuild-kit/core-utils` uses the project's existing `esbuild` version, currently `0.28.2`. Other locked package versions are unchanged. The [esbuild advisory](https://github.com/advisories/GHSA-67mh-4wv8-2f99) covers versions through `0.24.2`.
 
-`npm audit` now reports zero vulnerabilities. Database tooling loaded the TypeScript schema, generated all six tables, and passed a SQLite integrity check on the generated SQL. All 105 tests, lint, and both environment builds pass. CI now fails on moderate or higher findings. These tooling and backup changes do not need a Worker deployment.
+`npm audit` now reports zero vulnerabilities. Database tooling loaded the TypeScript schema, generated all six tables, and passed a SQLite integrity check on the generated SQL. All 116 tests, lint, and both environment builds pass. CI now fails on moderate or higher findings. These tooling and backup changes do not need a Worker deployment.
 
 ## Staging verification
 

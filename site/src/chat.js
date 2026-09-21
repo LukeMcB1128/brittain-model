@@ -1,8 +1,8 @@
 export const API_ORIGIN = (
   import.meta.env?.VITE_API_ORIGIN ||
-  "https://fragility-devoutly-dazzling.ngrok-free.dev"
+  "https://api.brittain.app"
 ).replace(/\/$/, "");
-export const apiHeaders = { "ngrok-skip-browser-warning": "true" };
+export const apiHeaders = {};
 
 const TAGS_OPEN = "<|tags|>";
 const TAGS_END = "<|end_tags|>";
