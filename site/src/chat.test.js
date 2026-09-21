@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readNdjson, requestMessages, visibleStory } from "./chat.js";
+import { readNdjson, requestMessages, visibleStory, withoutReferenceNotes } from "./chat.js";
 
 test("Shakespeare metadata never leaks at any stream boundary", () => {
   const wire =
@@ -89,4 +89,20 @@ test("stream errors and premature disconnects surface instead of silently comple
     readNdjson(encode("not json\n"), () => {}),
     SyntaxError,
   );
+});
+
+test("a leaked reference note never reaches the reader", () => {
+  // The server tells the model what it called using a bracketed note on the
+  // user side. It sometimes writes one back out; a real reply ended with
+  // "[Tools you used on this turn: search_curriculum(AP Calculus BC)]".
+  const leaked = "AP Calculus BC includes everything from AB." + String.fromCharCode(10, 10)
+    + "[Tools you used on this turn: search_curriculum(AP Calculus BC)]";
+  assert.equal(withoutReferenceNotes(leaked), "AP Calculus BC includes everything from AB.");
+
+  const other = "[For your reference: on your previous turn you used web_search(x).]";
+  assert.equal(withoutReferenceNotes(other), "");
+
+  // Ordinary brackets are the reader's, not ours.
+  const kept = "Use array[0] and see [the docs](https://example.com).";
+  assert.equal(withoutReferenceNotes(kept), kept);
 });

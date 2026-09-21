@@ -45,6 +45,20 @@ export function visibleStory(text, done = false) {
     .replace(/<(?:\|[^>]*)?$/, "")
     .trimStart();
 }
+// The server tells the model what it called on earlier turns using a bracketed
+// note on the user side. The model sometimes writes one back out. Telling it not
+// to helps but does not always hold, and a leaked note means nothing to the
+// reader, so it is removed on the way to the screen as well.
+export function withoutReferenceNotes(text) {
+  return String(text || "")
+    .replace(/\[(?:For your reference|Tools you used)[^\]]*\]/g, "")
+    .replace(/
+{3,}/g, "
+
+")
+    .trimEnd();
+}
+
 export function isStory(model) {
   return (
     model?.details?.tokenizer === "brittain_shakespeare_bpe" ||
