@@ -28,9 +28,11 @@ function db(rows, calls = []) {
     prepare(sql) {
       const call = { sql, binds: null };
       calls.push(call);
+      const resolve = () => (typeof rows === 'function' ? rows(call) : rows);
       return {
         bind(...binds) { call.binds = binds; return this; },
-        async all() { return { results: typeof rows === 'function' ? rows(call) : rows }; },
+        async all() { return { results: resolve() }; },
+        async first() { return resolve()[0] ?? null; },
       };
     },
   };
@@ -67,13 +69,16 @@ test('curriculum is presented as authoritative, unlike web content', async () =>
 
 test('a subject lists courses rather than returning every file', async () => {
   const calls = [];
-  const result = await searchCurriculum({ subject: 'math' }, { db: db([CALC, STATS], calls) });
+  // The count query and the listing query answer differently.
+  const result = await searchCurriculum({ subject: 'math' }, {
+    db: db(call => (call.sql.includes('COUNT(*)') ? [{ n: 2 }] : [CALC, STATS]), calls),
+  });
   assert.match(result.content, /AP Calculus AB/);
   assert.match(result.content, /AP Statistics/);
   // 178 CTE course files would fill the context and answer nothing, so a browse
   // must not select bodies at all.
   assert.doesNotMatch(result.content, /Intermediate Value Theorem/);
-  assert.match(calls[0].sql, /SELECT slug, title, credit, grade_level/);
+  assert.match(calls.at(-1).sql, /SELECT slug, title, credit, grade_level/);
 });
 
 test('a query returns snippets, and full files only when asked', async () => {
@@ -93,10 +98,35 @@ test('a subject narrows a query instead of being ignored', async () => {
   assert.equal(calls[0].binds.at(-1), 'math');
 });
 
-test('missing arguments and a missing database fail clearly', async () => {
-  await assert.rejects(() => searchCurriculum({}, { db: db([]) }), /course, a subject, or a query/);
+test('no arguments returns the subject overview rather than an error', async () => {
+  // "Give me a summary of AISD classes" used to call the tool vaguely, get
+  // "nothing matches", and send the model to the open web for a catalogue the
+  // database holds in full.
+  const result = await searchCurriculum({}, {
+    db: db([{ subject: 'cte', n: 178 }, { subject: 'math', n: 27 }]),
+  });
+  assert.match(result.content, /205 courses across 2 subjects/);
+  assert.match(result.content, /cte: 178 courses/);
+});
+
+test('a subject reports its true total, not the number of rows returned', async () => {
+  // LIMIT 40 with the row count printed as the total told the model CTE has 40
+  // courses. It has 178, and the model passed that on to the user as fact.
+  const listing = Array.from({ length: 40 }, (_, n) => ({
+    slug: `cte/course-${n}`, title: `Course ${n}`, credit: '1', grade_level: '9-12',
+  }));
+  const result = await searchCurriculum({ subject: 'cte' }, {
+    db: db(call => (call.sql.includes('COUNT(*)') ? [{ n: 178 }] : listing)),
+  });
+  assert.match(result.content, /cte — 178 courses/);
+  assert.match(result.content, /40 of 178 shown/);
+  assert.equal(result.display.result, '178 courses');
+});
+
+test('a missing database and an unknown course fail clearly', async () => {
   await assert.rejects(() => searchCurriculum({ course: 'x' }, {}), /not available in this deployment/);
   await assert.rejects(() => searchCurriculum({ course: 'nope' }, { db: db([]) }), /no course matches/);
+  await assert.rejects(() => searchCurriculum({ subject: 'nope' }, { db: db([{ n: 0 }]) }), /no subject named/);
 });
 
 test('wildcards in user input cannot widen the search', async () => {
@@ -111,7 +141,7 @@ test('executeTool routes the tool and labels its failures', async () => {
   assert.equal(ok.error, undefined);
   assert.equal(ok.display.label, 'Curriculum');
 
-  const failed = await executeTool('search_curriculum', {}, fetch, { db: db([]) });
+  const failed = await executeTool('search_curriculum', { course: 'nope' }, fetch, { db: db([]) });
   assert.equal(failed.error, true);
   assert.equal(failed.display.label, 'Curriculum');
 });

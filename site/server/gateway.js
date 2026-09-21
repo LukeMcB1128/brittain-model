@@ -118,7 +118,7 @@ function toolUseNote(tools) {
       return detail ? `${tool.name}(${detail})` : tool.name;
     });
   if (!used.length) return '';
-  return `\n\n[Tools you used on this turn: ${used.join('; ')}]`;
+  return `[For your reference: on your previous turn you used ${used.join('; ')}.]`;
 }
 
 function json(body, status = 200) {
@@ -539,14 +539,27 @@ export async function handleApi(request, env, fetchUpstream = fetch, authenticat
       if (message.role === 'user') fallbackTurn += 1;
       const turnId = typeof message.turnId === 'string' && /^[A-Za-z0-9-]{1,100}$/.test(message.turnId) ? message.turnId : `legacy-${fallbackTurn}`;
       const content = normalizeContent(message.role, message.content, totals);
-      // Only assistant turns can have called anything.
-      const note = message.role === 'assistant' ? toolUseNote(message.tools) : '';
       return {
         role: message.role,
-        content: note && typeof content === 'string' ? content + note : content,
+        content,
         turnId,
+        // Carried, not merged. See the second pass below.
+        note: message.role === 'assistant' ? toolUseNote(message.tools) : '',
       };
     });
+    // A note appended to an assistant turn is a writing sample. The model read
+    // its own history ending in "[Tools you used on this turn: ...]" and wrote
+    // one out to the user. So it moves to the following user message, where it
+    // reads as information about what happened rather than as a format to copy.
+    for (let index = 0; index < messages.length - 1; index += 1) {
+      const note = messages[index].note;
+      if (!note) continue;
+      const next = messages[index + 1];
+      if (next.role !== 'user') continue;
+      if (typeof next.content === 'string') next.content = note.trim() + '\n\n' + next.content;
+      else if (Array.isArray(next.content)) next.content.unshift({ type: 'text', text: note.trim() });
+    }
+    messages = messages.map(({ note: _note, ...message }) => message);
   } catch (error) { return json({ error: error.message }, 400); }
   const memory = body.memory === undefined ? '' : typeof body.memory === 'string' ? body.memory.trim() : null;
   if (memory === null || memory.length > MAX_MEMORY_CHARS) return json({ error: 'Conversation memory is not valid.' }, 400);

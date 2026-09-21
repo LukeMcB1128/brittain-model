@@ -38,7 +38,8 @@ export const CURRICULUM_TOOL = {
     description: 'Look up Austin ISD high school course curriculum aligned to Texas '
       + 'TEKS: course descriptions, units of study, credit, grade level, course '
       + 'numbers, PEIMS codes and TEKS citations. Use for any question about what '
-      + 'a course covers or how courses are sequenced.',
+      + 'a course covers or how courses are sequenced. Call with no arguments to '
+      + 'see every subject and how many courses each has.',
     parameters: {
       type: 'object', additionalProperties: false,
       properties: {
@@ -83,8 +84,23 @@ export async function searchCurriculum(args, context = {}) {
   const subject = String(args?.subject || '').trim().toLowerCase();
   const query = String(args?.query || '').trim();
   const full = args?.full === true;
+  // No arguments is a legitimate question -- "what is in here?" -- and the
+  // database answers it completely. Before this, a vague query returned
+  // "nothing matches" and the model went to the open web for a catalogue it
+  // already had.
   if (!course && !subject && !query) {
-    throw new Error('give a course, a subject, or a query');
+    const { results } = await db.prepare(
+      'SELECT subject, COUNT(*) AS n FROM courses GROUP BY subject ORDER BY n DESC',
+    ).all();
+    if (!results?.length) throw new Error('the curriculum database is empty');
+    const total = results.reduce((sum, row) => sum + row.n, 0);
+    const lines = results.map(row => `- ${row.subject}: ${row.n} courses`);
+    return {
+      content: `${HEADER}\n\n### ${total} courses across ${results.length} subjects\n`
+        + `${lines.join('\n')}\n\nCall again with a subject to list its courses, `
+        + `or a course name for the full file.`,
+      display: { label: 'Curriculum', detail: 'all subjects', result: `${total} courses` },
+    };
   }
   for (const [name, value] of [['course', course], ['subject', subject], ['query', query]]) {
     if (value.length > 200) throw new Error(`${name} is too long`);
@@ -111,15 +127,24 @@ export async function searchCurriculum(args, context = {}) {
   // A subject alone is a browse: titles only. Returning 178 CTE course files
   // would fill the window and answer nothing.
   if (subject && !query) {
+    // The true total is counted separately from the page that is returned.
+    // Reporting the capped row count as the total told the model CTE has 40
+    // courses when it has 178, and the model repeated that to the user.
+    const counted = await db.prepare(
+      'SELECT COUNT(*) AS n FROM courses WHERE subject = ?1',
+    ).bind(subject).first();
+    const total = counted?.n ?? 0;
+    if (!total) throw new Error(`no subject named ${subject}`);
     const { results } = await db.prepare(
       'SELECT slug, title, credit, grade_level FROM courses WHERE subject = ?1 ORDER BY title LIMIT ?2',
     ).bind(subject, MAX_LIST).all();
-    if (!results?.length) throw new Error(`no subject named ${subject}`);
     const lines = results.map(row => `- ${row.title} (${row.slug}) — ${row.credit || 'n/a'}, grades ${row.grade_level || 'n/a'}`);
-    const more = results.length === MAX_LIST ? `\n[showing the first ${MAX_LIST}]` : '';
+    const more = total > results.length
+      ? `\n\n[${results.length} of ${total} shown. Narrow with a query to see the rest.]`
+      : '';
     return {
-      content: `${HEADER}\n\n### ${subject} — ${results.length} courses\n${lines.join('\n')}${more}`,
-      display: { label: 'Curriculum', detail: subject, result: `${results.length} courses` },
+      content: `${HEADER}\n\n### ${subject} — ${total} courses\n${lines.join('\n')}${more}`,
+      display: { label: 'Curriculum', detail: subject, result: `${total} courses` },
     };
   }
 

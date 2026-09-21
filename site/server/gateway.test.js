@@ -446,10 +446,18 @@ test('an earlier turn: tool use is replayed to the model, results are not', asyn
     return sse([{ choices: [{ index: 0, delta: { content: 'I did.' }, finish_reason: 'stop' }] }, '[DONE]']);
   });
   const assistant = payload.messages.find(message => message.role === 'assistant');
-  assert.match(assistant.content, /Tools you used on this turn/);
-  assert.match(assistant.content, /web_search\(python reverse string\)/);
+  // The note must NOT sit on the assistant's own turn. When it did, the model
+  // read its history ending in "[Tools you used on this turn: ...]", learned
+  // the shape, and printed one out to the user.
+  assert.doesNotMatch(assistant.content, /on your previous turn/i);
+  const followUp = payload.messages.at(-1);
+  assert.equal(followUp.role, 'user');
+  assert.match(followUp.content, /on your previous turn you used/i);
+  assert.match(followUp.content, /web_search\(python reverse string\)/);
+  // The user's own words survive alongside the note.
+  assert.match(followUp.content, /why did you search for that/);
   // An unknown name is not echoed back into the prompt.
-  assert.doesNotMatch(assistant.content, /totally_made_up_tool/);
+  assert.doesNotMatch(followUp.content, /totally_made_up_tool/);
   // Nothing claiming to be tool output reaches the model from the browser.
   assert.equal(payload.messages.some(message => message.role === 'tool'), false);
 });
