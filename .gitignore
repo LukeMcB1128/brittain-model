@@ -50,3 +50,8 @@ tools/typescript/node_modules/
 # They live beside the corpus, never here: this repository is public.
 scrub_rules.json
 training/**/scrub_rules.json
+
+# Generated curriculum load: 2.2 MB rebuilt from the curriculum repo by
+# site/scripts/ingest-curriculum.mjs. Data, not schema -- the migrations in
+# site/drizzle are what belongs in version control.
+courses.sql
