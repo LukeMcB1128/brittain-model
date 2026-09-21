@@ -43,8 +43,8 @@ The user approved the production export on 2026-09-20. The backup was saved unde
 
 ## Verified deployment
 
-- Active Worker version: `42355249-f5aa-4166-bfb9-3250ce1bfac1`. It includes the Brave runtime fix, the bounded web-evidence final-answer flow, safe currency rendering, keyboard navigation fixes, removal of the obsolete experimental chat route, and the hosted-only Brittain 4 release policy.
-- Previous known-good Worker version: `11d15be2-fa92-455e-8142-0fcdf9869f29`. It includes the same chat, tool, accessibility, and route fixes but still describes planned Brittain 4 downloads.
+- Active Worker version: `e3fcb13a-b71d-4e3c-9e97-cfc4052c504b`. It includes the Brave runtime fix, the bounded web-evidence final-answer flow, safe currency rendering, keyboard navigation fixes, removal of the obsolete experimental chat route, and the hosted-only Brittain 4 release policy.
+- Previous known-good Worker version: `42355249-f5aa-4166-bfb9-3250ce1bfac1`. It includes the same features but still shows the 262k model maximum on the home-page model card.
 - Previous release before this update: `63e9c12b-8b54-4b17-8dfe-950233a73e02`. Rolling back to it also reverts the new account protection; assess that tradeoff before rollback.
 - Tests: 114 passing. Lint and the production build pass. The build warns that production secrets are absent locally; live health checks confirm the deployed configuration is present.
 - Live release check: 19 of 20 checks pass on the Workers address. Email verification/password recovery is the remaining failed check.
