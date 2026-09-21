@@ -214,6 +214,41 @@ function normalizeAssets(input) {
   });
 }
 
+// An opening bare greeting is the one turn where offering tools reliably
+// backfires. Given "Hey Im a new user" the model calls one anyway and invents
+// the argument -- a live session produced web_search("Brat Disney Channel new
+// show 2026"), about nothing anyone had mentioned. No wording fixed it: see
+// the note above TOOL_INSTRUCTIONS, where telling it not to made it worse.
+// So the tools are not offered at all. A tool that was never declared cannot
+// be called, and the next turn gets them back.
+//
+// Deliberately narrow. Every word must be greeting filler, so "hey whats the
+// weather" keeps its tools, and it applies only to the opening message,
+// because later on a short "hey" can be about something already in the
+// conversation.
+const GREETING_CORE = new Set(['hi', 'hey', 'hello', 'yo', 'sup', 'howdy', 'hiya',
+  'heya', 'greetings', 'morning', 'afternoon', 'evening']);
+const GREETING_FILLER = new Set([...GREETING_CORE, 'good', 'there', 'im', "i'm",
+  'a', 'an', 'new', 'user', 'here', 'just', 'testing', 'test', 'whats', "what's",
+  'up', 'how', 'are', 'you', 'doing', 'is', 'it', 'going', 'first', 'time',
+  'nice', 'to', 'meet', 'ya', 'yall', 'folks', 'and', 'my', 'name']);
+export function isBareGreeting(messages) {
+  const users = messages.filter(message => message.role === 'user');
+  if (users.length !== 1) return false;
+  const text = contentText(users[0].content).trim();
+  // A question mark means something is being asked, whatever the words are.
+  if (!text || text.length > 40 || text.includes('?')) return false;
+  const words = text.toLowerCase()
+    .replace(/[^a-z'\s]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+    // yoooo, heyyy -- the same greeting held a bit longer.
+    .map(word => (/^y+o+$/.test(word) ? 'yo' : /^h+e+y+$/.test(word) ? 'hey' : word));
+  if (!words.length) return false;
+  return words.some(word => GREETING_CORE.has(word))
+    && words.every(word => GREETING_FILLER.has(word));
+}
+
 function requestedTool(messages, hasPdf = false) {
   const prompt = contentText([...messages].reverse().find(message => message.role === 'user')?.content);
   if (hasPdf) {
@@ -338,7 +373,11 @@ function streamChat(systemMessage, conversation, request, env, fetchUpstream, at
   const startedAt = Date.now();
   const recorded = { toolCalls: [], reply: '' };
   const context = { pdfs: attachments.filter(item => item.type === 'application/pdf'), images: attachments.filter(item => item.type.startsWith('image/')), braveSearchApiKey: env.BRAVE_SEARCH_API_KEY, signal: requestSignal, db: env.DB };
-  const allTools = context.pdfs.length ? [...TOOL_DEFINITIONS, ...PDF_TOOL_DEFINITIONS] : TOOL_DEFINITIONS;
+  // An attachment is a request to do something with it, so it is never a
+  // bare greeting however the message reads.
+  const toolsSuppressed = !attachments.length && isBareGreeting(conversation);
+  const allTools = toolsSuppressed ? []
+    : context.pdfs.length ? [...TOOL_DEFINITIONS, ...PDF_TOOL_DEFINITIONS] : TOOL_DEFINITIONS;
   const firstTool = requestedTool(conversation, context.pdfs.length > 0);
   const firstArguments = firstTool ? requestedArguments(conversation, firstTool, context) : null;
   const stream = new ReadableStream({
@@ -399,7 +438,9 @@ function streamChat(systemMessage, conversation, request, env, fetchUpstream, at
           const finalRound = round === MAX_TOOL_ROUNDS || toolBudgetSpent || !offered.length;
           const forcing = round === 0 && firstTool && !firstArguments && !finalRound;
           const body = {
-            model: modelName(env), messages: finalRound ? finalAnswerMessages(answerBaseMessages, recorded.toolCalls) : messages,
+            model: modelName(env),
+            messages: finalRound && !toolsSuppressed
+              ? finalAnswerMessages(answerBaseMessages, recorded.toolCalls) : messages,
             max_tokens: 2048, temperature: 0.7, stream: true,
             stream_options: { include_usage: true }, chat_template_kwargs: { enable_thinking: false },
           };

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PDFDocument } from 'pdf-lib';
-import { handleApi, toolInstructions } from './gateway.js';
+import { handleApi, toolInstructions, isBareGreeting } from './gateway.js';
 const env = { BRITTAIN4_API_KEY: 'test-only-secret' };
 function req(body = { messages: [{ role: 'user', content: 'Hello' }] }, extra = {}) {
   return new Request('https://site.example/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json', 'oai-authenticated-user-id': 'test-user', ...extra }, body: JSON.stringify(body) });
@@ -523,6 +523,67 @@ test('a note that ends up in a search query does not breed another note', async 
   assert.doesNotMatch(followUp.content, /web_search\(Hello! Welcome/);
   // The call still gets reported -- with no detail left, just the name.
   assert.match(followUp.content, /web_search; web_search\(unit circle\)/);
+});
+
+const greet = text => isBareGreeting([{ role: 'user', content: text }]);
+
+test('an opening bare greeting is recognised, and anything asking for something is not', () => {
+  // The live failure: this exact message produced web_search with an invented
+  // query about a television show nobody had mentioned.
+  assert.equal(greet('Hey Im a new user'), true);
+  assert.equal(greet('Yoooo'), true);
+  assert.equal(greet('hey whats up'), true);
+  assert.equal(greet('good morning!'), true);
+  assert.equal(greet('hi there, first time here'), true);
+
+  // One content word is enough to keep the tools.
+  assert.equal(greet('hey whats the weather'), false);
+  assert.equal(greet('hello can you help me with calculus'), false);
+  assert.equal(greet('hi'.repeat(30)), false);
+  // A question is a question even when every word is filler.
+  assert.equal(greet('how are you?'), false);
+  // Greeting-shaped filler with no greeting in it.
+  assert.equal(greet('new user'), false);
+  assert.equal(greet(''), false);
+
+  // Only the opening message. Later on, a short 'hey' can be about whatever
+  // is already on the table.
+  assert.equal(isBareGreeting([
+    { role: 'user', content: 'what is the mayor of Austin called' },
+    { role: 'assistant', content: 'Kirk Watson.' },
+    { role: 'user', content: 'hey' },
+  ]), false);
+});
+
+test('no tools are offered on an opening greeting, and the model still replies', async () => {
+  // Wording could not fix this -- forbidding it took clean greetings from
+  // 44/80 to 25/80 -- so the tools are withheld instead. Nothing declared,
+  // nothing to call.
+  const payloads = [];
+  const response = await handleApi(req({ messages: [{ role: 'user', content: 'Hey Im a new user' }] }), env,
+    async (_url, options) => {
+      payloads.push(JSON.parse(options.body));
+      return sse([{ choices: [{ index: 0, delta: { content: 'Welcome. What are you working on?' }, finish_reason: 'stop' }] }, '[DONE]']);
+    });
+  assert.equal(payloads.length, 1);
+  assert.equal('tools' in payloads[0], false);
+  assert.equal('tool_choice' in payloads[0], false);
+  // The 'tool use has ended, answer now' suffix is addressed to a model that
+  // has been calling tools. Nothing here ever did.
+  assert.doesNotMatch(payloads[0].messages[0].content, /Tool use has ended/);
+  assert.match(await response.text(), /What are you working on/);
+});
+
+test('a greeting carrying an attachment keeps its tools', async () => {
+  let payload;
+  await handleApi(req({
+    messages: [{ role: 'user', content: 'hey' }],
+    attachments: [{ id: 'pdf-1', name: 'notes.pdf', type: 'application/pdf', dataUrl: `data:application/pdf;base64,${btoa('%PDF-test')}`, pageCount: 1, pageImages: [] }],
+  }), env, async (_url, options) => {
+    payload = JSON.parse(options.body);
+    return sse([{ choices: [{ index: 0, delta: { content: 'Reading it.' }, finish_reason: 'stop' }] }, '[DONE]']);
+  });
+  assert.equal(Array.isArray(payload.tools), true);
 });
 
 test('executes only declared tools and returns the final streamed reply', async () => {
