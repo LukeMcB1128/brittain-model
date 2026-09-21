@@ -55,7 +55,7 @@ export function planCompaction(messages, memory = '') {
 // `model` is the LoRA checkpoint the gateway serves. It is passed in rather
 // than hardcoded so compaction cannot quietly run on a different model from the
 // conversation it is compacting.
-export async function summarizeCompaction(plan, memory, fetchUpstream, upstream, apiKey, signal, model = 'step-0100-mm') {
+export async function summarizeCompaction(plan, memory, fetchUpstream, upstream, apiKey, signal, model = 'run3-step-0116') {
   const entries = plan.olderMessages.map(message => `${message.role.toUpperCase()}: ${transcriptContent(message.content)}`);
   const batches = [];
   let batch = '';
