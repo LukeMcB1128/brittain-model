@@ -51,7 +51,7 @@ test('validates messages and fixes server-owned model/options', async () => {
   assert.equal((await handleApi(req({ messages: [{ role: 'user', content: 'x'.repeat(500001) }] }), env)).status, 400);
   let payload;
   const response = await handleApi(req({ model: 'other', max_tokens: 99999, messages: [{ role: 'user', content: 'Hello' }] }), env, async (url, options) => {
-    assert.equal(url, 'https://fragility-devoutly-dazzling.ngrok-free.dev/v1/chat/completions');
+    assert.equal(url, 'https://api.brittain.app/v1/chat/completions');
     assert.equal(options.headers.Authorization, 'Bearer test-only-secret');
     payload = JSON.parse(options.body);
     return new Response('data: [DONE]\n', { headers: { 'Content-Type': 'text/event-stream' } });

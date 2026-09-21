@@ -3,7 +3,7 @@ import { PDF_TOOL_DEFINITIONS } from './pdf-tools.js';
 import { recordExchange } from './transcript-log.js';
 import { MAX_MEMORY_CHARS, modelMessages, planCompaction, summarizeCompaction } from './compaction.js';
 
-const DEFAULT_API_ORIGIN = 'https://fragility-devoutly-dazzling.ngrok-free.dev';
+const DEFAULT_API_ORIGIN = 'https://api.brittain.app';
 function upstream(env) {
   const origin = String(env?.MODEL_API_ORIGIN || DEFAULT_API_ORIGIN).replace(/\/$/, '');
   return `${origin}/v1/chat/completions`;
@@ -360,7 +360,7 @@ function streamChat(systemMessage, conversation, request, env, fetchUpstream, at
           }
           const response = await fetchUpstream(upstreamUrl, {
             method: 'POST',
-            headers: { Authorization: `Bearer ${env.BRITTAIN4_API_KEY}`, 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' },
+            headers: { Authorization: `Bearer ${env.BRITTAIN4_API_KEY}`, 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
             signal: AbortSignal.any([requestSignal, AbortSignal.timeout(180000)]),
           });
@@ -461,7 +461,7 @@ export async function handleApi(request, env, fetchUpstream = fetch, authenticat
     if (!env.BRITTAIN4_API_KEY) return json({ authenticated: true, configured: false, ready: false });
     try {
       const response = await fetchUpstream(upstream(env).replace('/chat/completions', '/models'), {
-        headers: { Authorization: `Bearer ${env.BRITTAIN4_API_KEY}`, 'ngrok-skip-browser-warning': '1' },
+        headers: { Authorization: `Bearer ${env.BRITTAIN4_API_KEY}` },
         signal: AbortSignal.any([request.signal, AbortSignal.timeout(8000)]),
       });
       if (!response.ok) throw new Error();

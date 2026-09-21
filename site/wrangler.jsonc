@@ -44,7 +44,7 @@
   ],
   "vars": {
     "BETTER_AUTH_URL": "https://brittain.app",
-    "MODEL_API_ORIGIN": "https://fragility-devoutly-dazzling.ngrok-free.dev",
+    "MODEL_API_ORIGIN": "https://api.brittain.app",
     "AUTH_EMAIL_FROM": "Brittain <accounts@brittain.app>",
     "CHAT_MAX_CONCURRENT": "4",
     "CHAT_ENABLED": "true",
