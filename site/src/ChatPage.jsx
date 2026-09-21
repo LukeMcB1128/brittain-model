@@ -46,20 +46,44 @@ function DownloadCards({ artifacts }) {
   if (!artifacts?.length) return null;
   return <div className="c-downloads" aria-label="Generated files">{artifacts.map(file => <a key={file.id} href={file.dataUrl} download={file.name}><span className="c-attachment-file"><Icon name="file"/></span><span><strong>{file.name}</strong><small>Download PDF</small></span></a>)}</div>;
 }
+// While a reply is in flight this says what is happening right now, one line.
+// Afterwards it folds into a single summary the reader can open.
+//
+// It used to stack a card per tool above every answer, permanently. A reply
+// that searched nine subjects left nine cards sitting on top of it, which
+// buried the thing the reader actually asked for. The information is worth
+// keeping -- which sources, which course files -- but not at the top of the
+// page forever.
 function ToolActivity({ message }) {
   const items = toolActivityItems(message.tools, message.compactionStatus);
   const progress = activityProgressMessage(message.status, message.activityPhase);
   if (!items.length && !progress) return null;
-  const liveMessage = items.findLast(item => item.status === 'running')?.label || progress;
-  return <div className="c-tool-activities" aria-label="Response activity">
+  const running = items.findLast(item => item.status === 'running');
+  const liveMessage = running?.label || progress;
+
+  if (message.status === 'streaming') {
+    return <p className="c-tool-live" aria-label="Response activity">
+      <span className="c-tool-spinner" aria-hidden="true"/>
+      <span className="c-tool-live-copy">
+        <strong>{running ? `${running.label}…` : progress}</strong>
+        {running?.detail && <small title={running.detail}>{running.detail}</small>}
+      </span>
+      <span className="sr-only" role="status">{liveMessage}</span>
+    </p>;
+  }
+
+  const failed = items.filter(item => item.status === 'error').length;
+  return <details className="c-tool-activities" aria-label="Response activity">
+    <summary className="c-tool-summary">
+      <Icon name="search"/>
+      <span>{items.length === 1 ? '1 step' : `${items.length} steps`}{failed ? ` · ${failed} failed` : ''}</span>
+    </summary>
     {items.map(item => <div className={`c-tool-activity c-tool-${item.status}`} key={item.id}>
       <span className="c-tool-icon"><Icon name={item.icon}/></span>
-      <span className="c-tool-copy"><strong>{item.label}{item.status === 'running' ? '…' : ''}</strong>{item.detail && <small title={item.detail}>{item.detail}</small>}</span>
-      {item.status === 'running' ? <span className="c-tool-spinner" aria-hidden="true"/> : item.result ? <span className="c-tool-result" title={item.result}>{item.result}</span> : <Icon name={item.status === 'done' ? 'check' : 'close'}/>}
+      <span className="c-tool-copy"><strong>{item.label}</strong>{item.detail && <small title={item.detail}>{item.detail}</small>}</span>
+      {item.result ? <span className="c-tool-result" title={item.result}>{item.result}</span> : <Icon name={item.status === 'done' ? 'check' : 'close'}/>}
     </div>)}
-    {progress && <p className="c-tool-progress"><span className="c-tool-spinner" aria-hidden="true"/>{progress}</p>}
-    <span className="sr-only" role="status">{liveMessage}</span>
-  </div>;
+  </details>;
 }
 function groupLabel(dateValue) {
   const date = new Date(dateValue);
