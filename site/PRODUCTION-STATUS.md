@@ -43,8 +43,8 @@ The user approved the production export on 2026-09-20. The backup was saved unde
 
 ## Verified deployment
 
-- Active Worker version: `11d15be2-fa92-455e-8142-0fcdf9869f29`. It includes the Brave runtime fix, the bounded web-evidence final-answer flow, safe currency rendering, keyboard navigation fixes, and removal of the obsolete experimental chat route.
-- Previous known-good Worker version: `af9fd012-ebdd-41da-9d6d-2a191940f7db`. It includes the same chat, tool, and accessibility fixes but still ships the obsolete experimental chat route.
+- Active Worker version: `42355249-f5aa-4166-bfb9-3250ce1bfac1`. It includes the Brave runtime fix, the bounded web-evidence final-answer flow, safe currency rendering, keyboard navigation fixes, removal of the obsolete experimental chat route, and the hosted-only Brittain 4 release policy.
+- Previous known-good Worker version: `11d15be2-fa92-455e-8142-0fcdf9869f29`. It includes the same chat, tool, accessibility, and route fixes but still describes planned Brittain 4 downloads.
 - Previous release before this update: `63e9c12b-8b54-4b17-8dfe-950233a73e02`. Rolling back to it also reverts the new account protection; assess that tradeoff before rollback.
 - Tests: 114 passing. Lint and the production build pass. The build warns that production secrets are absent locally; live health checks confirm the deployed configuration is present.
 - Live release check: 19 of 20 checks pass on the Workers address. Email verification/password recovery is the remaining failed check.
@@ -57,6 +57,7 @@ The user approved the production export on 2026-09-20. The backup was saved unde
 - The chat sidebar now reports its mobile open state correctly. Escape, the close button, and the scrim return focus to the open-sidebar button.
 - Currency amounts no longer become accidental LaTeX spans. Inline and display equations continue to use KaTeX.
 - The obsolete `/experimental-chat` route and its direct browser-to-ngrok client are no longer in the production bundle. A live browser check confirmed that the route returns the standard Page not found screen.
+- Brittain 4 is now described as web-chat only across the home, account, Models, and model-detail pages. Experimental model downloads remain separate. A live browser check confirmed both model views and the direct Experimental models link.
 
 ## Dependency audit
 

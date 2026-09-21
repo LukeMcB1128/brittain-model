@@ -137,7 +137,7 @@ function AccountForm({ mode, onSession, nextPath }) {
 }
 
 export function AuthPage({ mode, onSession, nextPath }) {
-  return <main className="signup-layout"><section><p className="eyebrow">BRITTAIN ACCOUNT</p><h1>Your Brittain account.</h1><p className="lead">Free web chat with Brittain 4.</p><div className="signup-benefits"><p><span>01</span> Use the hosted model without local setup.</p><p><span>02</span> Save conversations across visits.</p><p><span>03</span> Share server capacity through account limits.</p></div><a href="/models" className="text-link">Prefer local use? Explore models <span aria-hidden="true">↗</span></a></section><AccountForm mode={mode} onSession={onSession} nextPath={nextPath}/></main>;
+  return <main className="signup-layout"><section><p className="eyebrow">BRITTAIN ACCOUNT</p><h1>Your Brittain account.</h1><p className="lead">Free web chat with Brittain 4.</p><div className="signup-benefits"><p><span>01</span> Use Brittain 4 through the hosted web chat.</p><p><span>02</span> Save conversations across visits.</p><p><span>03</span> Share server capacity through account limits.</p></div><a href="/models?group=experimental" className="text-link">Looking for downloads? Explore experimental models <span aria-hidden="true">↗</span></a></section><AccountForm mode={mode} onSession={onSession} nextPath={nextPath}/></main>;
 }
 
 export function AccountSettings({ session, onSession }) {
