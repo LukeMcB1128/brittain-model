@@ -6,7 +6,7 @@ import MarkdownReply from './MarkdownReply.js';
 import { contextUsage } from './context-usage.js';
 import { ACCEPTED_ATTACHMENTS, importAttachment, MAX_ATTACHMENT_BYTES, MAX_ATTACHMENT_COUNT, messageContent, requestAssets } from './attachments.js';
 import { assistantToolHistory } from './chat-history.js';
-import { toolActivityMessage } from './tool-activity.js';
+import { activityProgressMessage, toolActivityItems } from './tool-activity.js';
 
 const suggestions = [
   ['write', 'Write something', 'Help me write a clear introduction for a community science project.'],
@@ -34,6 +34,7 @@ function Icon({ name }) {
     attach: 'M21.4 11.6 12 21a6 6 0 0 1-8.5-8.5l10-10a4 4 0 0 1 5.7 5.7l-10 10a2 2 0 1 1-2.9-2.8l9.5-9.5',
     file: 'M6 2h8l4 4v16H6zM14 2v5h5',
     close: 'm7 7 10 10M17 7 7 17',
+    compact: 'M4 9h5V4m11 5h-5V4M4 15h5v5m11-5h-5v5',
   };
   return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name] || paths.model}/></svg>;
 }
@@ -45,10 +46,20 @@ function DownloadCards({ artifacts }) {
   if (!artifacts?.length) return null;
   return <div className="c-downloads" aria-label="Generated files">{artifacts.map(file => <a key={file.id} href={file.dataUrl} download={file.name}><span className="c-attachment-file"><Icon name="file"/></span><span><strong>{file.name}</strong><small>Download PDF</small></span></a>)}</div>;
 }
-function ToolActivity({ tools }) {
-  const message = toolActivityMessage(tools);
-  if (!message) return null;
-  return <p className="c-tool-activity" role="status"><Icon name="search"/>{message}</p>;
+function ToolActivity({ message }) {
+  const items = toolActivityItems(message.tools, message.compactionStatus);
+  const progress = activityProgressMessage(message.status, message.activityPhase);
+  if (!items.length && !progress) return null;
+  const liveMessage = items.findLast(item => item.status === 'running')?.label || progress;
+  return <div className="c-tool-activities" aria-label="Response activity">
+    {items.map(item => <div className={`c-tool-activity c-tool-${item.status}`} key={item.id}>
+      <span className="c-tool-icon"><Icon name={item.icon}/></span>
+      <span className="c-tool-copy"><strong>{item.label}{item.status === 'running' ? '…' : ''}</strong>{item.detail && <small title={item.detail}>{item.detail}</small>}</span>
+      {item.status === 'running' ? <span className="c-tool-spinner" aria-hidden="true"/> : item.result ? <span className="c-tool-result" title={item.result}>{item.result}</span> : <Icon name={item.status === 'done' ? 'check' : 'close'}/>}
+    </div>)}
+    {progress && <p className="c-tool-progress"><span className="c-tool-spinner" aria-hidden="true"/>{progress}</p>}
+    <span className="sr-only" role="status">{liveMessage}</span>
+  </div>;
 }
 function groupLabel(dateValue) {
   const date = new Date(dateValue);
@@ -259,7 +270,7 @@ export default function Chat({ session, initialChatId = '' }) {
     const id = active || crypto.randomUUID();
     const turnAttachments = retry ? messages.at(-1).attachments || [] : attachments;
     const prompt = retry ? messages.at(-1).prompt : draft.trim() || 'Review the attached content.';
-    const turn = { id: crypto.randomUUID(), prompt, attachments: turnAttachments, answer: '', tools: [], artifacts: [], status: 'streaming' };
+    const turn = { id: crypto.randomUUID(), prompt, attachments: turnAttachments, answer: '', tools: [], artifacts: [], status: 'streaming', activityPhase: 'thinking' };
     const previous = retry ? messages.slice(0, -1) : messages;
     const contextStart = Math.min(current?.contextStart || 0, previous.length);
     const contextTurns = previous.slice(contextStart);
@@ -284,7 +295,7 @@ export default function Chat({ session, initialChatId = '' }) {
         if (message.id !== turn.id) return message;
         const usedTools = message.tools || [];
         const index = usedTools.findIndex(item => item.id === tool.id);
-        return { ...message, tools: index === -1 ? [...usedTools, tool] : usedTools.map((item, toolIndex) => toolIndex === index ? { ...item, ...tool, detail: tool.detail || item.detail } : item) };
+        return { ...message, activityPhase: tool.status === 'running' ? 'tool' : 'reviewing', tools: index === -1 ? [...usedTools, tool] : usedTools.map((item, toolIndex) => toolIndex === index ? { ...item, ...tool, detail: tool.detail || item.detail } : item) };
       }) };
       setChats(items => items.map(chat => chat.id === id ? workingChat : chat));
     }
@@ -307,11 +318,10 @@ export default function Chat({ session, initialChatId = '' }) {
         if (chunk.type === 'artifact') { updateArtifact(chunk); return; }
         if (chunk.type === 'compaction') {
           const boundary = chunk.throughTurnId ? workingChat.messages.findIndex(message => message.id === chunk.throughTurnId) + 1 : 0;
-          const note = chunk.status === 'running' ? 'Compressing earlier context…' : chunk.status === 'done' ? 'Earlier context was compressed for this reply.' : 'Earlier context could not be compressed. The full conversation was used.';
           workingChat = {
             ...workingChat,
             ...(chunk.status === 'done' ? { memory: chunk.memory, contextStart: Math.max(workingChat.contextStart || 0, boundary) } : {}),
-            messages: workingChat.messages.map(message => message.id === turn.id ? { ...message, note } : message),
+            messages: workingChat.messages.map(message => message.id === turn.id ? { ...message, compactionStatus: chunk.status, activityPhase: chunk.status === 'running' ? 'compacting' : 'thinking' } : message),
           };
           setChats(items => items.map(item => {
             if (item.id !== id) return item;
@@ -322,11 +332,11 @@ export default function Chat({ session, initialChatId = '' }) {
         if (chunk.type === 'usage') { update({ usage: chunk.usage }); return; }
         answer += chunk.text || '';
         if (chunk.finishReason) finishReason = chunk.finishReason;
-        update({ answer, ...(chunk.usage ? { usage: chunk.usage } : {}) });
+        update({ answer, ...(chunk.text ? { activityPhase: 'answering' } : {}), ...(chunk.usage ? { usage: chunk.usage } : {}) });
       });
-      update({ status: 'done', note: finishReason === 'length' ? 'The reply reached its output limit. Ask the model to continue.' : !answer ? 'The model returned no text. Please retry.' : '' });
+      update({ status: 'done', activityPhase: 'done', note: finishReason === 'length' ? 'The reply reached its output limit. Ask the model to continue.' : !answer ? 'The model returned no text. Please retry.' : '' });
     } catch (error) {
-      update({ status: abort.signal.aborted ? 'stopped' : 'error', error: abort.signal.aborted ? '' : error.message });
+      update({ status: abort.signal.aborted ? 'stopped' : 'error', activityPhase: 'done', error: abort.signal.aborted ? '' : error.message });
     } finally {
       try { await saveChat(workingChat); setHistoryStatus('ready'); }
       catch (saveError) { setHistoryStatus('error'); setCopyNotice(saveError.message); }
@@ -371,7 +381,7 @@ export default function Chat({ session, initialChatId = '' }) {
     </aside>
     <section className="c-main">
       <header className="c-header"><div className="c-header-left"><button ref={sidebarToggle} className={`c-icon c-open ${collapsed ? 'c-is-collapsed' : ''}`} aria-label="Open sidebar" aria-expanded={sidebar} aria-controls="chat-navigation" onClick={() => { setCollapsed(false); setSidebar(true); }}><Icon name="panel"/></button><div className="c-model-wrap" ref={modelWrap}><button className="c-model-button" onClick={() => setInfo(!info)} aria-expanded={info} aria-controls="model-information">Brittain 4<Icon name="down"/></button>{info && <div id="model-information" className="c-model-info" role="region" aria-label="Brittain 4 information"><strong>Brittain 4</strong><p>9B dense model</p><dl><div><dt>Web chat</dt><dd>{contextLimit.toLocaleString()} tokens</dd></div><div><dt>Model maximum</dt><dd>262k</dd></div></dl><a href="/models/brittain-4">View model details ↗</a></div>}</div></div><div className="c-header-right"><span className="c-preview">{busy ? 'Responding…' : preview ? 'Connected' : 'Not connected'}</span></div></header>
-      {messages.length === 0 ? <div className="c-start"><div className="c-start-inner"><h1>What can I help with?</h1>{composer}<div className="c-suggestions">{suggestions.map(([icon,label,prompt]) => <button key={icon} onClick={() => { setDraft(prompt); input.current?.focus(); }}><Icon name={icon}/>{label}</button>)}</div></div></div> : <><div className="c-conversation" role="log" aria-label="Conversation"><div className="c-message-column">{messages.map((message, index) => <div className="c-turn" key={message.id}><div className="c-user-message"><AttachmentCards attachments={message.attachments}/><span>{message.prompt}</span></div><div className="c-reply"><BrandLogo/><div className="c-response"><DownloadCards artifacts={message.artifacts}/>{message.answer && <MarkdownReply text={message.answer}/>}<ToolActivity tools={message.tools}/>{!message.answer && message.status === 'streaming' && !message.tools?.some(tool => tool.status === 'running') ? <p role="status">Waiting for Brittain 4…</p> : null}{message.error && <p className="c-error" role="alert">{message.error}</p>}{message.status === 'stopped' && <p>Reply stopped.</p>}{message.note && <p>{message.note}</p>}<div className="c-reply-actions">{message.answer && <button onClick={() => copyAnswer(message.answer)}>Copy</button>}{!busy && index === messages.length - 1 && <button onClick={e => send(e, true)}>Retry</button>}</div></div></div></div>)}<span className="sr-only" role="status">{copyNotice}</span><div ref={end}/></div></div><div className="c-bottom-composer">{composer}</div></>}
+      {messages.length === 0 ? <div className="c-start"><div className="c-start-inner"><h1>What can I help with?</h1>{composer}<div className="c-suggestions">{suggestions.map(([icon,label,prompt]) => <button key={icon} onClick={() => { setDraft(prompt); input.current?.focus(); }}><Icon name={icon}/>{label}</button>)}</div></div></div> : <><div className="c-conversation" role="log" aria-label="Conversation"><div className="c-message-column">{messages.map((message, index) => <div className="c-turn" key={message.id}><div className="c-user-message"><AttachmentCards attachments={message.attachments}/><span>{message.prompt}</span></div><div className="c-reply"><BrandLogo/><div className="c-response"><DownloadCards artifacts={message.artifacts}/><ToolActivity message={message}/>{message.answer && <MarkdownReply text={message.answer}/>}{message.error && <p className="c-error" role="alert">{message.error}</p>}{message.status === 'stopped' && <p>Reply stopped.</p>}{message.note && <p>{message.note}</p>}<div className="c-reply-actions">{message.answer && <button onClick={() => copyAnswer(message.answer)}>Copy</button>}{!busy && index === messages.length - 1 && <button onClick={e => send(e, true)}>Retry</button>}</div></div></div></div>)}<span className="sr-only" role="status">{copyNotice}</span><div ref={end}/></div></div><div className="c-bottom-composer">{composer}</div></>}
     </section>
     {(notice || pendingDelete) && <div className="c-toast" role="status"><span>{pendingDelete ? `“${pendingDelete.chat.title}” removed.` : notice}</span>{pendingDelete && <button type="button" onClick={undoDelete}>Undo</button>}</div>}
   </main>;

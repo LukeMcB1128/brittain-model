@@ -42,10 +42,10 @@ The user approved the production export on 2026-09-20. The backup was saved unde
 
 ## Verified deployment
 
-- Active Worker version: `acce1f3b-807c-4133-ba57-76f4e1fe7615`. It serves `brittain.app` as a Custom Domain and keeps `brittain-app.luke-brittain.workers.dev` enabled as a fallback.
-- Previous known-good Worker version: `6715dbf2-4053-446b-ac9e-06dc2b69b6e4`. It includes the email secret and tunnel integration but only serves the `workers.dev` address.
+- Active Worker version: `5d2f3e63-e318-4943-87e3-e07622de5140`. It adds persistent tool activity, response phases, and saved compaction status.
+- Previous known-good Worker version: `acce1f3b-807c-4133-ba57-76f4e1fe7615`. It serves `brittain.app` as a Custom Domain and keeps `brittain-app.luke-brittain.workers.dev` enabled as a fallback.
 - Previous release before this update: `63e9c12b-8b54-4b17-8dfe-950233a73e02`. Rolling back to it also reverts the new account protection; assess that tradeoff before rollback.
-- Tests: 116 passing. Lint and the production build pass. The build warns that production secrets are absent locally; live health checks confirm the deployed configuration is present.
+- Tests: 126 passing. Lint and the production build pass. The build warns that production secrets are absent locally; live health checks confirm the deployed configuration is present.
 - Live release check: all 20 checks pass on `https://brittain.app`. Email verification and password recovery are configured.
 - Live negative login check: HTTP 400 with `MISSING_RESPONSE` when no CAPTCHA token is supplied.
 - Browser check: the managed widget completed automatically. A deliberately invalid login returned the expected error, refreshed the token, and enabled another attempt. No account was created and no email was sent.
@@ -61,12 +61,13 @@ The user approved the production export on 2026-09-20. The backup was saved unde
 - An authenticated tunnel check returns HTTP 200 and lists `brittain4`, `run3-step-0116`, and `run2-step-0116`. The API key stayed in the private `.env` file during this check.
 - Earlier tool calls now reach the model from the active chat page. Only bounded tool names and arguments are sent. Tool results remain server-side.
 - A live browser check confirms that `https://brittain.app` serves the public Brittain 4 home page without the previous ChatGPT account gate. `/api/health` also returns HTTP 200.
+- Tool actions now remain visible after completion and show their query, file, or result summary. The response phase changes from thinking to active work, result review, and answer streaming without falling back to a generic waiting message. Successful or failed context compaction is saved with the turn and remains visible after reload.
 
 ## Dependency audit
 
 The four moderate findings were removed with a scoped override: `@esbuild-kit/core-utils` uses the project's existing `esbuild` version, currently `0.28.2`. Other locked package versions are unchanged. The [esbuild advisory](https://github.com/advisories/GHSA-67mh-4wv8-2f99) covers versions through `0.24.2`.
 
-`npm audit` now reports zero vulnerabilities. Database tooling loaded the TypeScript schema, generated all six tables, and passed a SQLite integrity check on the generated SQL. All 116 tests, lint, and both environment builds pass. CI now fails on moderate or higher findings. These tooling and backup changes do not need a Worker deployment.
+`npm audit` now reports zero vulnerabilities. Database tooling loaded the TypeScript schema, generated all six tables, and passed a SQLite integrity check on the generated SQL. All 126 tests, lint, and both environment builds pass. CI now fails on moderate or higher findings. These tooling and backup changes do not need a Worker deployment.
 
 ## Staging verification
 

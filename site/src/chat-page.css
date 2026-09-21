@@ -127,8 +127,20 @@
   .c-history-action { opacity: 1; }
 }
 .c-response { min-width: 0; flex: 1; overflow-wrap: anywhere; }
-.c-tool-activity { display: flex; align-items: center; gap: var(--s2); margin: var(--s3) 0 0; color: var(--subtle); font-size: var(--t1); }
-.c-tool-activity svg { width: 16px; height: 16px; color: var(--blue); }
+.c-tool-activities { display: grid; gap: var(--s2); margin: var(--s4) 0; max-width: 720px; }
+.c-tool-activity { display: grid; grid-template-columns: 28px minmax(0,1fr) auto; align-items: center; gap: var(--s3); min-height: 48px; padding: var(--s2) var(--s3); border: 1px solid var(--line); border-radius: var(--r2); background: var(--panel); color: var(--subtle); }
+.c-tool-icon { width: 28px; height: 28px; display: grid; place-items: center; border-radius: var(--r1); background: var(--input); color: var(--blue); }
+.c-tool-icon svg, .c-tool-activity > svg { width: 16px; height: 16px; }
+.c-tool-copy { min-width: 0; display: grid; gap: 2px; }
+.c-tool-copy strong { color: var(--ink); font-size: var(--t1); font-weight: var(--medium); line-height: 1.25; }
+.c-tool-copy small, .c-tool-result { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--subtle); font-size: var(--t0); }
+.c-tool-copy small { max-width: 100%; }
+.c-tool-result { max-width: min(260px,28vw); text-align: right; }
+.c-tool-error .c-tool-icon, .c-tool-error > svg { color: var(--red); }
+.c-tool-spinner { width: 14px; height: 14px; flex: 0 0 auto; border: 2px solid var(--line); border-top-color: var(--blue); border-radius: 50%; animation: c-tool-spin .8s linear infinite; }
+.c-tool-progress { display: flex; align-items: center; gap: var(--s2); margin: 0; padding: var(--s1) var(--s3); color: var(--subtle); font-size: var(--t1) !important; }
+@keyframes c-tool-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .c-tool-spinner { animation: none; border-color: var(--blue); border-right-color: transparent; } }
 .c-response .prose { white-space: pre-wrap; }
 .c-response pre { overflow-x: auto; }
 .c-response .c-error { color: var(--red); }

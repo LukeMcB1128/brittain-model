@@ -9,7 +9,7 @@ test('saved chats keep useful text and remove attachment binary data', () => {
     id: chatId,
     title: 'Attachment chat',
     messages: [{
-      id: 'turn-1', prompt: 'Read this', answer: 'Done', status: 'done',
+      id: 'turn-1', prompt: 'Read this', answer: 'Done', status: 'done', compactionStatus: 'done',
       attachments: [
         { id: 'image-1', name: 'photo.png', kind: 'image', type: 'image/png', dataUrl: 'data:image/png;base64,secret' },
         { id: 'pdf-1', name: 'notes.pdf', kind: 'pdf', type: 'application/pdf', content: 'Page 1 text', dataUrl: 'data:application/pdf;base64,secret' },
@@ -18,6 +18,7 @@ test('saved chats keep useful text and remove attachment binary data', () => {
   });
   assert.equal(JSON.stringify(chat).includes('base64'), false);
   assert.equal(chat.messages[0].attachments[1].content, 'Page 1 text');
+  assert.equal(chat.messages[0].compactionStatus, 'done');
 });
 
 test('chat list returns summaries without message payloads', async () => {

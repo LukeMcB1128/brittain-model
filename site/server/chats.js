@@ -33,6 +33,7 @@ export function cleanChat(input) {
     status: ['done', 'error', 'stopped'].includes(message?.status) ? message.status : 'done',
     error: safeString(message?.error, 1_000),
     note: safeString(message?.note, 1_000),
+    compactionStatus: ['done', 'error'].includes(message?.compactionStatus) ? message.compactionStatus : '',
     attachments: Array.isArray(message?.attachments) ? message.attachments.map(cleanAttachment).filter(Boolean).slice(0, 10) : [],
     tools: Array.isArray(message?.tools) ? message.tools.slice(0, 20).map(tool => ({
       id: safeString(tool?.id, 100),
