@@ -29,10 +29,17 @@ from brittain.keep_awake import _acquire, _release  # noqa: E402
 
 
 def running(match: str) -> bool:
-    """Is anything in WSL running a command line containing `match`?"""
+    """Is anything in WSL running a command line containing `match`?
+
+    The first character is wrapped in a character class, so the pattern matches
+    the job but not the `bash -lc pgrep ...` that carries it. Without that,
+    pgrep finds its own caller, every check returns true, and the machine is
+    held awake forever -- including when nothing is training at all.
+    """
+    pattern = "[%s]%s" % (match[0], match[1:]) if match else match
     try:
         done = subprocess.run(
-            ["wsl", "bash", "-lc", "pgrep -f %s > /dev/null" % match],
+            ["wsl", "bash", "-lc", "pgrep -f '%s' > /dev/null" % pattern],
             capture_output=True, timeout=30)
         return done.returncode == 0
     except (subprocess.SubprocessError, OSError):
