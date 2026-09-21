@@ -55,15 +55,22 @@ const MAX_FINAL_EVIDENCE_CHARS = 18_000;
 // unrelated refusals -- it declined a fictional story by citing the rule. It is
 // now scoped to tool output and explicitly not a reason to decline.
 //
-// PROHIBITIONS BACKFIRE HERE. Three additions were measured against the
-// served adapter, 32 samples per arm, each against the failure it targeted.
-// Only the course-routing line below survived: naming a course reached
-// search_curriculum 21/32 without it and 30/32 with it. The two rules
-// written as prohibitions both made their own target worse -- "a greeting
-// gets a reply, not a tool call" took greetings from 7/16 to 5/16, and
-// "never state an exam's length or pass rate unless a tool returned it"
-// took invented exam statistics from 11/16 to 3/16. Saying what to do
-// works; saying what not to do appears to raise the behaviour instead.
+// PROHIBITIONS BACKFIRE HERE. Rules were A/B'd against the served adapter,
+// each against the failure it targeted. The course-routing line below is a
+// positive instruction and it worked: naming a course reached
+// search_curriculum 21/32 without it, 30/32 with it.
+//
+// Rules phrased as prohibitions made their own target worse. "If the user is
+// just greeting you, DO NOT use tools" took clean greetings from 44/80 to
+// 25/80 over two runs, and a gentler positive rephrasing of the same idea
+// was no better; a long hedged version changed nothing. Mentioning greetings
+// and tools together appears to raise tool use on greeting turns however it
+// is worded. "Never state an exam's length or pass rate unless a tool
+// returned it" took invented exam statistics from 11/16 to 3/16 in a single
+// run -- a large effect, but measured once.
+//
+// So: adding a rule here is not free, and it is not reliably monotonic.
+// Measure before shipping one. evals/ has the harness.
 //
 // The tool triggers are concrete ("versions, prices, weather, news...") because
 // the abstract "current or specific online information" lost web_search

@@ -1,0 +1,117 @@
+[
+ {
+  "type": "function",
+  "function": {
+   "name": "web_search",
+   "description": "Search the public web for current information. Use when the answer depends on recent or specific online facts. Results include titles, URLs, and short extracts. Do not put secrets, private data, or source code in a search query.",
+   "parameters": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "query"
+    ],
+    "properties": {
+     "query": {
+      "type": "string",
+      "description": "A focused search query of at most 500 characters."
+     },
+     "allowed_domains": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+       "type": "string"
+      },
+      "description": "Optional public domains to restrict results to."
+     },
+     "max_results": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 8,
+      "description": "Number of results. Default: 5."
+     }
+    }
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "web_fetch",
+   "description": "Read one public HTTPS webpage as sanitized text. Use after web_search when a result needs more detail. Local, private, credential-bearing, non-text, and oversized resources are blocked.",
+   "parameters": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "url"
+    ],
+    "properties": {
+     "url": {
+      "type": "string",
+      "description": "A public HTTPS webpage URL."
+     },
+     "max_chars": {
+      "type": "integer",
+      "minimum": 1000,
+      "maximum": 30000,
+      "description": "Maximum text characters. Default: 12000."
+     }
+    }
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "calculate",
+   "description": "Evaluate a safe mathematical expression. Use this for arithmetic instead of estimating. Supports parentheses, +, -, *, /, %, ^, constants pi and e, and common functions such as sqrt, sin, cos, log, min, and max.",
+   "parameters": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "expression"
+    ],
+    "properties": {
+     "expression": {
+      "type": "string",
+      "description": "A mathematical expression of at most 500 characters."
+     },
+     "precision": {
+      "type": "integer",
+      "minimum": 2,
+      "maximum": 15,
+      "description": "Significant digits. Default: 12."
+     }
+    }
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "search_curriculum",
+   "description": "Look up Austin ISD high school course curriculum aligned to Texas TEKS: course descriptions, units of study, credit, grade level, course numbers, PEIMS codes and TEKS citations. Use for any question about what a course covers or how courses are sequenced. Call with no arguments to see every subject and how many courses each has.",
+   "parameters": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "course": {
+      "type": "string",
+      "description": "A course name or slug, e.g. \"AP Calculus AB\" or \"math/ap-calculus-ab\". Returns that course in full."
+     },
+     "subject": {
+      "type": "string",
+      "description": "One of: math, science, english, social-studies, world-languages, fine-arts, health-pe, cte, innovative. Lists the courses in it."
+     },
+     "query": {
+      "type": "string",
+      "description": "Words to search for across all courses."
+     },
+     "full": {
+      "type": "boolean",
+      "description": "Return complete course files rather than snippets. Default false."
+     }
+    }
+   }
+  }
+ }
+]
