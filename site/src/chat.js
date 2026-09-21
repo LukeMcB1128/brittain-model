@@ -52,10 +52,7 @@ export function visibleStory(text, done = false) {
 export function withoutReferenceNotes(text) {
   return String(text || "")
     .replace(/\[(?:For your reference|Tools you used)[^\]]*\]/g, "")
-    .replace(/
-{3,}/g, "
-
-")
+    .replace(/\n{3,}/g, "\n\n")
     .trimEnd();
 }
 
