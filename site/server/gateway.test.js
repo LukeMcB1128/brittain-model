@@ -491,6 +491,40 @@ test('an earlier turn: tool use is replayed to the model, results are not', asyn
   assert.equal(payload.messages.some(message => message.role === 'tool'), false);
 });
 
+test('a note that ends up in a search query does not breed another note', async () => {
+  // Live session: the model searched the web for the note itself. The query
+  // became the tool's detail, the browser sent the detail back, and the next
+  // note quoted it -- so each turn wrapped the previous note in a new one.
+  // By the third turn the query was the note nested inside itself, twice.
+  let payload;
+  const history = {
+    messages: [
+      { role: 'user', content: 'Hey Im a new user' },
+      {
+        role: 'assistant',
+        content: 'Welcome.',
+        tools: [
+          // As the browser reports it: clipped at 80 characters, so the
+          // closing bracket of the quoted note is already gone.
+          { name: 'web_search', detail: '[For your reference: on your previous turn you used web_search(Hello! Welcome' },
+          { name: 'web_search', detail: 'unit circle' },
+        ],
+      },
+      { role: 'user', content: 'why did you search the web' },
+    ],
+  };
+  await handleApi(req(history), env, async (_url, options) => {
+    payload = JSON.parse(options.body);
+    return sse([{ choices: [{ index: 0, delta: { content: 'I did.' }, finish_reason: 'stop' }] }, '[DONE]']);
+  });
+  const followUp = payload.messages.at(-1);
+  // Exactly one note, and nothing of the old one left inside it.
+  assert.equal(followUp.content.match(/For your reference/g).length, 1);
+  assert.doesNotMatch(followUp.content, /web_search\(Hello! Welcome/);
+  // The call still gets reported -- with no detail left, just the name.
+  assert.match(followUp.content, /web_search; web_search\(unit circle\)/);
+});
+
 test('executes only declared tools and returns the final streamed reply', async () => {
   let round = 0;
   const response = await handleApi(req(), env, async (url, options) => {

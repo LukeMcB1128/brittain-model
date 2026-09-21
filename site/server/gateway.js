@@ -114,7 +114,15 @@ function toolUseNote(tools) {
     .filter(tool => tool && TOOL_NAMES.has(tool.name))
     .slice(0, 10)
     .map(tool => {
-      const detail = String(tool.detail || '').replace(/[\r\n]+/g, ' ').slice(0, 80);
+      // A note that reaches a tool argument comes back as that tool's detail
+      // and goes straight into the next note, quoting itself and growing every
+      // turn. The detail is the model's own text round-tripped through the
+      // browser, so any note text in it is stripped here at the boundary.
+      const detail = String(tool.detail || '')
+        .replace(/\[(?:For your reference|Tools you used)[^\]]*\]?/g, '')
+        .replace(/[\r\n]+/g, ' ')
+        .trim()
+        .slice(0, 80);
       return detail ? `${tool.name}(${detail})` : tool.name;
     });
   if (!used.length) return '';
