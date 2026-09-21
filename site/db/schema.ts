@@ -68,3 +68,30 @@ export const chatExchanges = sqliteTable('chat_exchanges', {
   index('idx_chat_exchanges_created_at').on(table.createdAt),
   index('idx_chat_exchanges_user_created_at').on(table.userHash, table.createdAt),
 ]);
+
+// AISD/TEA course curriculum: one row per course markdown file.
+//
+// No full-text index on purpose. The corpus is 394 courses totalling 2.23 MB,
+// which SQLite scans in milliseconds, and the tool only runs when the model
+// asks for it. FTS5 would add a virtual table, shadow tables and sync triggers
+// that drizzle cannot express, for no measurable gain at this size. Revisit if
+// the corpus grows by an order of magnitude.
+//
+// `body` holds the whole file. A course averages 5.8 KB -- about 1,450 tokens --
+// so a lookup can return the complete document rather than a chunk, which is
+// what keeps TEKS language quotable rather than paraphrased.
+export const courses = sqliteTable('courses', {
+  slug: text('slug').primaryKey(),        // math/ap-calculus-ab
+  subject: text('subject').notNull(),     // math
+  title: text('title').notNull(),         // AP Calculus AB
+  credit: text('credit'),
+  gradeLevel: text('grade_level'),
+  courseNumber: text('course_number'),
+  peims: text('peims'),
+  teksCite: text('teks_cite'),
+  body: text('body').notNull(),
+  updatedAt: text('updated_at').notNull(),
+}, table => [
+  index('idx_courses_subject').on(table.subject),
+  index('idx_courses_title').on(table.title),
+]);

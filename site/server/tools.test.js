@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { executeTool, TOOL_DEFINITIONS, validatePublicUrl } from './tools.js';
 
 test('exposes exactly the requested three tools', () => {
-  assert.deepEqual(TOOL_DEFINITIONS.map(tool => tool.function.name), ['web_search', 'web_fetch', 'calculate']);
+  assert.deepEqual(TOOL_DEFINITIONS.map(tool => tool.function.name), ['web_search', 'web_fetch', 'calculate', 'search_curriculum']);
 });
 
 test('calculator handles arithmetic and approved functions without code execution', async () => {

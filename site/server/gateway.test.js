@@ -62,7 +62,7 @@ test('validates messages and fixes server-owned model/options', async () => {
   assert.equal(payload.chat_template_kwargs.enable_thinking, false);
   assert.match(payload.messages[0].content, /The current date is \w+, \d{4}-\d{2}-\d{2}\./);
   assert.doesNotMatch(payload.messages[0].content, /1970-01-01/);
-  assert.deepEqual(payload.tools.map(tool => tool.function.name), ['web_search', 'web_fetch', 'calculate']);
+  assert.deepEqual(payload.tools.map(tool => tool.function.name), ['web_search', 'web_fetch', 'calculate', 'search_curriculum']);
   assert.equal((await response.text()).includes('test-only-secret'), false);
 });
 test('accepts safe image parts and rejects remote or oversized attachment content', async () => {
