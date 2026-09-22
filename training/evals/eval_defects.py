@@ -279,6 +279,9 @@ def main():
     parser.add_argument("--samples", type=int, default=8)
     parser.add_argument("--model", default="run3-step-0116")
     parser.add_argument("--out", default=None)
+    parser.add_argument("--probe", default=None,
+                        help="only probes whose name contains this, for "
+                             "re-testing a close comparison at higher n")
     args = parser.parse_args()
 
     system = system_prompt()
@@ -290,7 +293,11 @@ def main():
     record = []
     tokens = 0
     print("%s, %d samples per probe\n" % (args.model, args.samples))
-    for probe in PROBES:
+    probes = [p for p in PROBES
+              if not args.probe or args.probe.lower() in p["name"].lower()]
+    if not probes:
+        raise SystemExit("no probe matches %r" % args.probe)
+    for probe in probes:
         counts = collections.Counter()
         useful = []
         for _ in range(args.samples):
