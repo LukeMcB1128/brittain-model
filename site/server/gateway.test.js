@@ -679,13 +679,14 @@ test('every request carries a frequency penalty', async () => {
   // is the round that writes the long answer where this happened.
   const payloads = [];
   let round = 0;
-  await handleApi(req({ messages: [{ role: 'user', content: 'Search the web for a language reference.' }] }), env,
+  const response = await handleApi(req({ messages: [{ role: 'user', content: 'Search the web for a language reference.' }] }), env,
     async (_url, options) => {
       payloads.push(JSON.parse(options.body));
       round += 1;
       if (round === 1) return modelToolCalls([['web_search', { query: 'language reference' }]]);
       return sse([{ choices: [{ index: 0, delta: { content: 'Here it is.' }, finish_reason: 'stop' }] }, '[DONE]']);
     });
+  await response.text();
   assert.ok(payloads.length >= 2, 'expected a tool round and an answer round');
   for (const payload of payloads) assert.equal(payload.frequency_penalty, 0.3);
 });
