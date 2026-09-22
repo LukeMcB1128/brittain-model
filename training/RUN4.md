@@ -104,8 +104,10 @@ fight the fix.**
 **Measured as working. Do not spend data defending these; do not regress
 them.** Accepting correction (12/12) and checking a fact that moves (11/12).
 The Antigravity review of the served exchanges reported both as broken. My
-probes disagree. That has to be settled in Phase 0 before any data is built
-for it, or a whole group gets spent fixing something that is not broken.
+probes disagree, and settling it needs the stored exchanges. That is worth
+having but it is not worth blocking on: building the `tool_account` group
+anyway costs 120 examples, and being wrong about it costs a live defect
+shipping. Build it, and check the exchanges when convenient.
 
 **Not reproducible. Do not train on a ghost.** The JSON envelope trailer
 (0/27) and curriculum domain bleed (0/80 single-turn, multi-turn unconfirmed).
@@ -117,14 +119,13 @@ Half a day, and it gates everything after it.
 1. **Grade the post-tool turns.** Done: `eval_defects.py` now replays a fixed
    tool result and grades the second reply. Fixed results rather than live
    tools, so a change between runs is the model changing and not the internet.
-2. **Export the D1 exchanges and grade them with Jev.** Settles the
-   correction/mayor discrepancy against real traffic instead of my probes.
-   Needs the machine with node:
-   `npx wrangler d1 execute brittain-app --remote --json --command "SELECT created_at, model, payload FROM chat_exchanges ORDER BY created_at DESC LIMIT 400"`
-3. **Score run 3 checkpoints 25/50/75/100.** Never done. 0116 is being served
-   without anyone knowing it is the best one, and run 1's best was step-0100
-   rather than its last. If an earlier checkpoint scores better, part of what
-   run 4 is meant to fix may just be overtraining.
+2. **Score every run 3 checkpoint.** Done, defects and capability both, and
+   it settled the serving question: keep 0116. See above.
+3. **Grade real exchanges.** Not blocking, see above. `npm run db:backup`
+   then `extract_exchanges.py`, on the machine with node. Worth having for
+   Phase 1 material regardless: the payloads carry tool arguments and
+   results, which is better training and DPO material than anything written
+   from imagination.
 
 ## Phase 1 — build the data
 
