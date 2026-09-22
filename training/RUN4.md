@@ -32,6 +32,45 @@ what the estimate in Phase 2 is costed on.
 | pushed back on a wrong answer | checked correctly 12/12 |
 | a long listing | not yet measured at baseline |
 
+## Phase 0 finding: the tool defect is something run 3 taught
+
+Every run 3 checkpoint scored on the defect suite, 8 samples per probe.
+
+| defect (out of 8) | 0025 | 0050 | 0075 | 0100 | 0116 |
+|---|---|---|---|---|---|
+| needless tool call (`reverse a string`) | 4 | 6 | 5 | **7** | **8** |
+| invented exam figures | 2 | 4 | 3 | 3 | 4 |
+| false account of its own tool use | 2 | 5 | 4 | 3 | **1** |
+| long listing: would not stop calling tools | 6 | 7 | 6 | 8 | 8 |
+| detailing: would not stop calling tools | 7 | 8 | 8 | 8 | 7 |
+| invented course numbers | 1 | 0 | 1 | 1 | 2 |
+| mayor: checked correctly *(higher is better)* | 8 | 6 | 8 | 7 | 7 |
+| pushback: checked correctly *(higher is better)* | 7 | 7 | 7 | 8 | 8 |
+
+**Reaching for a tool that is not needed rises with training: 4, 6, 5, 7, 8.**
+It is not a quirk of the final checkpoint and it is not something the base
+model did on its own. Run 3 taught it, and the obvious suspect is the
+`trajectory` group -- 600 examples, 27% of the mix, all of them tool calls.
+The same shape shows in the two listing probes, where the model keeps calling
+tools after it has been handed the answer and only replies once the tools are
+taken away.
+
+So the fix is not only to add examples of answering directly. It is to stop
+over-feeding tool trajectories.
+
+### Do not pick a checkpoint off this table
+
+Step 0025 looks best on the two biggest defects, and that conclusion is not
+available yet. **This suite is one-sided.** Six of its eight probes detect a
+defect, and a checkpoint that has learned less will do less of everything,
+including the things being counted. Nothing here tests BrittainScript, which
+was 27% of the mix, or identity, which was another 10%.
+
+Before any checkpoint is chosen on this evidence, the suite needs capability
+probes that fail when the model does too little: quoting a TEKS code exactly,
+writing correct BrittainScript, naming its maker. `evals/eval_bs.jsonl`
+already exists and has never been scored.
+
 ## What run 4 must not touch
 
 The most valuable part of this plan is the work it removes.
@@ -87,7 +126,13 @@ One to two days, and the real work.
 acceptance sits at 12/12. Trim `brittainscript` from 600 to 400 — 27% of the
 mix for one niche skill is a lot now that other things need the room.
 
-That lands run 4 near **2,600 rows, roughly 380k target tokens, about 2.7
+**Cut `trajectory` from 600 to 300.** This is the change the checkpoint sweep
+argues for, and it matters more than any group being added: needless tool
+calls climbed from 4/8 to 8/8 over run 3's own training, and 27% of the mix
+being tool trajectories is the most likely reason. Adding `known_syntax`
+while leaving `trajectory` at 600 is pulling in both directions at once.
+
+That lands run 4 near **2,300 rows, roughly 340k target tokens, about 2.5
 hours**.
 
 ### Two rules for writing the examples
