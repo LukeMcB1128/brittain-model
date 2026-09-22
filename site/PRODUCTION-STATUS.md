@@ -7,7 +7,7 @@ Updated 2026-09-22 (America/Chicago).
 - Production Worker `296c4d4a-3068-46cd-81a3-3c4f0c277e36` uses `run4c-step-0116` for chat and context compaction. The public assistant name remains Brittain 4.
 - No `BRITTAIN4_MODEL` Worker secret overrides this default.
 - All 137 site tests, lint, build, and all 20 read-only release checks pass.
-- Live model inference is not verified. Direct requests from this workstation to the model API received Cloudflare error 1010 before reaching the model server.
+- The production API lists `run4c-step-0116`. A minimal authenticated completion returned HTTP 200 and reported that model ID. A signed-in chat through the site was not tested in this update.
 
 ## Completed in this update
 
