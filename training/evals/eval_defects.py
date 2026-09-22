@@ -239,23 +239,39 @@ def ask(turns, system, key, model, tools=None):
     return message.get("content") or "", calls, raw
 
 
-def replay(turns, raw_calls, results, system, key, model, tools):
-    """Hand back a fixed tool result and take the next reply.
+def replay(turns, raw_calls, results, system, key, model, tools, rounds=3):
+    """Feed back fixed tool results until the model answers, as the gateway does.
+
+    A single replay was not faithful and was not even fair. Handed a course
+    listing and asked for course numbers the listing does not carry, the model
+    called the tool again -- which is the right move, not a defect -- and the
+    eval recorded that as a failure and never reached a reply to grade.
+
+    So this loops like streamChat: up to `rounds` tool rounds, then a final
+    round with no tools offered at all, which is what forces an answer out of
+    it in production too.
 
     The message shape is the gateway's: an assistant turn carrying the
-    tool_calls, then one tool message per call. Anything else and the model is
-    answering a conversation it would never actually see.
+    tool_calls, then one tool message per call.
     """
-    followup = list(turns)
-    followup.append({"role": "assistant", "content": None, "tool_calls": raw_calls})
-    for call in raw_calls:
-        name = call["function"]["name"]
-        followup.append({
-            "role": "tool",
-            "tool_call_id": call.get("id") or ("call-%s" % name),
-            "content": results.get(name, "The tool returned no results."),
-        })
-    return ask(followup, system, key, model, tools)
+    conversation = list(turns)
+    calls = raw_calls
+    for round_index in range(rounds):
+        conversation.append({"role": "assistant", "content": None,
+                             "tool_calls": calls})
+        for call in calls:
+            name = call["function"]["name"]
+            conversation.append({
+                "role": "tool",
+                "tool_call_id": call.get("id") or ("call-%d-%s" % (round_index, name)),
+                "content": results.get(name, "The tool returned no results."),
+            })
+        reply, plain, calls = ask(conversation, system, key, model, tools)
+        if not calls:
+            return reply, plain, calls, round_index + 1
+    # Tools withdrawn: answer with what you have.
+    reply, plain, calls = ask(conversation, system, key, model, None)
+    return reply, plain, calls, rounds + 1
 
 
 def main():
@@ -284,17 +300,18 @@ def main():
             if calls and not probe.get("tools_called"):
                 expected = probe.get("expect_tool")
                 if probe.get("tool_results"):
-                    # The defect is downstream of the tool. Replay a fixed
-                    # result and grade what the model does with it.
-                    reply, calls, raw = replay(
+                    # The defect is downstream of the tool. Replay fixed
+                    # results until it answers, then grade that answer.
+                    reply, calls, raw, used = replay(
                         probe["turns"], raw, probe["tool_results"],
                         system, key, args.model, tools)
                     sources = probe.get("sources_after", sources)
                     counts["checked, correctly"] += 1
-                    if calls:
-                        # Still asking for tools after being handed the answer.
-                        counts["called another tool instead of answering"] += 1
-                        continue
+                    # Rounds are reported, not punished: asking again for a
+                    # course the listing did not carry is the right instinct.
+                    # Needing the tools withdrawn before answering is not.
+                    if used > 3:
+                        counts["only answered once tools were withdrawn"] += 1
                 else:
                     # A turn that called a tool has not answered from memory,
                     # so the memory-shaped questions do not apply. What the
