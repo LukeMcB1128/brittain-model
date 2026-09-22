@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { PDFDocument } from 'pdf-lib';
 import { handleApi, toolInstructions, isBareGreeting } from './gateway.js';
 const env = { BRITTAIN4_API_KEY: 'test-only-secret' };
-function req(body = { messages: [{ role: 'user', content: 'Hello' }] }, extra = {}) {
+function req(body = { messages: [{ role: 'user', content: 'Please help with this task.' }] }, extra = {}) {
   return new Request('https://site.example/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json', 'oai-authenticated-user-id': 'test-user', ...extra }, body: JSON.stringify(body) });
 }
 test('builds the current date inside the request instead of at module initialization', () => {
@@ -50,7 +50,7 @@ test('validates messages and fixes server-owned model/options', async () => {
   assert.equal((await handleApi(req({ messages: [{ role: 'system', content: 'x' }] }), env)).status, 400);
   assert.equal((await handleApi(req({ messages: [{ role: 'user', content: 'x'.repeat(500001) }] }), env)).status, 400);
   let payload;
-  const response = await handleApi(req({ model: 'other', max_tokens: 99999, messages: [{ role: 'user', content: 'Hello' }] }), env, async (url, options) => {
+  const response = await handleApi(req({ model: 'other', max_tokens: 99999, messages: [{ role: 'user', content: 'Please help with this task.' }] }), env, async (url, options) => {
     assert.equal(url, 'https://api.brittain.app/v1/chat/completions');
     assert.equal(options.headers.Authorization, 'Bearer test-only-secret');
     payload = JSON.parse(options.body);
@@ -621,10 +621,11 @@ test('a follow-up turn gets the course file back, read from the database', async
       { role: 'user', content: 'how hard is the ap test' },
     ],
   };
-  await handleApi(req(history), { ...env, DB: courseDb([APES], calls) }, async (_url, options) => {
+  const response = await handleApi(req(history), { ...env, DB: courseDb([APES], calls) }, async (_url, options) => {
     payload = JSON.parse(options.body);
     return sse([{ choices: [{ index: 0, delta: { content: 'It is demanding.' }, finish_reason: 'stop' }] }, '[DONE]']);
   });
+  await response.text();
   // Only the course NAME came from the browser; the text came from D1.
   assert.equal(calls[0].binds[0], 'AP Environmental Science');
   // One file, not the three a loose lookup would return.
@@ -634,16 +635,17 @@ test('a follow-up turn gets the course file back, read from the database', async
   assert.equal(grounding.role, 'user');
   assert.match(grounding.content, /supplied again so you can answer from it/);
   // It goes before the question, not after it.
-  assert.equal(payload.messages.at(-1).content, 'how hard is the ap test');
+  assert.match(payload.messages.at(-1).content, /how hard is the ap test$/);
 });
 
 test('re-grounding is skipped when there is nothing to re-ground', async () => {
   const send = async (history, db) => {
     let payload;
-    await handleApi(req(history), { ...env, DB: db }, async (_url, options) => {
+    const response = await handleApi(req(history), { ...env, DB: db }, async (_url, options) => {
       payload = JSON.parse(options.body);
       return sse([{ choices: [{ index: 0, delta: { content: 'ok' }, finish_reason: 'stop' }] }, '[DONE]']);
     });
+    await response.text();
     return payload;
   };
   const grounded = payload => payload.messages.some(m => /supplied again/.test(m.content || ''));

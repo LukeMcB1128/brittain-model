@@ -99,7 +99,9 @@ export async function summarizeCompaction(plan, memory, fetchUpstream, upstream,
 }
 
 export function modelMessages(systemMessage, messages, memory = '') {
-  const clean = messages.map(({ turnId: _turnId, ...message }) => message);
+  // `tools` is browser-reported history used only by the gateway to restore
+  // trusted server-side context. It must not become an extra model field.
+  const clean = messages.map(({ turnId: _turnId, tools: _tools, ...message }) => message);
   if (!memory) return [systemMessage, ...clean];
   return [{
     ...systemMessage,

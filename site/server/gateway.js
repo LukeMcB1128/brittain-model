@@ -300,7 +300,10 @@ function requestedTool(messages, hasPdf = false) {
   }
   if (/https:\/\/\S+/i.test(prompt) && /\b(?:fetch|read|open|visit|summari[sz]e|review)\b/i.test(prompt)) return 'web_fetch';
   if (/\b(?:calculate|calculator|compute|arithmetic)\b/i.test(prompt) && /\d/.test(prompt)) return 'calculate';
-  if (/\b(?:search the web|web search|browse the web|look up|latest|current news|today'?s news)\b/i.test(prompt)) return 'web_search';
+  // Route an explicit request. A user asking why an earlier search happened
+  // contains the same words, but must not start another search.
+  if (/^\s*(?:(?:please|can you|could you|would you)\s+)?(?:search the web|web search|browse the web|look up)\b/i.test(prompt)
+    || /\b(?:latest|current news|today'?s news)\b/i.test(prompt)) return 'web_search';
   return null;
 }
 
@@ -433,6 +436,9 @@ function streamChat(systemMessage, conversation, request, env, fetchUpstream, at
       let toolCount = 0;
       let messages = modelMessages(systemMessage, conversation, memory);
       try {
+        // Keep the full validated history for server-side context restoration.
+        // Compaction can remove the earlier turn that contains the tool marker.
+        const groundingConversation = conversation;
         const plan = planCompaction(conversation, memory);
         if (plan) {
           emit({ type: 'compaction', status: 'running' });
@@ -456,7 +462,7 @@ function streamChat(systemMessage, conversation, request, env, fetchUpstream, at
         messages = modelMessages(systemMessage, conversation, memory);
         // Before answerBaseMessages is taken, so the final round is grounded
         // too -- that is the round that writes the answer.
-        const grounding = await curriculumGrounding(conversation, context);
+        const grounding = await curriculumGrounding(groundingConversation, context);
         if (grounding) messages.splice(Math.max(1, messages.length - 1), 0, grounding);
         const answerBaseMessages = messages.map(message => ({ ...message }));
         if (firstTool && firstArguments) {
@@ -500,9 +506,10 @@ function streamChat(systemMessage, conversation, request, env, fetchUpstream, at
           // Hold the final text until we know it is an answer. This prevents a
           // fragment such as "Let me check" from appearing before an invalid
           // tool request is rejected.
+          const guardedFinalRound = finalRound && !toolsSuppressed;
           const finalContentEvents = [];
-          const result = await readModelStream(response, finalRound ? event => finalContentEvents.push(event) : emit);
-          if (finalRound && result.toolCalls.length) {
+          const result = await readModelStream(response, guardedFinalRound ? event => finalContentEvents.push(event) : emit);
+          if (guardedFinalRound && result.toolCalls.length) {
             throw new Error('The model kept requesting tools after tool use ended. It did not complete the answer. Please retry.');
           }
           if (!result.toolCalls.length || finalRound) {
@@ -658,12 +665,19 @@ export async function handleApi(request, env, fetchUpstream = fetch, authenticat
       if (message.role === 'user') fallbackTurn += 1;
       const turnId = typeof message.turnId === 'string' && /^[A-Za-z0-9-]{1,100}$/.test(message.turnId) ? message.turnId : `legacy-${fallbackTurn}`;
       const content = normalizeContent(message.role, message.content, totals);
+      const tools = message.role === 'assistant' && Array.isArray(message.tools)
+        ? message.tools
+          .filter(tool => tool && TOOL_NAMES.has(tool.name))
+          .slice(0, 10)
+          .map(tool => ({ name: tool.name, detail: String(tool.detail || '').trim().slice(0, 200) }))
+        : [];
       return {
         role: message.role,
         content,
         turnId,
+        tools,
         // Carried, not merged. See the second pass below.
-        note: message.role === 'assistant' ? toolUseNote(message.tools) : '',
+        note: message.role === 'assistant' ? toolUseNote(tools) : '',
       };
     });
     // A note appended to an assistant turn is a writing sample. The model read

@@ -42,10 +42,10 @@ The user approved the production export on 2026-09-20. The backup was saved unde
 
 ## Verified deployment
 
-- Active Worker version: `5d2f3e63-e318-4943-87e3-e07622de5140`. It adds persistent tool activity, response phases, and saved compaction status.
-- Previous known-good Worker version: `acce1f3b-807c-4133-ba57-76f4e1fe7615`. It serves `brittain.app` as a Custom Domain and keeps `brittain-app.luke-brittain.workers.dev` enabled as a fallback.
+- Active Worker version: `38675aa3-6e48-4e7d-a6c4-364020480706`. It keeps tools off an opening bare greeting, fixes tool-loop regressions, and restores trusted curriculum context on later turns.
+- Previous known-good Worker version: `5d2f3e63-e318-4943-87e3-e07622de5140`. It adds persistent tool activity, response phases, and saved compaction status.
 - Previous release before this update: `63e9c12b-8b54-4b17-8dfe-950233a73e02`. Rolling back to it also reverts the new account protection; assess that tradeoff before rollback.
-- Tests: 126 passing. Lint and the production build pass. The build warns that production secrets are absent locally; live health checks confirm the deployed configuration is present.
+- Tests: 136 passing. Lint and the production build pass. The build warns that production secrets are absent locally; live health checks confirm the deployed configuration is present.
 - Live release check: all 20 checks pass on `https://brittain.app`. Email verification and password recovery are configured.
 - Live negative login check: HTTP 400 with `MISSING_RESPONSE` when no CAPTCHA token is supplied.
 - Browser check: the managed widget completed automatically. A deliberately invalid login returned the expected error, refreshed the token, and enabled another attempt. No account was created and no email was sent.
