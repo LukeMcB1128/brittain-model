@@ -60,6 +60,7 @@ test('the summarizer uses a low-temperature non-streaming request', async () => 
   );
   assert.equal(summary, 'Compressed memory.');
   assert.equal(payload.stream, false);
+  assert.equal(payload.model, 'run4c-step-0116');
   assert.equal(payload.temperature, 0.1);
   assert.match(payload.messages[1].content, /Existing fact/);
 });

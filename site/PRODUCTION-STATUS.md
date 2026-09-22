@@ -1,6 +1,13 @@
 # Production preparation
 
-Updated 2026-09-21 (America/Chicago).
+Updated 2026-09-22 (America/Chicago).
+
+## Current model release
+
+- Production Worker `296c4d4a-3068-46cd-81a3-3c4f0c277e36` uses `run4c-step-0116` for chat and context compaction. The public assistant name remains Brittain 4.
+- No `BRITTAIN4_MODEL` Worker secret overrides this default.
+- All 137 site tests, lint, build, and all 20 read-only release checks pass.
+- Live model inference is not verified. Direct requests from this workstation to the model API received Cloudflare error 1010 before reaching the model server.
 
 ## Completed in this update
 
@@ -40,9 +47,9 @@ The user approved the production export on 2026-09-20. The backup was saved unde
 - The backup command now hides signed download URLs in both success and error output. Two tests verify URL filtering and private file permissions with synthetic data.
 - This is a local backup with a SQLite restore check. Remote D1 restore, encrypted off-device storage, and scheduled backups have not been tested or configured.
 
-## Verified deployment
+## Earlier deployment record
 
-- Active Worker version: `38675aa3-6e48-4e7d-a6c4-364020480706`. It keeps tools off an opening bare greeting, fixes tool-loop regressions, and restores trusted curriculum context on later turns.
+- Worker version recorded in the earlier deployment: `38675aa3-6e48-4e7d-a6c4-364020480706`. It keeps tools off an opening bare greeting, fixes tool-loop regressions, and restores trusted curriculum context on later turns.
 - Previous known-good Worker version: `5d2f3e63-e318-4943-87e3-e07622de5140`. It adds persistent tool activity, response phases, and saved compaction status.
 - Previous release before this update: `63e9c12b-8b54-4b17-8dfe-950233a73e02`. Rolling back to it also reverts the new account protection; assess that tradeoff before rollback.
 - Tests: 136 passing. Lint and the production build pass. The build warns that production secrets are absent locally; live health checks confirm the deployed configuration is present.
