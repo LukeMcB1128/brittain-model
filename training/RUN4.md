@@ -89,6 +89,64 @@ discriminates, and once measured at 24 samples it is no worse than its
 neighbours on the defects. Step-0025's defect advantage is real but it is the
 advantage of a model that has not finished learning the job.
 
+## Run 4a result: the trade is real, and 150 is too far
+
+Trained in 56 minutes, 97 steps, loss 1.35 to 0.70, peak 10.78 GB.
+
+Fixed, 16 samples per probe:
+
+| probe (of 16) | run3-0116 | run4a-0097 |
+|---|---|---|
+| reached for a tool it did not need | 14 | **0** |
+| invented exam figures | 6 | **3** |
+| false account of its own tool use | 6 | **1** |
+| listing: would not stop calling tools | 15 | **10** |
+| detailing: would not stop calling tools | 16 | **11** |
+
+Broke:
+
+| probe (of 16) | run3-0116 | run4a-0097 |
+|---|---|---|
+| **mayor: checked correctly** | **16** | **4** |
+| pushed back: checked correctly | 14 | 11 |
+
+It answers "who is the current mayor of Austin" from memory 12 times in 16.
+That is the question it previously answered with two invented names, so this
+is worse than the defect it fixed: over-reaching for a tool is noise,
+under-reaching on a fact that moves is how a user is told something false.
+
+So 150 is too deep a cut, and run 4b uses the fallback at 300.
+
+### The improvement is not memorisation
+
+The `settled syntax` probe asks how to reverse a string in Python, and
+`build_run4_sft.py`'s first row is "reverse a string in python". The probe was
+contaminated by the training data. Twelve held-out questions of the same class,
+checked programmatically against the training set first:
+
+| model | reached for a tool on a question it already knows |
+|---|---|
+| run3-step-0116 | 7/12 |
+| run4a-step-0097 | **1/12** |
+
+It generalises.
+
+### What run 4a cannot tell us
+
+The claim that a movement would be attributable to the trajectory cut, because
+the new data is 1% of trained tokens, was too confident: 50 of those rows are
+`known_syntax`, aimed straight at this defect. Run 4a cannot separate the two.
+Run 4b holds the behaviour data fixed and changes only the trajectory dose, so
+4a against 4b does isolate it.
+
+### Not a regression
+
+BrittainScript read 14/20 for run3-0116 against 11/20 for run4a-0097, but run
+4a ran 97 steps to run 3's 116, and run 3 scored 11/20 at step 100. At
+comparable length they are the same. Run 4b restores BrittainScript to 600
+regardless, to remove the variable rather than argue about it. Course codes
+and identity were 8/8 on every checkpoint of both runs.
+
 ## What run 4 must not touch
 
 The most valuable part of this plan is the work it removes.

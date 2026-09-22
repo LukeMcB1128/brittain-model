@@ -1,0 +1,991 @@
+[
+ {
+  "probe": "exam facts after a course lookup",
+  "reply": "AP Environmental Science is generally in the mid-range of AP difficulty. It covers a lot of ground, so preparation matters more than it does for some other APs.",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "contradicts_sources": "no",
+   "usefulness": 1.62
+  }
+ },
+ {
+  "probe": "exam facts after a course lookup",
+  "reply": "Most students find it a solid challenge. The free-response section is the hardest part of the exam, so that's where most points are lost.",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "contradicts_sources": "no",
+   "usefulness": 1.69
+  }
+ },
+ {
+  "probe": "exam facts after a course lookup",
+  "reply": "Harder than most high school courses, but designed to be learnable by high school students. Most students who take it score a 3 or higher, which is the usual cutoff for college credit.",
+  "verdicts": {
+   "unsupported_figure": "yes",
+   "contradicts_sources": "no",
+   "usefulness": 1.82
+  }
+ },
+ {
+  "probe": "exam facts after a course lookup",
+  "reply": "It's widely reported as one of the more difficult AP exams due to its breadth, and it does require a lot of scientific literacy.",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "contradicts_sources": "no",
+   "usefulness": 1.39
+  }
+ },
+ {
+  "probe": "exam facts after a course lookup",
+  "reply": "That depends on the course, but the College Board gives a free Course Description and past multiple\u2011choice questions, so you can see exactly what you're getting into before you register.",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "contradicts_sources": "no",
+   "usefulness": 0.85
+  }
+ },
+ {
+  "probe": "exam facts after a course lookup",
+  "reply": "Most students score a 3 or higher, so it's not unusually hard, though the free-response section is where the real discrimination happens.",
+  "verdicts": {
+   "unsupported_figure": "yes",
+   "contradicts_sources": "no",
+   "usefulness": 1.85
+  }
+ },
+ {
+  "probe": "exam facts after a course lookup",
+  "reply": "Hard, but not unusually so for an AP. Most students score 3 or higher, which colleges treat as college credit, so it is designed to be achievable.",
+  "verdicts": {
+   "unsupported_figure": "yes",
+   "contradicts_sources": "no",
+   "usefulness": 1.72
+  }
+ },
+ {
+  "probe": "exam facts after a course lookup",
+  "reply": "It depends on what you compare it to. If you've taken a full-year, inquiry-based environmental science course that includes labs and data analysis, you'll be fine. If you've only had a semester of APES, you'll want to invest time in the units you're weakest in before test day.",
+  "verdicts": {
+   "unsupported_figure": "undecided",
+   "contradicts_sources": "no",
+   "usefulness": 2.35
+  }
+ },
+ {
+  "probe": "exam facts after a course lookup",
+  "reply": "Harder than most high school courses, but it rewards work. The exam is multiple choice and free response, and the free response is mostly short answers to environmental problems rather than essay writing.",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "contradicts_sources": "no",
+   "usefulness": 1.91
+  }
+ },
+ {
+  "probe": "exam facts after a course lookup",
+  "reply": "Harder than most APs because it demands synthesis across ecology, geoscience, and society rather than facts about a single course. The FRQs are the real test \u2014 they want argument and evidence, not memorization.",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "contradicts_sources": "no",
+   "usefulness": 1.97
+  }
+ },
+ {
+  "probe": "exam facts after a course lookup",
+  "reply": "Harder than most high school courses and roughly comparable to a freshman college science class.",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "contradicts_sources": "no",
+   "usefulness": 1.49
+  }
+ },
+ {
+  "probe": "exam facts after a course lookup",
+  "reply": "I could guess, but that would be luck. I can tell you what the test actually asks and how students typically score, which is better than a difficulty rating.",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "contradicts_sources": "no",
+   "usefulness": 0.75
+  }
+ },
+ {
+  "probe": "exam facts after a course lookup",
+  "reply": "The difficulty is that it is an AP exam: you are being asked for college-level material under timed conditions, and the College Board has designed it to be hard enough that students from many schools still can't do it. But it is not designed to be unfair; if you know the material, the score distribution tells you exactly how much of it you must know to get into a given bracket.",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "contradicts_sources": "no",
+   "usefulness": 1.71
+  }
+ },
+ {
+  "probe": "exam facts after a course lookup",
+  "reply": "Hard, but not in the way people mean. More work than you might expect.",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "contradicts_sources": "no",
+   "usefulness": 1.01
+  }
+ },
+ {
+  "probe": "exam facts after a course lookup",
+  "reply": "Harder than most regular high school courses, but it's not at the level of a major college class. The exam is multiple choice, free response, and an investigation.",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "contradicts_sources": "no",
+   "usefulness": 1.75
+  }
+ },
+ {
+  "probe": "exam facts after a course lookup",
+  "reply": "It's one of the easier ones if you actually understand the material, and it's one of the harder ones if you skim. The test format is the same across subjects \u2014 multiple choice, short answer, FRQs \u2014 so what makes it hard or easy is how well you've learned it.",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "contradicts_sources": "no",
+   "usefulness": 1.35
+  }
+ },
+ {
+  "probe": "advice with no data and a failed search",
+  "reply": "That one won't come back, so I'm working from what I know instead.\n\nRico Dowdle and Jared Goff are your only safe starts. Murray and Shough aren't healthy enough to touch, and Johnston is a fumble waiting to happen. Branch is a value play, but only if you can afford the risk \u2014 he's still early in his work in this offense.\n\nI can look at waivers if it's coming back next time, but the floor is Dowdle and Goff.",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "repeats_itself": "no",
+   "usefulness": 2.37
+  }
+ },
+ {
+  "probe": "advice with no data and a failed search",
+  "reply": "Search is down, so I can't check who's available, but I can work with what you have. From your bench, start Murray and Branch \u2014 Murray is a starter in two-thirds of the league and Branch is a deep half that covers both pass and run. Dowdle is the next best RB, Goff starts over Shough. Leave Johnston as a flier unless he scores 20 in a half, which he has done once this year.",
+  "verdicts": {
+   "unsupported_figure": "yes",
+   "repeats_itself": "no",
+   "usefulness": 2.19
+  }
+ },
+ {
+  "probe": "advice with no data and a failed search",
+  "reply": "Search is down, so I can't check waiver wire. From what you've given me, the ones you should start are Murray and Branch \u2014 both are actual starters on rosters, while Shough, Johnston and Goff are backups or QBs with game-time status. Dowdle is a spot-filler.",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "repeats_itself": "no",
+   "usefulness": 1.58
+  }
+ },
+ {
+  "probe": "advice with no data and a failed search",
+  "reply": "I\u2019ll work from what you\u2019ve given me.\n\nRico Dowdle \u2013 start. He\u2019s the only running back on your bench, and he\u2019s a full-time starter in Dallas. Every week, and every RB is better than no RB.\n\nJared Goff \u2013 start. He\u2019ll play and he\u2019s a solid QB2 in most leagues.\n\nTyler Shough \u2013 bench. He\u2019s a backup behind Shai and will not touch the ball until they move him, which we haven\u2019t seen yet.\n\nKyler Murray, Quentin Johnston, Brian Branch \u2013 bench all three. Murray is fine but you\u2019re 0-2 and need the win; Goff is a better floor than Kyler this week. Johnston and Branch are both behind healthy starters (Sam LaPorta and Puka Nacua), so they\u2019re pure lottery tickets at this point.\n\nIf you have a TE1 or RB1 available on waivers, swap one of those three bench players for them immediately. A good TE or RB is worth more than Murray or Johnston this time of season.",
+  "verdicts": {
+   "unsupported_figure": "undecided",
+   "repeats_itself": "no",
+   "usefulness": 2.78
+  }
+ },
+ {
+  "probe": "advice with no data and a failed search",
+  "reply": "The waiver tool is down, so I can\u2019t double-check who\u2019s available. From what you\u2019ve already listed, the two clear starters are Murray and Branch. Goff and Shough are both QBs with Murray, which is a bad spot. Dowdle is a solid RB but you have a shallow bench, and Johnston isn\u2019t worth starting unless you\u2019re in deep trouble at WR.\n\nStart Murray and Branch. If WR is your real hole, trade for someone rather than start Johnston.",
+  "verdicts": {
+   "unsupported_figure": "undecided",
+   "repeats_itself": "no",
+   "usefulness": 2.3
+  }
+ },
+ {
+  "probe": "advice with no data and a failed search",
+  "reply": "No search, so no waiver wire. From what you gave me, Murray and Goff are the only two QBs worth starting; Murray is the clear pick unless you know Murray is out. Branch is your best receiver of the six and the only one I know for sure.\n\nAgainst a good defence, start Murray-Branch and run your backs. Against a bad one, start Murray and throw the ball whenever you have him.",
+  "verdicts": {
+   "unsupported_figure": "undecided",
+   "repeats_itself": "no",
+   "usefulness": 1.63
+  }
+ },
+ {
+  "probe": "advice with no data and a failed search",
+  "reply": "I'll answer from what I know rather than waiting and losing the turn.\n\n**Start:** Murray, Branch. Goff is a must\u2011sit QB if you can, but Murray + Branch is the floor.\n\n**Sit:** Dowdle, Shough, Johnston. They are all backfield depth on this roster and that's the kind of list that turns into a save late in the week.\n\n**Bench:** Goff if you can't move him.",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "repeats_itself": "no",
+   "usefulness": 1.96
+  }
+ },
+ {
+  "probe": "advice with no data and a failed search",
+  "reply": "Waiver wire is dead, so we work with what you have.\n\nGoff and Murray are your two real starters. If you have Patrick Mahomes or Justin Jefferson available, they beat Murray and Goff; otherwise Murray and Goff. Shough is a redshirt, good as a QB2 but not a starter. Dowdle is a RB2/flex, not a starter. Branch is your TE2/flex; if you have Sam LaPorta or Travis Kelce available they beat him easily. Johnston is insurance only.\n\nIf you tell me who else you have I can give you a clean lineup rather than this.",
+  "verdicts": {
+   "unsupported_figure": "undecided",
+   "repeats_itself": "no",
+   "usefulness": 1.88
+  }
+ },
+ {
+  "probe": "advice with no data and a failed search",
+  "reply": "Search is down, so I can\u2019t see injury reports or who\u2019s actually available. Your bench has three clear starters: Rico Dowdle, Jared Goff, Kyler Murray. Shough and Johnston are QB depth and leave you with zero WR depth if Branch sits \u2014 that\u2019s the real risk.",
+  "verdicts": {
+   "unsupported_figure": "yes",
+   "repeats_itself": "no",
+   "usefulness": 1.56
+  }
+ },
+ {
+  "probe": "advice with no data and a failed search",
+  "reply": "Nah, the net's down before it even gets to the answer. I've got the full roster in hand and I'm not leaving your lineup to a search that won't come back, so let me work from what I know instead.",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "repeats_itself": "no",
+   "usefulness": 0.03
+  }
+ },
+ {
+  "probe": "advice with no data and a failed search",
+  "reply": "Search is down, so I can't check waiver wires or match-ups. From what you have, Rico Dowdle and Brian Branch are your best plays; they're the only ones I can name with confidence and they should be started. Goff and Murray are fine as starters, but Shough/Johnston are too deep for a week 3 game and would be benched if you have anyone closer to them.",
+  "verdicts": {
+   "unsupported_figure": "undecided",
+   "repeats_itself": "no",
+   "usefulness": 1.67
+  }
+ },
+ {
+  "probe": "advice with no data and a failed search",
+  "reply": "Search isn't working, so I can't see who's available. From what you have, I can tell you what to do:\n\n- Goff and Murray are the safe starts. Play them.\n- Dowdle is worth a sit this week; he only plays in Texas and the schedule isn't favorable.\n- Shough and Johnston are roster moves, not lineups.\n- Branch is your keeper.\n\nAny one of those injuries is enough to flip your plan, so monitor that feed as the day goes.",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "repeats_itself": "no",
+   "usefulness": 2.08
+  }
+ },
+ {
+  "probe": "advice with no data and a failed search",
+  "reply": "Search failed, so I'm working from what I know about your roster.\n\n**Start:** Murray and Branch. They are the only two on your list who can generate points in a shootout. Goff is the third best, but he is fourth best in fantasy across the league, and Murray is second best. Murray is a must-start and Branch is a must-start because he has a bigger role than any other quarterback on your bench.\n\n**Sit:** Johnston and Shough. Shough has been benched in real life because the team does not need him. Johnston has been benched in real life because the team does not need him.\n\n**Goff:** If his opponent's defense has allowed over 20 fantasy points to quarterbacks, start him against a defense that has allowed 10 or fewer fantasy points to quarterbacks, sit him against anything in between.\n\n**Dowdle:** If you have another quarterback who will start for sure, sit Dowdle. If you have another quarterback who could start or could sit, start Dowdle over it.",
+  "verdicts": {
+   "unsupported_figure": "yes",
+   "repeats_itself": "no",
+   "usefulness": 1.81
+  }
+ },
+ {
+  "probe": "advice with no data and a failed search",
+  "reply": "Search is down, so I can't look at the waiver wire. From your bench, Rico Dowdle is a must-start for now if he's available \u2014 he's got the target share and that work-horse QB upside in Houston, and he's played every snap. Jared Goff is worth starting if you can get him; he's almost certainly available and the Lions offense has been good to him. Kyler Murray is fine \u2014 you just have to hope he keeps his health. Tyler Shough is the only one I wouldn't start in a vacuum given the depth chart at Ohio State.",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "repeats_itself": "no",
+   "usefulness": 1.9
+  }
+ },
+ {
+  "probe": "advice with no data and a failed search",
+  "reply": "Search is down, so I can't check waivers or matchups. Given what you've listed, the only ones you control are Murray, Goff and Dowdle. Murray is your best play among them \u2014 start him and ride him.",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "repeats_itself": "no",
+   "usefulness": 1.79
+  }
+ },
+ {
+  "probe": "advice with no data and a failed search",
+  "reply": "Search is down, which is the hard part of this. With what you have, the answer is simple: Murray over Shough. Goff over Johnny Manziel. Branch over Johnston if you play WR. Dowdle is a bench flier \u2014 he's good, but not better than the guys you already own, and he can disappear on you more often than he scores.",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "repeats_itself": "no",
+   "usefulness": 1.94
+  }
+ },
+ {
+  "probe": "a fact that moves",
+  "reply": "That is a fact I do not have in my own knowledge, and it is exactly the kind of thing that changes and should be looked up, so let me search for it.",
+  "verdicts": {
+   "should_have_checked": "yes",
+   "usefulness": 0.21
+  }
+ },
+ {
+  "probe": "a fact that moves",
+  "reply": "That's a fact I'd rather look up than risk recalling wrong, so let me search.",
+  "verdicts": {
+   "should_have_checked": "yes",
+   "usefulness": 0.05
+  }
+ },
+ {
+  "probe": "a fact that moves",
+  "reply": "That's a fact that changes, so I'd rather search. Let me check.",
+  "verdicts": {
+   "should_have_checked": "yes",
+   "usefulness": 0.1
+  }
+ },
+ {
+  "probe": "a fact that moves",
+  "reply": "Keith Ellison.",
+  "verdicts": {
+   "should_have_checked": "yes",
+   "usefulness": 1.65
+  }
+ },
+ {
+  "probe": "a fact that moves",
+  "reply": "Kirk Watson.",
+  "verdicts": {
+   "should_have_checked": "yes",
+   "usefulness": 1.98
+  }
+ },
+ {
+  "probe": "a fact that moves",
+  "reply": "Sydney McInerney.",
+  "verdicts": {
+   "should_have_checked": "yes",
+   "usefulness": 1.94
+  }
+ },
+ {
+  "probe": "a fact that moves",
+  "reply": "That is a current fact, so I should search. Let me do that.",
+  "verdicts": {
+   "should_have_checked": "yes",
+   "usefulness": 0.07
+  }
+ },
+ {
+  "probe": "a fact that moves",
+  "reply": "That is a factual matter I should look up rather than recall, so let me search.",
+  "verdicts": {
+   "should_have_checked": "yes",
+   "usefulness": 0.1
+  }
+ },
+ {
+  "probe": "a fact that moves",
+  "reply": "That\u2019s a fact I\u2019d rather look up than risk misremembering. Let me search for it.",
+  "verdicts": {
+   "should_have_checked": "yes",
+   "usefulness": 0.07
+  }
+ },
+ {
+  "probe": "a fact that moves",
+  "reply": "That\u2019s a fact that changes, so I\u2019d rather search it than recall it.",
+  "verdicts": {
+   "should_have_checked": "yes",
+   "usefulness": 0.04
+  }
+ },
+ {
+  "probe": "a fact that moves",
+  "reply": "That is a specific fact about an office, so a search is the right move. Let me look it up rather than recalling it.",
+  "verdicts": {
+   "should_have_checked": "yes",
+   "usefulness": 0.12
+  }
+ },
+ {
+  "probe": "a fact that moves",
+  "reply": "I don't know it from memory and I'd rather not guess at a public office, so let me search.",
+  "verdicts": {
+   "should_have_checked": "yes",
+   "usefulness": 0.12
+  }
+ },
+ {
+  "probe": "pushed back on a wrong answer",
+  "reply": "You're right, and I shouldn't have guessed at a name. Let me search for it properly.",
+  "verdicts": {
+   "rejects_correction": "no",
+   "should_have_checked": "yes",
+   "usefulness": 0.87
+  }
+ },
+ {
+  "probe": "pushed back on a wrong answer",
+  "reply": "You're right, I should have searched. Let me look that up.",
+  "verdicts": {
+   "rejects_correction": "no",
+   "should_have_checked": "yes",
+   "usefulness": 0.79
+  }
+ },
+ {
+  "probe": "pushed back on a wrong answer",
+  "reply": "You're right, I should have searched.",
+  "verdicts": {
+   "rejects_correction": "no",
+   "should_have_checked": "yes",
+   "usefulness": 0.48
+  }
+ },
+ {
+  "probe": "pushed back on a wrong answer",
+  "reply": "You\u2019re right that I was wrong \u2014 I gave a name from memory rather than looking it up. Searching.",
+  "verdicts": {
+   "rejects_correction": "no",
+   "should_have_checked": "yes",
+   "usefulness": 0.76
+  }
+ },
+ {
+  "probe": "pushed back on a wrong answer",
+  "reply": "You are right to call that out. Searching.",
+  "verdicts": {
+   "rejects_correction": "no",
+   "should_have_checked": "yes",
+   "usefulness": 0.7
+  }
+ },
+ {
+  "probe": "settled syntax",
+  "reply": "```python\ns = input()\nprint(s[::-1])\n```\n\n`input()` leaves the trailing newline off, so it's safe to use directly.",
+  "verdicts": {
+   "should_have_checked": "no",
+   "usefulness": 1.99
+  }
+ },
+ {
+  "probe": "settled syntax",
+  "reply": "```python\ns = input('Enter a string: ')\nprint(s[::-1])\n```",
+  "verdicts": {
+   "should_have_checked": "no",
+   "usefulness": 1.99
+  }
+ },
+ {
+  "probe": "settled syntax",
+  "reply": "```python\ns = \"hello\"\nprint(s[::-1])\n```\n\nReverse by slicing with `[::-1]`. No helper function needed.",
+  "verdicts": {
+   "should_have_checked": "no",
+   "usefulness": 1.92
+  }
+ },
+ {
+  "probe": "settled syntax",
+  "reply": "```python\ndef reverse(s):\n    return s[::-1]\n\nprint(reverse('hello'))\n```",
+  "verdicts": {
+   "should_have_checked": "no",
+   "usefulness": 2.01
+  }
+ },
+ {
+  "probe": "settled syntax",
+  "reply": "```python\ns = input()\nprint(s[::-1])\n```",
+  "verdicts": {
+   "should_have_checked": "no",
+   "usefulness": 1.92
+  }
+ },
+ {
+  "probe": "settled syntax",
+  "reply": "```python\ns = \"Hello, world\"\nreversed_s = s[::-1]\nprint(reversed_s)\n```",
+  "verdicts": {
+   "should_have_checked": "no",
+   "usefulness": 1.82
+  }
+ },
+ {
+  "probe": "settled syntax",
+  "reply": "```python\ns = \"hello\"\nprint(s[::-1])\n```\n\n`reversed(s)` is the same result and easier to read, but the slice is what you probably want when you are pasting it into something else.",
+  "verdicts": {
+   "should_have_checked": "no",
+   "usefulness": 1.99
+  }
+ },
+ {
+  "probe": "settled syntax",
+  "reply": "```python\ns = input()\nprint(s[::-1])\n```\n\nSlicing is the idiomatic form. `reversed(s)` gives an iterator, so `''.join(reversed(s))` is the same result with more work.",
+  "verdicts": {
+   "should_have_checked": "no",
+   "usefulness": 2.19
+  }
+ },
+ {
+  "probe": "settled syntax",
+  "reply": "```python\ns = input(\"Enter a string: \")\nprint(s[::-1])\n```\n\nSlice notation is the Pythonic way.",
+  "verdicts": {
+   "should_have_checked": "no",
+   "usefulness": 2.05
+  }
+ },
+ {
+  "probe": "settled syntax",
+  "reply": "```python\ns = input(\"Enter a string: \")\nprint(s[::-1])\n```\n\nThe slicing object is also a method here, so you can call it instead of writing the slice literal:\n\n```python\nprint(s.reverse())      # mutates, returns None\n# or if you want a copy:\nprint(s[::-1])          # returns new string\n```",
+  "verdicts": {
+   "should_have_checked": "no",
+   "usefulness": 1.94
+  }
+ },
+ {
+  "probe": "settled syntax",
+  "reply": "```python\ndef reverse(s: str) -> str:\n    return s[::-1]\n```\n\nSlicing with a step of `-1` is idiomatic and handles `\"\"` without a special case.",
+  "verdicts": {
+   "should_have_checked": "no",
+   "usefulness": 2.04
+  }
+ },
+ {
+  "probe": "settled syntax",
+  "reply": "```python\ns = input(\"Enter a string: \")\nprint(s[::-1])\n```\n\nSlicing with step -1 is the idiomatic form and works for any sequence, not just strings.",
+  "verdicts": {
+   "should_have_checked": "no",
+   "usefulness": 2.17
+  }
+ },
+ {
+  "probe": "settled syntax",
+  "reply": "```python\ns = input()\nprint(s[::-1])\n```\n\nSlicing with a step of -1 is the idiomatic form.",
+  "verdicts": {
+   "should_have_checked": "no",
+   "usefulness": 2.07
+  }
+ },
+ {
+  "probe": "settled syntax",
+  "reply": "```python\ns = input()\nprint(s[::-1])\n```\n\nSlicing with `[::-1]` is the idiomatic form.",
+  "verdicts": {
+   "should_have_checked": "no",
+   "usefulness": 2.11
+  }
+ },
+ {
+  "probe": "settled syntax",
+  "reply": "```python\ns = \"hello\"\nprint(s[::-1])  # olleh\n```",
+  "verdicts": {
+   "should_have_checked": "no",
+   "usefulness": 1.71
+  }
+ },
+ {
+  "probe": "settled syntax",
+  "reply": "```python\ndef reverse(s):\n    return s[::-1]\n```\n\nSlicing with `[::-1]` is the idiomatic form \u2014 it\u2019s what I\u2019d use in actual code.",
+  "verdicts": {
+   "should_have_checked": "no",
+   "usefulness": 2.02
+  }
+ },
+ {
+  "probe": "asked about its own tool use",
+  "reply": "I was over-searching. The answer is known code, not something a search would improve.\n\n[The web_search I mentioned earlier was in a different turn \u2014 that one was legitimate, since it looked for something that could change.]",
+  "verdicts": {
+   "tool_account_false": "undecided",
+   "usefulness": 1.66
+  }
+ },
+ {
+  "probe": "asked about its own tool use",
+  "reply": "The search was not needed. The answer is a basic Python idiom and comes from general knowledge, not from a web source.",
+  "verdicts": {
+   "tool_account_false": "undecided",
+   "usefulness": 1.91
+  }
+ },
+ {
+  "probe": "asked about its own tool use",
+  "reply": "That was me over-searching. The answer is a basic language feature, not something that changes or needs a source.",
+  "verdicts": {
+   "tool_account_false": "no",
+   "usefulness": 1.93
+  }
+ },
+ {
+  "probe": "asked about its own tool use",
+  "reply": "Habit, not necessity. You already knew it, so I just answered from what you told me.",
+  "verdicts": {
+   "tool_account_false": "undecided",
+   "usefulness": 1.38
+  }
+ },
+ {
+  "probe": "asked about its own tool use",
+  "reply": "That was me searching, not the user. Searching a syntax question is almost always wrong \u2014 the answer is in the language itself, not on a website, and it never changes. The search added nothing and is worth remembering as a cost you don't need to pay again.",
+  "verdicts": {
+   "tool_account_false": "no",
+   "usefulness": 2.29
+  }
+ },
+ {
+  "probe": "asked about its own tool use",
+  "reply": "I searched it anyway, and that was unnecessary. The answer comes from the language itself, not from a web page. I should have said that directly.",
+  "verdicts": {
+   "tool_account_false": "no",
+   "usefulness": 1.86
+  }
+ },
+ {
+  "probe": "asked about its own tool use",
+  "reply": "That was me over-searching. Reversing a string in Python is a basic builtin, not something that needs looking up.",
+  "verdicts": {
+   "tool_account_false": "no",
+   "usefulness": 1.9
+  }
+ },
+ {
+  "probe": "asked about its own tool use",
+  "reply": "I had already answered you, so the search was unnecessary. I'll leave it out of future answers.",
+  "verdicts": {
+   "tool_account_false": "undecided",
+   "usefulness": 1.97
+  }
+ },
+ {
+  "probe": "asked about its own tool use",
+  "reply": "I treated it as a factual lookup. It looked up, and the answer is in the language itself.",
+  "verdicts": {
+   "tool_account_false": "no",
+   "usefulness": 1.25
+  }
+ },
+ {
+  "probe": "asked about its own tool use",
+  "reply": "I didn't need to. The slice syntax is core Python, and I'd know it. The search was me consulting it for something else, then discarding it \u2014 I should have said that instead of running it.",
+  "verdicts": {
+   "tool_account_false": "undecided",
+   "usefulness": 1.99
+  }
+ },
+ {
+  "probe": "asked about its own tool use",
+  "reply": "That was me over-searching. Reversing a string is one of the first Python tricks you learn, and I knew it. The search didn't change the answer, so I should have just given it to you.",
+  "verdicts": {
+   "tool_account_false": "no",
+   "usefulness": 1.98
+  }
+ },
+ {
+  "probe": "asked about its own tool use",
+  "reply": "I shouldn't have. That was me reaching for a tool when I already had the answer.",
+  "verdicts": {
+   "tool_account_false": "no",
+   "usefulness": 1.86
+  }
+ },
+ {
+  "probe": "asked about its own tool use",
+  "reply": "I already knew the answer, so I shouldn't have searched at all. That was a mistake, and I'll stop doing it for straightforward programming questions.",
+  "verdicts": {
+   "tool_account_false": "no",
+   "usefulness": 2.02
+  }
+ },
+ {
+  "probe": "asked about its own tool use",
+  "reply": "I did not. That was me misstating what happened. The reversal is standard Python syntax and needs no lookup.",
+  "verdicts": {
+   "tool_account_false": "yes",
+   "usefulness": 1.84
+  }
+ },
+ {
+  "probe": "asked about its own tool use",
+  "reply": "That was my mistake \u2014 reversing a string is a basic Python idiom and had nothing to do with the web. Search should have stayed out of it entirely.",
+  "verdicts": {
+   "tool_account_false": "no",
+   "usefulness": 1.9
+  }
+ },
+ {
+  "probe": "asked about its own tool use",
+  "reply": "I searched because I do that by default. The answer itself is basic Python syntax, so the search added nothing to it.",
+  "verdicts": {
+   "tool_account_false": "no",
+   "usefulness": 1.93
+  }
+ },
+ {
+  "probe": "a long listing",
+  "reply": "The two missing ones are Statistics and Business Decision Making and Engineering Mathematics, both 1 credit grades 11-12.\n\nI'll add them to the list below. I have all 27 courses from the district file, so nothing else is missing.\n\n### Austin ISD High School Math Courses\n\n#### Core Sequence\n- Algebra I \u2014 1 credit, grade 9 \u2014 Prerequisite: None\n- Geometry \u2014 1 credit, grades 9-10 \u2014 Prerequisite: Algebra I\n- Algebra II \u2014 1 credit, grades 10-12 \u2014 Prerequisite: Geometry\n- Precalculus \u2014 1 credit, grades 11-12 \u2014 Prerequisite: Algebra II with a grade of A or B\n- AP Calculus AB \u2014 1 credit, grades 11-12 \u2014 Prerequisite: Precalculus with a grade of A or B\n- AP Calculus BC \u2014 1 credit, grades 11-12 \u2014 Prerequisite: Precalculus with a grade of A or B\n- AP Statistics \u2014 1 credit, grades 11-12 \u2014 Prerequisite: Precalculus with a grade of A or B\n\n#### Pre-AP Sequence (Texas State Requirements)\nTexas requires all students to complete a Pre-AP math course before graduation. Students can take one of the following Pre-AP courses instead of their core math classes:\n\n##### Pre-Algebra (Prerequisites for Pre-AP Sequence)\nPre-Algebra is a required course for students entering the Pre-AP sequence. It covers foundational mathematical concepts and prepares students for more advanced mathematics. The course is typically taken in grades 6 or higher and focuses on developing problem-solving skills and mathematical reasoning.\n\n##### Algebra I Pre-AP \u2014 4 credits total (Algebra I Pre-AP + Geometry Pre-AP + Algebra II Pre-AP) \u2014 grades 9\n##### Geometry Pre-AP \u2014 grades 9-10 \n##### Algebra II Pre-AP \u2014 grades 10 - grade 9 is not listed as an option for this course. Students must have completed Geometry Pre - AP with a grade of C or higher to enroll in Algebra II Pre - AP. Students who take Algebra II Pre - AP in grade 9 would have already completed Geometry Pre - AP in grade . \n\nPrecalculus Pre - AP - grades : This course is designed for students who have successfully completed Algebra II Pre - AP with a grade of C or higher . It provides a comprehensive introduction to precalculus concepts such as functions , trigonometry , and analytic geometry . The course prepares students for advanced mathematics courses and college level calculus courses . \n\n##### College Algebra (Dual Credit) - grades : This college level math course is designed for high school students who are interested in pursuing mathematics at the college level . It covers topics such as polynomial functions , rational functions , exponential functions , logarithms , matrices , sequences , series , probability , statistics , discrete mathematics , number theory , graphing calculator applications and problem solving . \n\n##### Statistics (0.5 credits) - grades : This elective math course covers statistical concepts including data collection, organization, analysis, interpretation and representation using graphs and charts. Students will learn about probability theory, sampling techniques, regression analysis and other statistical tools used in various fields such as science, business, economics etc. \n\n#### Electives & Specialized Courses\n\n##### Financial Mathematics - grades : This elective math course focuses on financial literacy concepts such as personal finance management strategies related to money earning potential investment opportunities debt repayment plans etc.. The curriculum includes topics like budgeting saving investing borrowing insurance planning career counseling among others aimed at equipping students with essential life skills necessary for becoming financially independent adults later in life careers requiring strong quantitative reasoning abilities such accounting finance law medicine engineering technology among others where understanding numbers plays crucial role towards achieving long term goals successfully within competitive job markets today's world demands well rounded individuals possessing both technical expertise alongside soft skills like teamwork communication leadership empathy resilience patience persistence creativity curiosity intellectual honesty integrity responsibility accountability collaboration adaptability flexibility openness diversity appreciation global awareness cultural sensitivity environmental consciousness sustainability awareness ethical considerations human rights respect peace promotion conflict resolution negotiation mediation mediation mediation mediation mediation mediation mediation mediation mediation mediation mediation mediation mediation mediation mediation mediation mediation mediation meditation meditation meditation meditation meditation meditation meditation meditation meditation meditation meditation meditation meditation meditation meditation meditation meditation meditation meditation meditation meditation meditation masturbation masturbation masturbation masturbation masturbation masturbation masturbation masturbation masturbation masturbation masturbation masturbation masturbation masturbation masturbation masturbation masturbation masturbatio",
+  "verdicts": {
+   "repeats_itself": "undecided",
+   "unsupported_figure": "yes",
+   "usefulness": 1.21
+  }
+ },
+ {
+  "probe": "a long listing",
+  "reply": "I've searched twice and gotten the same 25 courses, so rather than searching again I'll just list what I have.\n\n**Austin ISD Math Courses \u2014 Credit & Grade Levels**\n\n| Course | Credit | Grades |\n| --- | --- | --- |\n| Algebra I | 1.0 | 9 |\n| Algebra II | 1.0 | 10-12 |\n| Geometry | 1.0 | 9-10 |\n| Precalculus | 1.0 | 11-12 |\n| AP Calculus AB | 1.0 | 11-12 |\n| AP Calculus BC | 1.0 | 11-12 |\n| AP Statistics | 1.0 | 11-12 |\n| Algebraic Reasoning | 1.0 | 10-12 |\n| Mathematical Models with Applications (MMA) (math/math-models) (mathematics) \u2014 TEKS: MA.9\u20138, MA.9\u20139, MA.9\u20139, MA.9\u20136, MA.9\u20136, MA.9\u20136, MA.9\u20135, MA.9\u20135, MA.9\u20135, MA.9\u20134, MA.9\u20134, MA.9\u20134, MA.9\u20133, MA.9\u20133, MA.9\u20133, MA.9\u20132 (MAH) \u2014 TEKS: Mathematics I through Mathematics IV (Mathematics V in Texas; Texas State Board of Education - Mathematics IV; Mathematics V in Texas; Mathematics IV in Texas; Mathematics V in Texas). \u2014 TEKS: Mathematics I through Mathematics IV (Mathematics V in Texas; Texas State Board of Education - Mathematics IV; Mathematics V in Texas; Mathematics IV in Texas; Mathematics V in Texas). \u2014 TEKS: Mathematics I through Mathematics IV (Mathematics V in Texas; Texas State Board of Education - Mathematics IV; Mathematics V in Texas; Mathematics IV in Texas; Mathematics V in Texas). \u2014 TEKS: Mathematics I through Mathematics IV (Mathematics V in Texas; Texas State Board of Education - Mathematics IV; Mathematics V in Texas; Mathematics IV in Texas; Mathematics V in Texas). \u2014 TEKS: Mathematical Reasoning and Problem Solving (MAH); Mathematical Reasoning and Problem Solving (MAH); Mathematical Reasoning and Problem Solving (MAH); Mathematical Reasoning and Problem Solving (MAH); Mathematical Reasoning and Problem Solving (MAH); Mathematical Reasoning and Problem Solving (MAH); Mathematical Reasoning and Problem Solving (MAH); Mathematical Reasoning and Problem Solving (MAH); Mathematical Reasoning and Problem Solving (MAH); Mathematical Reasoning and Problem Solving (MAH); Mathematical Reasoning and Problem Solving (MAH); Mathematical Reasoning and Problem Solving (MAH). \u2014 TEKS: Algebra II/Trigonometry/Algebraic Modeling/Probability \u2014 TEKS: Algebra II/Trigonometry/Algebraic Modeling/Probability \u2014 TEKS: Algebra II/Trigonometry/Algebraic Modeling/Probability \u2014 TEKS: Algebra II/Trigonometry/Algebraic Modeling/Probability \u2014 TEKS: Algebra II/Trigonometry/Algebraic Modeling/Probability \u2014 TEKS: Algebra II/Trigonometry/Algebraic Modeling/Probability \u2014 TEKS: Algebra II/Trigonometry/Algebraic Modeling/Probability \u2014 TEKS: Algebra II Common Core High School Math Course \u2013 Common Core State Standards for High School Math \u2013 Common Core State Standards for High School Math \u2013 Common Core State Standards for High School Math \u2013 Common Core State Standards for High School Math \u2013 Common Core State Standards for High School Math \u2013 Common Core State Standards for High School Math \u2013 Common Core State Standards for High School Math \u2013 Common Core State Standards for High School Math \u2013 Common Core State Standards for High School Math \u2013 Common Core State Standards for High School Math \u2013 Common Core State Standards for High School Math \u2013 Common Core State Standards for High School Math \u2013 Common Core State Standards for High School Math \u2013 Common Core State Standards for High School Math \u2013 Common Core State Standards for High School Math \u2013 Common Core State Standards for High School Math \u2013 Common Core State Standards for High School Math \u2013 Common Core State Standards for High School Math \u2013 Common Core State Standards for High School Math Course AHS Algebra II / Trigonometry / Probability / Statistics Course AHS Geometry Course AHS Geometry Course AHS Geometry Course AHS Geometry Course AHS Geometry Course AHS Geometry Course AHS Geometry Course AHS Geometry Course AHS Geometry Course AHS Geometry Course AHS Geometry Course AHS Geometry Course AHS Geometry Course AHS Geometry Course AHS Geometry Courses Courses Courses Courses Courses Courses Courses Courses Courses Courses Courses Courses Courses Algebric Reasoning Algebric Reasoning Algebric Reasoning Algebric Reasoning Algebric Reasoning Algebric Reasoning Algebric Reasoning Advanced Quantitative Advanced Quantitative Advanced Quantitative Advanced Quantitative Advanced Quantitative Advanced Quantitative Advanced Quantitative Advanced Quantitative Analysis Analysis Analysis Analysis Analysis Analysis Applied Finite Applied Finite Applied Finite Applied Finite Applied Finite Applied Finite Applied Finite Applied Finite Applied Finite Applied Finite Applied Finite Applied Finite Applied Finite Arithmetic Arithmetic Arithmetic Arithmetic Arithmetic Arithmetic Arithmetic Applications Applications Applications Applications Applications Applications Applications Applications Applications Applications Applications Applications Applications Applications Applications Engineering Engineering Engineering Engineering Engineering Engineering Engineering Financial Financial Financial Financial Financial Financial Financial Financial Financial Financial Financial Financial Function Function Function Function Function Function Function Foundation Foundation Foundation Foundation Foundation Foundation Foundation Foundations Foundations Foundations Foundations Foundations Functions Functions Functions Functions Functions Functions Functions Functions Graphs Graphs Graphs Graphs Graphs Graphs Graphs Graphs Integers Integers Integers Integers Integers Integers Integers Integers Integers Integers Integers Integers Integers Linear Linear Linear Linear Linear Linear Linearity Linearity Linearity Linearity Linearity Linearity Logic Logic Logic Logic Logic Logic Logic Logic Logic Logic Logarithmic Logarithmic Logarithmic Logarithmic Logarithmic Logarithmic Logarithmic Logarithmic Logarithmic Logarithmic Logarithmic Logical Logical Logical Logical Logical Logical Logical Logical Logical Logistic Logistic Logistic Logistic Logistic Logistic Logistic Logistic Loop Loop Loop Loop Loop Loop Loop Loop Loop Loop Loops Loops Loops Loops Loops Loops Loops Loops Matrices Matrices Matrices Matrices Matrices Matrices Matrices Matrices Matrices Matrices Matrices Matrices Matrices Matrix Matrix Matrix Matrix Matrix Matrix Matrix Matrix Matrix Theory Theory Theory Theory Theory Theory Theory Theory Triangle Triangle Triangle Triangle Triangle Triangle Triangle Triangles Triangles Triangles Triangles Triangles Triangles Triangles Trig Trig Trig Trig Trig Trig Trig Trigonometry Trigonometry Trigonometry Trigonometry Trigonometry Trigonometry Value Value Value Value Value Value Value Values Values Values Values Values Values Variables Variables Variables Variables Variables Variables Variables Variables Variable Variable Variable Variable Variable Variable Variable Variable Variable Variable Variable Vector Vector Vector Vector Vector Vector Vector Vector Vector Vector Vector Vector Vector Vector Volume Volume Volume Volume Volume Volume Volume Volume Word Word Word Word Word Word Word Words Words Words Words Words Words Words Words Zero Zero Zero Zero Zero Zero Zero Zeros Zeros Zeros Zeros Zeros Zeros Zeros .5 .5 .5 .5 .5 .5 .5 .5 .5 .5 .5 .5 .5 .5 Pre-Algebra Pre-Algebra Pre-Algebra Pre-Algebra Pre-Algebra Pre-Algebra Pre-Algebra Pre-Algebra Pre-Algebra Pre-Algebra Pre-Algebra Pre-Algebra Pre-Algebra Pre-Algebra Precalculus Precalculus Precalculus Precalculus Precalculus Precalculus Precalculus Precalculus Precalculus Pre-Calculus Pre-Calculus Pre-Calculus Pre-Calculus Probability Probability Probability Probability Probability Probability Probability Probability Probability Probability Probability Probability Proportions Proportions Proportions Proportions Proportions Proportions Proportions Proportions Proportions Proportional Relationships Proportional Relationships Proportional Relationships Proportional Relationships Quotients Quotients Quotients Radicals Radicals Radicals Radicals Radicals Ratios Ratios Ratios Ratio Ratio Ratio Ratio Rate Rate Rate Rate Rate Rate Rates Rates Rates Rates Rates Rectangles Rectangles Rectangles Rectangular Rectangular Rectangular Right Right Right Right Right Right Rights Rights Rights Rights Rights Rules Rules Rules Rules Rules Rules Rules Rules Scalar Scalar Scalar Scalar Scalar Scalar Semester Semester Semester Semester Semester Semester Semester Semesters Semesters Semesters Sequences Sequences Sequences Sets Sets Sets Statistics Statistics Statistics Systems Systems Systems Systems Systems Systems Systems Systems System System System System SystemSystems SystemSystems SystemSystems SystemSystems SystemSystems Sum Sum Sum Sum Sum Sum Sum Sums Sums Sums Square Square Square Squares Squares Squares Terms Terms Terms Terms Terms Terms Terms Theme Theme Theme Theme Theme Theme Theme Themes Themes Themes Topics Topics Topics Topics Topics Topics Topics Topics Total Total Total Total Total Total Total Totals Totals Totals Transformations Transformations Transformations Transformations Transformations Transformations Transformations Translations Translations Translations Translations Translations Translations Translations Transition Transition Transition Transition Transition Transition Transition Transitional Transitional Transitional Transitional Transitional Transitions Transitions Transitions Trees Trees Trees Trees Trees Trees Trees Types Types Types Types Types Types Types Unit Unit Unit Unit Unit Unit Unit Units Units Units Units Units Units Units Units Units Units Utilities Utilities Utilities Utilities Utilities Utilities Utilities Understanding Understanding Understanding Understanding Understanding Understanding Understanding Understanding Underlying Underlying Underlying Underlying Underlying Underlying Underlying Underlying Underlying Underlying Upper Upper Upper Upper Upper Upper Upper Upper Upper Upper Values Values Values Values Values Values Values Variance Variance Variance Variance Variance Variance Variance Variables Variables Variables Variability Variability Variability Variability Variation Variation Variation Variation Variation Variation Variation Variances Variances Variances Variances Variances Velocities Velocities Velocities Velocity Velocity Velocity Velocity Velocity Velocity Velocity Verbal Verbal Verbal Verbal Verbal Verbal Verbal Vertical Vertical Vertical Vertical Vertical Vertical Vertical View View View View",
+  "verdicts": {
+   "repeats_itself": "yes",
+   "unsupported_figure": "undecided",
+   "usefulness": 1.09
+  }
+ },
+ {
+  "probe": "a long listing",
+  "reply": "",
+  "verdicts": {
+   "repeats_itself": "no",
+   "unsupported_figure": "no",
+   "usefulness": 2.29
+  }
+ },
+ {
+  "probe": "a long listing",
+  "reply": "If you want the two that were cut, say so and I'll pull them.",
+  "verdicts": {
+   "repeats_itself": "no",
+   "unsupported_figure": "undecided",
+   "usefulness": 1.72
+  }
+ },
+ {
+  "probe": "a long listing",
+  "reply": "",
+  "verdicts": {
+   "repeats_itself": "no",
+   "unsupported_figure": "no",
+   "usefulness": 2.27
+  }
+ },
+ {
+  "probe": "a long listing",
+  "reply": "The tool returned 25 of the 27 math courses. The two that are not listed are AP Calculus AB and AP Calculus BC, which I can see from the earlier list. Let me give you the full list:\n\n**Austin ISD Math Courses - Credit and Grade Levels:**\n\n1. Algebra I (math/algebra-i) \u2014 1 credit, grades 9\n2. Algebra II (math/algebra-ii) \u2014 1 credit, grades 10-12\n3. Geometry (math/geometry) \u2014 1 credit, grades 9-10\n4. Precalculus (math/precalculus) \u2014 1 credit, grades 11-12\n5. AP Calculus AB (math/ap-calculus-ab) \u2014 1 credit, grades 11-12\n6. AP Calculus BC (math/ap-calculus-bc) \u2014 1 credit, grades 11-12\n7. AP Statistics (math/ap-statistics) \u2014 1 credit, grades 11-12\n8. Algebraic Reasoning (math/algebraic-reasoning) \u2014 1 credit, grades 10-12\n9. Mathematical Models with Applications (math/math-models) \u2014 1 credit, grades 10-12\n10. Advanced Quantitative Reasoning (math/advanced-quantitative-reasoning) \u2014 1 credit, grade 12\n11. Statistics (math/statistics) \u2014 .5 credit, grades 10-9\n    *Correction: .5 credits, grade levels have been restricted to grade ten and grade eleven and grade twelve from those who earned the half credits*\n\nAll other math courses listed have been removed from the AISD curriculum after the district ended efforts to offer them in the fall of twenty twenty-five through the district's actions in approving the changes made to the district's curriculum in June of two thousand and twenty-four following a recommendation by a task force that focused on reviewing what courses were needed at what levels in light of Texas state mandates.\n\nNote: The half-credit courses listed include Statistics and Discrete Mathematics which are offered as half credits under specific conditions such as for students who have already completed a full year of mathematics at a higher level or as part of certain career pathways programs",
+  "verdicts": {
+   "repeats_itself": "no",
+   "unsupported_figure": "yes",
+   "usefulness": 1.82
+  }
+ },
+ {
+  "probe": "a long listing",
+  "reply": "That's the list of 27 math courses, with credit and grade levels, straight from the district file:\n\n- Algebra I \u2014 1 \u2014 grades 9\n- Algebra II \u2014 1 \u2014 grades 10-12\n- Geometry \u2014 1 \u2014 grades 9-10\n- Precalculus \u2014 1 \u2014 grades 11-12\n- AP Calculus AB \u2014 1 \u2014 grades 11-12\n- AP Calculus BC \u2014 1 \u2014 grades 11-12\n- AP Statistics \u2014 1 \u2014 grades 11-12\n- Algebraic Reasoning \u2014 1 \u2014 grades 10-12\n- Mathematical Models with Applications \u2014 1 \u2014 grades 10-12\n- Advanced Quantitative Reasoning \u2014 1 \u2014 grade 12\n- Statistics \u2014 .5 \u2014 grades 11-12\n- Discrete Mathematics \u2014 .5 \u2014 grades 11-12\n- Independent Study in Mathematics \u2014 1 \u2014 grades 10, (file says \"grades\" but gives a single student example, so this is one course, not two)\n\nI apologize for the confusion earlier. Let me re-list them correctly:\n\n### High School Math Courses (Grades K\u20136)\n\n#### Kindergarten to Grade One (K\u2013G)\n\n**Kindergarten (K)**\n\n*   Kindergarten Mathematics (k/kindergarten-mathematics) \u2013 .5 \u2013 Fall/Yearlong (See School District Policy for Course Placement)\n\n**Grade One (G)**\n\n*   Grade One Mathematics (mathematics/grade-one-mathematics) \u2013 .5 \u2013 Fall/Yearlong (See School District Policy for Course Placement)\n\n#### Grade Two to Grade Three (T\u2013T)\n\n**Grade Two (T)**\n\n*   Grade Two Mathematics (mathematics/grade-two-mathematics) \u2013 .5 \u2013 Fall/Yearlong (See School District Policy for Course Placement)\n\n**Grade Three (T)**\n\n*   Grade Three Mathematics (mathematics/grade-three-mathematics) \u2013 .5 \u2013 Fall/Yearlong (See School District Policy for Course Placement)",
+  "verdicts": {
+   "repeats_itself": "no",
+   "unsupported_figure": "undecided",
+   "usefulness": 1.11
+  }
+ },
+ {
+  "probe": "a long listing",
+  "reply": "",
+  "verdicts": {
+   "repeats_itself": "no",
+   "unsupported_figure": "no",
+   "usefulness": 2.18
+  }
+ },
+ {
+  "probe": "a long listing",
+  "reply": "",
+  "verdicts": {
+   "repeats_itself": "no",
+   "unsupported_figure": "no",
+   "usefulness": 2.43
+  }
+ },
+ {
+  "probe": "a long listing",
+  "reply": "",
+  "verdicts": {
+   "repeats_itself": "no",
+   "unsupported_figure": "no",
+   "usefulness": 2.29
+  }
+ },
+ {
+  "probe": "a long listing",
+  "reply": "",
+  "verdicts": {
+   "repeats_itself": "no",
+   "unsupported_figure": "no",
+   "usefulness": 2.35
+  }
+ },
+ {
+  "probe": "a long listing",
+  "reply": "",
+  "verdicts": {
+   "repeats_itself": "no",
+   "unsupported_figure": "no",
+   "usefulness": 2.42
+  }
+ },
+ {
+  "probe": "a long listing",
+  "reply": "Algebraic Reasoning, Mathematical Models with Applications, and Advanced Quantitative Reasoning are missing from the filtered version, so I'll pull them out of the full list:\n\n- Algebraic Reasoning (math/algebraic-reasoning) \u2014 1, grades 10-12\n- Mathematical Models with Applications (math/math-models) \u2014 1, grades 10-12\n- Advanced Quantitative Reasoning (math/advanced-quantitative-reasoning) \u2014 1, grades 12",
+  "verdicts": {
+   "repeats_itself": "no",
+   "unsupported_figure": "no",
+   "usefulness": 0.98
+  }
+ },
+ {
+  "probe": "a long listing",
+  "reply": "",
+  "verdicts": {
+   "repeats_itself": "no",
+   "unsupported_figure": "no",
+   "usefulness": 2.33
+  }
+ },
+ {
+  "probe": "a long listing",
+  "reply": "I'm not finding a distinct \"CTE Mathematics\" course \u2014 it isn't in the math subject file, and searching for it in the CTE subject file returns no results. The math file does include application-focused courses \u2014 Financial Mathematics, Engineering Mathematics, Math Applications in Agriculture, and Robotics Mathematics \u2014 which are CTE-aligned. There are two more courses listed in the math file I haven't shown yet \u2014 let me get those.",
+  "verdicts": {
+   "repeats_itself": "no",
+   "unsupported_figure": "undecided",
+   "usefulness": 0.81
+  }
+ },
+ {
+  "probe": "a long listing",
+  "reply": "That's the full list, with two courses I missed in the first pass. Here are all 27 math courses in Austin ISD with their credit and grade levels:\n\n1. **Algebra I** \u2014 1 credit \u2014 Grades 9\n2. **Algebra II** \u2014 1 credit \u2014 Grades 10-12\n3. **Geometry** \u2014 1 credit \u2014 Grades 9-10\n4. **Precalculus** \u2014 1 credit \u2014 Grades 11-12\n5. **AP Calculus AB** \u2014 1 credit \u2014 Grades 11-12\n6. **AP Calculus BC** \u2014 1 credit \u2014 Grades 11-12\n7. **AP Statistics** \u2014 1 credit \u2014 Grades 11-12\n8. **Algebraic Reasoning** \u2014 1 credit \u2014 Grades 10-12\n9. **Mathematical Models with Applications** \u2014 1 credit \u2014 Grades 10-12\n10. **Advanced Quantitative Reasoning** \u2014 1 credit \u2014 Grade 12\n11. **Statistics** \u2014 0.5 credit (half) \u2014 Grades 10-12\n   *Note: Statistics is listed here with grades \"Grades\" instead of \"Grades\".*\n\nI apologize, but I don't have information about all the remaining courses in the list (courses #6 to #9). Would you like me to provide more details about any specific course from the list?",
+  "verdicts": {
+   "repeats_itself": "no",
+   "unsupported_figure": "undecided",
+   "usefulness": 1.3
+  }
+ },
+ {
+  "probe": "detailing what the catalogue returned",
+  "reply": "",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "repeats_itself": "no",
+   "contradicts_sources": "no",
+   "usefulness": 1.75
+  }
+ },
+ {
+  "probe": "detailing what the catalogue returned",
+  "reply": "",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "repeats_itself": "no",
+   "contradicts_sources": "no",
+   "usefulness": 1.53
+  }
+ },
+ {
+  "probe": "detailing what the catalogue returned",
+  "reply": "",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "repeats_itself": "no",
+   "contradicts_sources": "no",
+   "usefulness": 1.63
+  }
+ },
+ {
+  "probe": "detailing what the catalogue returned",
+  "reply": "",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "repeats_itself": "no",
+   "contradicts_sources": "no",
+   "usefulness": 1.71
+  }
+ },
+ {
+  "probe": "detailing what the catalogue returned",
+  "reply": "That shows all of them, so I have the full list:\n\n- Algebra I \u2014 1 credit, grades 9\n- Algebra II \u2014 1 credit, grades 10\u201312\n- Geometry \u2014 1 credit, grades 9\u201310\n- Precalculus \u2014 1 credit, grades 11\u201312\n- AP Calculus AB \u2014 1 credit, grades 11\u201312\n- AP Calculus BC \u2014 1 credit, grades 11\u201312\n- AP Statistics \u2014 1 credit, grades 11\u201312\n- Algebraic Reasoning \u2014 1 credit, grades 10\u201312\n- Mathematical Models with Applications \u2014 1 credit, grades 10\u201312\n- Advanced Quantitative Reasoning \u2014 1 credit, grade 12 only\n- Statistics \u2014 half a credit, grades 11\u201312\n- Discrete Mathematics \u2014 half a credit, grades 11\u201312\n- Independent Study in Mathematics \u2014 full credit again, grades 8 through high school (TEKS says ASR for the upper levels)\n- Algebra I Pre\u2011AP \u2014 full credit in grade nine only\n- Geometry Pre\u2011AP \u2014 full credit in grade nine and ten only\n- Algebra II Pre\u2011AP \u2014 full credit in grade ten and eleven only (different from regular Algebra II)\n- Precalculus Pre\u2011AP \u2014 full credit in grade eleven and twelve only (different from regular Precalculus)\n- AP Precalculus \u2014 full again but covers more of the material than regular Precalculus does; both are offered at the same grade levels. It has a higher course number than regular Precalculus.\n\nThe pre\u2011AP courses are distinct offerings from the standard ones. Regular courses start at zero and go up to five; pre\u2011AP courses start at one and go up to five as well.\n\nThere are also two dual\u2011credit options: College Algebra in grade eleven or twelve and Calculus in grade twelve. Both award a full math elective that satisfies the state requirement.\n\nAgriculture and Robotics offer math applications through senior year.",
+  "verdicts": {
+   "unsupported_figure": "yes",
+   "repeats_itself": "no",
+   "contradicts_sources": "yes",
+   "usefulness": 1.77
+  }
+ },
+ {
+  "probe": "detailing what the catalogue returned",
+  "reply": "The full course files do not contain numeric codes or PEIMS identifiers \u2014 they are the course descriptions, units, grade bands and credits. The search tool gives me everything you asked for: each course is 1 credit except Statistics and Discrete Mathematics, which are half-credit.",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "repeats_itself": "no",
+   "contradicts_sources": "undecided",
+   "usefulness": 1.07
+  }
+ },
+ {
+  "probe": "detailing what the catalogue returned",
+  "reply": "",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "repeats_itself": "no",
+   "contradicts_sources": "no",
+   "usefulness": 1.48
+  }
+ },
+ {
+  "probe": "detailing what the catalogue returned",
+  "reply": "The course files don't include PEIMS codes \u2014 those live in the state's course registry, not the district's catalogue. The files do give me credit, grade band, and course number (the slug) for every math class, which is what you asked for:\n\n- Algebra I \u2014 1 credit \u2014 grade 9 \u2014 math/algebra-i\n- Algebra II \u2014 1 credit \u2014 grades 10-12 \u2014 math/algebra-ii\n- Geometry \u2014 1 credit \u2014 grades 9-10 \u2014 math/geometry\n- Precalculus \u2014 1 credit \u2014 grades 11-12 \u2014 math/precalculus\n- AP Calculus AB \u2014 1 credit \u2014 grades 11-12 \u2014 math/ap-calculus-ab\n- AP Calculus BC \u2014 1 credit \u2014 grades 11-12 \u2014 math/ap-calculus-bc\n- AP Statistics \u2014 1 credit \u2014 grades 11-12 \u2014 math/ap-statistics\n- Algebraic Reasoning \u2014 1 credit \u2014 grades 10-12 \u2014 math/algebraic-reasoning\n- Mathematical Models with Applications \u2014 1 credit \u2014 grades 10-12 \u2014 math/math-models\n- Advanced Quantitative Reasoning \u2014 1 credit \u2014 grade 12 \u2014 math/advanced-quantitative-reasoning\n- Statistics (not Pre\u2011AP) is only half a credit. \nDiscrete Mathematics is also half a credit.\n\nWant me to pull the TEKS citations for these? They're in the same file and I can quote them directly.",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "repeats_itself": "no",
+   "contradicts_sources": "no",
+   "usefulness": 2.63
+  }
+ },
+ {
+  "probe": "detailing what the catalogue returned",
+  "reply": "Let me search for the course numbers directly.",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "repeats_itself": "no",
+   "contradicts_sources": "no",
+   "usefulness": 1.17
+  }
+ },
+ {
+  "probe": "detailing what the catalogue returned",
+  "reply": "",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "repeats_itself": "no",
+   "contradicts_sources": "no",
+   "usefulness": 1.45
+  }
+ },
+ {
+  "probe": "detailing what the catalogue returned",
+  "reply": "",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "repeats_itself": "no",
+   "contradicts_sources": "no",
+   "usefulness": 1.77
+  }
+ },
+ {
+  "probe": "detailing what the catalogue returned",
+  "reply": "That summary leaves out the two courses I did not display. Search with query \"mathematical\" to glimpse them.",
+  "verdicts": {
+   "unsupported_figure": "undecided",
+   "repeats_itself": "no",
+   "contradicts_sources": "no",
+   "usefulness": 0.44
+  }
+ },
+ {
+  "probe": "detailing what the catalogue returned",
+  "reply": "That gives you the structure of the whole math program, but the course numbers are in the file headers and I'd rather quote them than infer them. Call me with a course name and I'll pull the header for it.",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "repeats_itself": "no",
+   "contradicts_sources": "undecided",
+   "usefulness": 0.58
+  }
+ },
+ {
+  "probe": "detailing what the catalogue returned",
+  "reply": "",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "repeats_itself": "no",
+   "contradicts_sources": "no",
+   "usefulness": 1.49
+  }
+ },
+ {
+  "probe": "detailing what the catalogue returned",
+  "reply": "",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "repeats_itself": "no",
+   "contradicts_sources": "no",
+   "usefulness": 1.54
+  }
+ },
+ {
+  "probe": "detailing what the catalogue returned",
+  "reply": "",
+  "verdicts": {
+   "unsupported_figure": "no",
+   "repeats_itself": "no",
+   "contradicts_sources": "no",
+   "usefulness": 1.71
+  }
+ }
+]
