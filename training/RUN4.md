@@ -145,15 +145,56 @@ One to two days, and the real work.
 acceptance sits at 12/12. Trim `brittainscript` from 600 to 400 — 27% of the
 mix for one niche skill is a lot now that other things need the room.
 
-**Cut `trajectory` from 600 to 300.** This is the change the checkpoint sweep
-argues for, and it matters more than any group being added: needless tool
-calls go from 8/24 at step 25 to 22/24 by step 50 and stay there, so run 3
-taught this and no checkpoint escapes it. 27% of the mix being tool
-trajectories is the most likely reason. Adding `known_syntax` while leaving
-`trajectory` at 600 is pulling in both directions at once.
+**Cut `trajectory` to 150, not 300.** Counting examples was the wrong unit.
+A trajectory row averages about 12,000 tokens and a Tulu row 569, so the
+group's share of what the model actually trains on is far larger than its
+share of the rows:
 
-That lands run 4 near **2,300 rows, roughly 340k target tokens, about 2.5
-hours**.
+| `--trajectory` | rows | share of trained tokens |
+|---|---|---|
+| 600 (run 3) | 29% | **83%** |
+| 300 | 17% | 70% |
+| 150 | 9% | **54%** |
+| 100 | 6% | 44% |
+
+Halving the row count barely moves the dose. 150 is what halving the group
+actually means, and it is the number run 4a uses.
+
+The risk is real and is measured: trajectories are also what teach correct
+tool use. If `a fact that moves` or `a long listing` regress while `settled
+syntax` improves, the cut went too far and 300 is the fallback.
+
+## Run 4a, as actually built
+
+The first run does not wait for all 680 examples. It tests the plan's
+load-bearing assumption -- that the trajectory group causes the tool defect --
+for two hours of unattended GPU. If that is wrong, the Phase 1 sizing is
+wrong, and it is far cheaper to learn that now than after authoring 580 more
+examples.
+
+```
+build_mix.py --general 500 --trajectory 150 --brittainscript 400     --tool-mode names --out data/train_mix_run4.jsonl
+train_lora.py --mix data/train_mix_run4.jsonl --out adapters/run4     --save-every 25
+```
+
+| | run 3 | run 4a |
+|---|---|---|
+| trajectory | 600 (83% of tokens) | 150 (54%) |
+| brittainscript | 600 | 400 |
+| general | 500 | 500 |
+| restraint | 276 | 276 |
+| identity | 221 | 221 |
+| run4 behaviour | — | 98 |
+| rows / usable | 2,197 / 1,859 | 1,645 / 1,564 |
+| target tokens | 316,524 | 259,037 |
+
+`--tool-mode names` matches run 3: the existing mix declares 55 tools by name
+with no descriptions or schemas. Changing that as well would have confounded
+the result.
+
+Because the new behaviour data is only 1% of trained tokens, a large movement
+in `settled syntax` is attributable to the trajectory cut rather than to the
+98 new rows. That is the point of running it this way round.
 
 ### Two rules for writing the examples
 

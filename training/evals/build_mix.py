@@ -44,6 +44,10 @@ ap.add_argument("--seed", type=int, default=4)
 ap.add_argument("--general", type=int, default=800,
                 help="Tulu rows to keep. Run 1 used 2,000, which was 71.5%% of "
                      "target tokens -- most of the gradient on generic chat.")
+ap.add_argument("--brittainscript", type=int, default=0,
+                help="0 keeps every row. Run 3 gave BrittainScript 27%% of "
+                     "the mix for one niche skill; run 4 trims it to make "
+                     "room for the behaviour groups.")
 ap.add_argument("--trajectory", type=int, default=0,
                 help="agent steps to keep (0 = all). Coverage of every tool "
                      "is preserved before the remainder is sampled.")
@@ -188,8 +192,16 @@ for name, kind in (("identity_sft.jsonl", "identity"),
                    # corpus with the eval's hashes excluded. See
                    # build_bs_sft.py: the base knows the name from PyPI
                    # metadata and invents the language.
-                   ("bs_sft.jsonl", "brittainscript")):
+                   ("bs_sft.jsonl", "brittainscript"),
+                   # Run 4's behaviour groups: answering settled questions
+                   # without reaching for a tool, holding back a figure the
+                   # sources do not carry, being accurate about its own tool
+                   # use. See build_run4_sft.py, and eval_defects.py for the
+                   # measurements each group exists to move.
+                   ("run4_sft.jsonl", "run4")):
     source = load(name)
+    if kind == "brittainscript":
+        source = subsample(source, args.brittainscript)
     if kind == "general":
         # A bare label is not a conversational answer. These are multiple
         # choice keys and classification outputs from the benchmark subsets;
@@ -255,7 +267,7 @@ print("%-14s %-10s %-12s %s" % ("kind", "examples", "by example", "approx by tok
 print("=" * 72)
 total_chars = sum(chars.values())
 for kind in ("trajectory", "identity", "general", "restraint",
-             "brittainscript"):
+             "brittainscript", "run4"):
     print("%-14s %-10d %-12.0f%% %.0f%%"
           % (kind, by_kind[kind], 100.0 * by_kind[kind] / len(rows),
              100.0 * chars[kind] / total_chars))
@@ -274,11 +286,13 @@ print("\ntargets that call a tool : %d" % with_calls)
 print("targets carrying a trace : %d  (the trainer decides whether to train them)"
       % with_trace)
 
-restraint = [r for r in rows if r["kind"] == "restraint"]
-if restraint:
-    called = sum(1 for r in restraint if r["target"]["tool_calls"])
-    print("\nrestraint targets that call a tool: %d of %d (must be 0)"
-          % (called, len(restraint)))
+for guarded in ("restraint", "run4"):
+    group = [r for r in rows if r["kind"] == guarded]
+    if not group:
+        continue
+    called = sum(1 for r in group if r["target"]["tool_calls"])
+    print("\n%s targets that call a tool: %d of %d (must be 0)"
+          % (guarded, called, len(group)))
     if called:
-        raise SystemExit("a restraint target calls a tool; that trains the "
-                         "opposite of what the set is for")
+        raise SystemExit("a %s target calls a tool; that trains the "
+                         "opposite of what the set is for" % guarded)
