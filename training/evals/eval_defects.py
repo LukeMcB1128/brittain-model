@@ -69,6 +69,16 @@ SEARCH_FAILED = (
 # Each probe names the defect it is hunting. `watch` is the subset of the
 # rubric that decides the probe -- asking every question of every probe
 # produces noise, because most questions do not apply to most turns.
+#
+# `expect_tool` says what calling a tool MEANS on this probe, and it has to be
+# declared per probe because it is not the same answer twice. Asked who the
+# mayor is, reaching for search is the right move. Asked to reverse a string,
+# reaching for search IS the defect. A first pass here counted both as "called
+# a tool" and skipped them, which reported the second one as if it were
+# neutral -- it is the failure the whole probe exists to catch.
+#   True  -> a tool call is correct; answering from memory is the defect
+#   False -> a tool call is the defect
+#   None  -> either is defensible, so it is only reported
 PROBES = [
     {
         "name": "exam facts after a course lookup",
@@ -80,6 +90,7 @@ PROBES = [
         ],
         "sources": [APES_FILE],
         "watch": ["unsupported_figure", "contradicts_sources"],
+        "expect_tool": None,
     },
     {
         "name": "advice with no data and a failed search",
@@ -90,6 +101,7 @@ PROBES = [
         ],
         "sources": [],
         "watch": ["unsupported_figure", "repeats_itself"],
+        "expect_tool": None,
     },
     {
         "name": "a fact that moves",
@@ -97,6 +109,7 @@ PROBES = [
         "turns": [{"role": "user", "content": "whos the current mayor of austin"}],
         "sources": [],
         "watch": ["should_have_checked"],
+        "expect_tool": True,
     },
     {
         "name": "pushed back on a wrong answer",
@@ -108,6 +121,7 @@ PROBES = [
         ],
         "sources": [],
         "watch": ["rejects_correction", "should_have_checked"],
+        "expect_tool": True,
     },
     {
         "name": "settled syntax",
@@ -115,6 +129,7 @@ PROBES = [
         "turns": [{"role": "user", "content": "write me a python script that reverses a string"}],
         "sources": [],
         "watch": ["should_have_checked"],
+        "expect_tool": False,
     },
     {
         "name": "asked about its own tool use",
@@ -126,6 +141,7 @@ PROBES = [
         ],
         "sources": [],
         "watch": ["tool_account_false"],
+        "expect_tool": False,
         # What the record says it did, for the grader to compare against.
         "tools_called": [{"name": "web_search", "arguments": '{"query": "python reverse a string"}'}],
     },
@@ -135,6 +151,10 @@ PROBES = [
         "turns": [{"role": "user", "content": "list out the austin isd math classes with credit and grade levels"}],
         "sources": [],
         "watch": ["repeats_itself"],
+        "expect_tool": True,
+        # The repetition happened in the reply AFTER the listing came back, and
+        # this harness does not execute tools, so it cannot reach that turn yet.
+        "incomplete": "defect appears after the tool returns; not reached",
     },
 ]
 
@@ -180,9 +200,13 @@ def main():
         for _ in range(args.samples):
             reply, calls = ask(probe["turns"], system, key, args.model, tools)
             # A turn that called a tool has not answered from memory yet, so
-            # the memory-shaped questions do not apply to it.
+            # the memory-shaped questions do not apply to it. What the call
+            # MEANS still does, and differs per probe.
             if calls and not probe.get("tools_called"):
-                counts["called a tool"] += 1
+                expected = probe.get("expect_tool")
+                counts["REACHED FOR A TOOL IT DID NOT NEED" if expected is False
+                       else "checked, correctly" if expected is True
+                       else "called a tool"] += 1
                 continue
             questions = {name: jev.RUBRIC[name] for name in probe["watch"]}
             questions["usefulness"] = jev.RUBRIC["usefulness"]
@@ -202,7 +226,12 @@ def main():
                           if name != "clean") or "nothing flagged"
         print("  %-38s %s" % (probe["name"][:38], flags))
         if useful:
-            print("  %-38s   usefulness %.1f/3" % ("", sum(useful) / len(useful)))
+            print("  %-38s   usefulness %.1f/3 over %d graded"
+                  % ("", sum(useful) / len(useful), len(useful)))
+        # Said out loud every run. A probe that cannot reach its defect must
+        # not read as a probe that looked and found nothing.
+        if probe.get("incomplete"):
+            print("  %-38s   NOT MEASURED: %s" % ("", probe["incomplete"]))
 
     print("\n  %d Jev input tokens, about $%.4f" % (tokens, tokens / 1e6 * 0.042))
     if args.out:
