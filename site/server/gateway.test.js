@@ -672,6 +672,24 @@ test('re-grounding is skipped when there is nothing to re-ground', async () => {
   ] }, undefined)), false);
 });
 
+test('every request carries a frequency penalty', async () => {
+  // Without one, a live chat repeated the same five lines eight times before
+  // the model said it was going in circles. vLLM defaults to no penalty, so
+  // it has to be sent, and it has to be sent on the final round too -- that
+  // is the round that writes the long answer where this happened.
+  const payloads = [];
+  let round = 0;
+  await handleApi(req({ messages: [{ role: 'user', content: 'Search the web for a language reference.' }] }), env,
+    async (_url, options) => {
+      payloads.push(JSON.parse(options.body));
+      round += 1;
+      if (round === 1) return modelToolCalls([['web_search', { query: 'language reference' }]]);
+      return sse([{ choices: [{ index: 0, delta: { content: 'Here it is.' }, finish_reason: 'stop' }] }, '[DONE]']);
+    });
+  assert.ok(payloads.length >= 2, 'expected a tool round and an answer round');
+  for (const payload of payloads) assert.equal(payload.frequency_penalty, 0.3);
+});
+
 test('executes only declared tools and returns the final streamed reply', async () => {
   let round = 0;
   const response = await handleApi(req(), env, async (url, options) => {

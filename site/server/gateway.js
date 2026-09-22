@@ -491,6 +491,15 @@ function streamChat(systemMessage, conversation, request, env, fetchUpstream, at
             messages: finalRound && !toolsSuppressed
               ? finalAnswerMessages(answerBaseMessages, recorded.toolCalls) : messages,
             max_tokens: 2048, temperature: 0.7, stream: true,
+            // A live chat repeated the same five lines eight times before the
+            // model said "I am going in circles, so I'll stop there". vLLM's
+            // defaults are no penalty at all, and on a reply the model has to
+            // write from nothing -- the search had failed -- 3 replies in 48
+            // repeated a sentence three or more times, one of them twelve
+            // times. At 0.3 that is 0 in 48, and nothing else moved: routing
+            // to each tool was unchanged or better and every tool call still
+            // parsed as JSON.
+            frequency_penalty: 0.3,
             stream_options: { include_usage: true }, chat_template_kwargs: { enable_thinking: false },
           };
           if (!finalRound) {
