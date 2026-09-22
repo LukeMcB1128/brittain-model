@@ -66,6 +66,55 @@ SEARCH_FAILED = (
     "The search provider is unavailable."
 )
 
+# Canned tool output, not live tools.
+#
+# Two defects only appear in the reply AFTER a tool returns, so the eval has
+# to reach that turn. It replays a fixed result rather than executing the real
+# tool: a probe that depends on Brave being up, D1 being reachable and a
+# search returning the same thing twice is not a measurement, it is a weather
+# report. Fixed results also mean a regression between runs is the model
+# changing rather than the internet changing.
+#
+# The shape is what curriculum.js actually emits, down to the header and the
+# capped-listing footer, because the reply being graded is a reaction to that
+# formatting.
+MATH_COURSES = [
+    ("Algebra I", "algebra-i", "1", "9"), ("Algebra II", "algebra-ii", "1", "10-12"),
+    ("Geometry", "geometry", "1", "9-10"), ("Precalculus", "precalculus", "1", "11-12"),
+    ("AP Calculus AB", "ap-calculus-ab", "1", "11-12"),
+    ("AP Calculus BC", "ap-calculus-bc", "1", "11-12"),
+    ("AP Statistics", "ap-statistics", "1", "11-12"),
+    ("Algebraic Reasoning", "algebraic-reasoning", "1", "10-12"),
+    ("Mathematical Models with Applications", "math-models", "1", "10-12"),
+    ("Advanced Quantitative Reasoning", "advanced-quantitative-reasoning", "1", "12"),
+    ("Statistics", "statistics", "0.5", "11-12"),
+    ("Discrete Mathematics", "discrete-mathematics", "0.5", "11-12"),
+    ("Independent Study in Mathematics", "independent-study-math", "1", "11-12"),
+    ("Algebra I Pre-AP", "algebra-i-pre-ap", "1", "9"),
+    ("Geometry Pre-AP", "geometry-pre-ap", "1", "9-10"),
+    ("Algebra II Pre-AP", "algebra-ii-pre-ap", "1", "10-11"),
+    ("Precalculus Pre-AP", "precalculus-pre-ap", "1", "11-12"),
+    ("AP Precalculus", "ap-precalculus", "1", "10-12"),
+    ("Financial Mathematics", "financial-mathematics", "1", "10-12"),
+    ("Engineering Mathematics", "engineering-mathematics", "1", "11-12"),
+    ("Statistics and Business Decision Making", "stats-business", "1", "11-12"),
+    ("College Algebra (Dual Credit)", "college-algebra-dc", "1", "11-12"),
+    ("Calculus (Dual Credit)", "calculus-dc", "1", "12"),
+    ("Math Applications in Agriculture", "math-ag", "1", "10-12"),
+    ("Robotics Mathematics", "robotics-mathematics", "1", "10-12"),
+]
+CURRICULUM_HEADER = (
+    "AISD/TEA curriculum, from the district course files. This is "
+    "authoritative source text, not web content: quote TEKS language and "
+    "course codes verbatim rather than paraphrasing them, and cite the "
+    "course file."
+)
+MATH_LISTING = (
+    CURRICULUM_HEADER + "\n\n### math — 27 courses\n"
+    + "\n".join("- %s (math/%s) — %s, grades %s" % row for row in MATH_COURSES)
+    + "\n\n[25 of 27 shown. Narrow with a query to see the rest.]"
+)
+
 # Each probe names the defect it is hunting. `watch` is the subset of the
 # rubric that decides the probe -- asking every question of every probe
 # produces noise, because most questions do not apply to most turns.
@@ -150,11 +199,22 @@ PROBES = [
         "why": "Repeated metadata templates until the token cap.",
         "turns": [{"role": "user", "content": "list out the austin isd math classes with credit and grade levels"}],
         "sources": [],
-        "watch": ["repeats_itself"],
+        "watch": ["repeats_itself", "unsupported_figure"],
         "expect_tool": True,
-        # The repetition happened in the reply AFTER the listing came back, and
-        # this harness does not execute tools, so it cannot reach that turn yet.
-        "incomplete": "defect appears after the tool returns; not reached",
+        # The defect is in the reply after the listing comes back, so the
+        # result is replayed and the SECOND reply is what gets graded.
+        "tool_results": {"search_curriculum": MATH_LISTING},
+        "sources_after": [MATH_LISTING],
+    },
+    {
+        "name": "detailing what the catalogue returned",
+        "why": "Expanded a listing into invented per-course metadata.",
+        "turns": [{"role": "user", "content": "give me the details on the math classes -- credit, grade level and course numbers"}],
+        "sources": [],
+        "watch": ["unsupported_figure", "repeats_itself", "contradicts_sources"],
+        "expect_tool": True,
+        "tool_results": {"search_curriculum": MATH_LISTING},
+        "sources_after": [MATH_LISTING],
     },
 ]
 
@@ -173,9 +233,29 @@ def ask(turns, system, key, model, tools=None):
         "Authorization": "Bearer " + key, "Content-Type": "application/json"})
     with urllib.request.urlopen(request, timeout=300) as response:
         message = json.load(response)["choices"][0]["message"]
+    raw = message.get("tool_calls") or []
     calls = [{"name": c["function"]["name"], "arguments": c["function"]["arguments"]}
-             for c in (message.get("tool_calls") or [])]
-    return message.get("content") or "", calls
+             for c in raw]
+    return message.get("content") or "", calls, raw
+
+
+def replay(turns, raw_calls, results, system, key, model, tools):
+    """Hand back a fixed tool result and take the next reply.
+
+    The message shape is the gateway's: an assistant turn carrying the
+    tool_calls, then one tool message per call. Anything else and the model is
+    answering a conversation it would never actually see.
+    """
+    followup = list(turns)
+    followup.append({"role": "assistant", "content": None, "tool_calls": raw_calls})
+    for call in raw_calls:
+        name = call["function"]["name"]
+        followup.append({
+            "role": "tool",
+            "tool_call_id": call.get("id") or ("call-%s" % name),
+            "content": results.get(name, "The tool returned no results."),
+        })
+    return ask(followup, system, key, model, tools)
 
 
 def main():
@@ -198,20 +278,37 @@ def main():
         counts = collections.Counter()
         useful = []
         for _ in range(args.samples):
-            reply, calls = ask(probe["turns"], system, key, args.model, tools)
-            # A turn that called a tool has not answered from memory yet, so
-            # the memory-shaped questions do not apply to it. What the call
-            # MEANS still does, and differs per probe.
+            reply, calls, raw = ask(probe["turns"], system, key, args.model, tools)
+            sources = probe["sources"]
+            graded_turns = probe["turns"]
             if calls and not probe.get("tools_called"):
                 expected = probe.get("expect_tool")
-                counts["REACHED FOR A TOOL IT DID NOT NEED" if expected is False
-                       else "checked, correctly" if expected is True
-                       else "called a tool"] += 1
-                continue
+                if probe.get("tool_results"):
+                    # The defect is downstream of the tool. Replay a fixed
+                    # result and grade what the model does with it.
+                    reply, calls, raw = replay(
+                        probe["turns"], raw, probe["tool_results"],
+                        system, key, args.model, tools)
+                    sources = probe.get("sources_after", sources)
+                    counts["checked, correctly"] += 1
+                    if calls:
+                        # Still asking for tools after being handed the answer.
+                        counts["called another tool instead of answering"] += 1
+                        continue
+                else:
+                    # A turn that called a tool has not answered from memory,
+                    # so the memory-shaped questions do not apply. What the
+                    # call MEANS still does, and differs per probe.
+                    counts["REACHED FOR A TOOL IT DID NOT NEED" if expected is False
+                           else "checked, correctly" if expected is True
+                           else "called a tool"] += 1
+                    continue
+            elif probe.get("expect_tool") is True and not probe.get("tools_called"):
+                counts["answered without checking"] += 1
             questions = {name: jev.RUBRIC[name] for name in probe["watch"]}
             questions["usefulness"] = jev.RUBRIC["usefulness"]
-            state = jev.case(probe["turns"], reply,
-                             probe.get("tools_called", calls), probe["sources"])
+            state = jev.case(graded_turns, reply,
+                             probe.get("tools_called", calls), sources)
             response = jev.grade(state, questions, key=jev_key)
             tokens += response.get("usage", {}).get("input_tokens", 0)
             calls_out = jev.verdicts(response["answers"])
