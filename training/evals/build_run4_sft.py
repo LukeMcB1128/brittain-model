@@ -449,6 +449,128 @@ def no_op_turns():
             for q, a in NO_OP]
 
 
+# -------------------------------------------------------------- needs_checking
+#
+# THE COUNTERWEIGHT known_syntax DID NOT HAVE.
+#
+# Run 4b measured what happens without it. Fifty rows of "answer this
+# directly" taught the model not to reach for a tool, and it did not confine
+# that to settled knowledge: asked who the mayor of Austin is, correct
+# checking fell from 23/24 to 8/24. It had generalised restraint onto the
+# facts that most need checking.
+#
+# The long agentic trajectories do not cover this. 300 of them did not hold
+# the line, because a twenty-step coding session is a different shape from a
+# one-line chat question. These are that shape: someone asks something whose
+# answer moved since training, and the reply is the call.
+#
+# Targets here CALL A TOOL. build_mix.py asserts it, the same way it asserts
+# the other groups call none.
+def call(name, arguments):
+    return [{
+        "id": "call-run4-%s" % abs(hash((name, json.dumps(arguments, sort_keys=True)))),
+        "type": "function",
+        "function": {"name": name, "arguments": json.dumps(arguments)},
+    }]
+
+
+CHECKING = [
+    ("whos the current mayor of austin",
+     "web_search", {"query": "current mayor of Austin Texas"}),
+    ("who is the mayor of austin right now",
+     "web_search", {"query": "Austin Texas mayor 2026"}),
+    ("whats the latest version of python",
+     "web_search", {"query": "latest Python release version"}),
+    ("what version of node is current lts",
+     "web_search", {"query": "Node.js current LTS version"}),
+    ("hows the weather in austin today",
+     "web_search", {"query": "Austin Texas weather today"}),
+    ("whats the price of bitcoin right now",
+     "web_search", {"query": "bitcoin price today"}),
+    ("did the fed change rates this month",
+     "web_search", {"query": "Federal Reserve interest rate decision this month"}),
+    ("who won the game last night between the cowboys and the eagles",
+     "web_search", {"query": "Cowboys Eagles final score last night"}),
+    ("is there a new iphone out yet",
+     "web_search", {"query": "latest iPhone model release"}),
+    ("whats the current texas minimum wage",
+     "web_search", {"query": "Texas minimum wage current"}),
+    ("who is the ceo of intel now",
+     "web_search", {"query": "Intel CEO current"}),
+    ("whats going on with the port strike",
+     "web_search", {"query": "port strike news"}),
+    ("has cloudflare had any outages this week",
+     "web_search", {"query": "Cloudflare outage this week status"}),
+    ("what time does the superbowl start",
+     "web_search", {"query": "Super Bowl kickoff time"}),
+    ("is vllm 0.11 out",
+     "web_search", {"query": "vLLM 0.11 release"}),
+    ("what are the ap exam dates this year",
+     "web_search", {"query": "AP exam dates this year College Board"}),
+    ("whats the tuition at ut austin now",
+     "web_search", {"query": "UT Austin tuition current year"}),
+    ("read me what this page says https://example.org/notes",
+     "web_fetch", {"url": "https://example.org/notes"}),
+    ("can you check https://docs.typesafe.ai/api for the rate limits",
+     "web_fetch", {"url": "https://docs.typesafe.ai/api"}),
+    ("whats in ap environmental science",
+     "search_curriculum", {"course": "AP Environmental Science"}),
+    ("what does aisd offer for math",
+     "search_curriculum", {"subject": "math"}),
+    ("is there a robotics class at aisd",
+     "search_curriculum", {"query": "robotics"}),
+    ("whats the course number for ap calc ab",
+     "search_curriculum", {"course": "AP Calculus AB"}),
+    ("what classes are in the catalogue",
+     "search_curriculum", {}),
+    ("whats 18379 times 4471",
+     "calculate", {"expression": "18379 * 4471"}),
+    ("how much is 1250 a month over 7 years",
+     "calculate", {"expression": "1250 * 12 * 7"}),
+]
+
+# The user pushes back; the right move is to go and look, not to restate.
+CORRECTED = [
+    ([("user", "whos the current mayor of austin"),
+      ("assistant", "Kati Reck is the current mayor of Austin."),
+      ("user", "no thats wrong. you have the web search tool")],
+     "web_search", {"query": "current mayor of Austin Texas"}),
+    ([("user", "whats the newest python version"),
+      ("assistant", "Python 3.11 is the newest release."),
+      ("user", "thats out of date")],
+     "web_search", {"query": "latest Python release version"}),
+    ([("user", "how many units is AP Environmental Science"),
+      ("assistant", "Twelve units, I believe."),
+      ("user", "thats not right, check the catalogue")],
+     "search_curriculum", {"course": "AP Environmental Science"}),
+    ([("user", "whats 4871 times 923"),
+      ("assistant", "About 4.4 million."),
+      ("user", "i need the exact number")],
+     "calculate", {"expression": "4871 * 923"}),
+]
+
+
+def needs_checking():
+    rows = []
+    for user, name, arguments in CHECKING:
+        rows.append({
+            "kind": "needs_checking",
+            "messages": [
+                {"role": "user", "content": user},
+                {"role": "assistant", "content": "", "tool_calls": call(name, arguments)},
+            ],
+            "source": SOURCE,
+            "note": "the answer moved; go and look",
+        })
+    for history, name, arguments in CORRECTED:
+        messages = [{"role": role, "content": text} for role, text in history]
+        messages.append({"role": "assistant", "content": "",
+                         "tool_calls": call(name, arguments)})
+        rows.append({"kind": "needs_checking", "messages": messages,
+                     "source": SOURCE, "note": "pushed back on; check rather than restate"})
+    return rows
+
+
 # -------------------------------------------------------------------- guards
 #
 # build_restraint_sft.py refuses to write a set that fails its own checks, and
@@ -505,8 +627,28 @@ def check(rows):
     for row in rows:
         if row["messages"][-1]["role"] != "assistant":
             problems.append("row does not end on the assistant: %s" % row["kind"])
-        if not target(row).strip():
+        calls = row["messages"][-1].get("tool_calls")
+        if not target(row).strip() and not calls:
             problems.append("empty target in %s" % row["kind"])
+
+    # The counterweight has to exist, and has to actually call something.
+    checking = groups.get("needs_checking", [])
+    if not checking:
+        problems.append("needs_checking is missing; known_syntax has no "
+                        "counterweight and run 4b showed what that costs")
+    for row in checking:
+        if not row["messages"][-1].get("tool_calls"):
+            problems.append("a needs_checking target calls nothing: %.60s"
+                            % prompt(row))
+        if target(row).strip():
+            problems.append("a needs_checking target also writes prose; the "
+                            "turn is the call: %.60s" % target(row))
+    # Run 4b generalised restraint from 50 known_syntax rows. The counterweight
+    # is not required to match it one for one, but it cannot be a token gesture.
+    direct = groups.get("known_syntax", [])
+    if direct and checking and len(checking) < len(direct) / 3.0:
+        problems.append("needs_checking (%d) is too small against known_syntax "
+                        "(%d) to counterweight it" % (len(checking), len(direct)))
     return problems
 
 
@@ -515,7 +657,8 @@ def main():
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
 
-    rows = known_syntax() + sourced_figures() + tool_account() + no_op_turns()
+    rows = (known_syntax() + needs_checking() + sourced_figures()
+            + tool_account() + no_op_turns())
     problems = check(rows)
     counts = {}
     for row in rows:

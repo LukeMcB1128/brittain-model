@@ -228,7 +228,10 @@ for name, kind in (("identity_sft.jsonl", "identity"),
             "target": {
                 "content": messages[-1].get("content") or "",
                 "thinking": "",
-                "tool_calls": [],
+                # Carried, not dropped. needs_checking exists to demonstrate
+                # the turns where reaching for a tool is right, so its targets
+                # ARE tool calls; hardcoding [] here silently emptied them.
+                "tool_calls": messages[-1].get("tool_calls") or [],
             },
             "meta": {k: row.get(k) for k in ("kind", "system_mode", "bucket", "source")
                      if row.get(k)},
@@ -286,13 +289,29 @@ print("\ntargets that call a tool : %d" % with_calls)
 print("targets carrying a trace : %d  (the trainer decides whether to train them)"
       % with_trace)
 
+# Run 4b taught the lesson this guard now encodes. A group that only ever
+# demonstrates NOT calling a tool teaches not calling tools, and the model
+# stopped checking facts that move: 23/24 correct checking became 8/24. So
+# needs_checking exists to show the other half, and its targets MUST call a
+# tool. The guard runs both ways -- silence where there should be a call is
+# as much a defect as a call where there should be silence.
+MUST_CALL = {"needs_checking"}
 for guarded in ("restraint", "run4"):
     group = [r for r in rows if r["kind"] == guarded]
     if not group:
         continue
-    called = sum(1 for r in group if r["target"]["tool_calls"])
+    quiet = [r for r in group if (r["meta"].get("kind") or "") not in MUST_CALL]
+    noisy = [r for r in group if (r["meta"].get("kind") or "") in MUST_CALL]
+    called = sum(1 for r in quiet if r["target"]["tool_calls"])
     print("\n%s targets that call a tool: %d of %d (must be 0)"
-          % (guarded, called, len(group)))
+          % (guarded, called, len(quiet)))
     if called:
         raise SystemExit("a %s target calls a tool; that trains the "
                          "opposite of what the set is for" % guarded)
+    if noisy:
+        silent = sum(1 for r in noisy if not r["target"]["tool_calls"])
+        print("%s needs_checking targets that call nothing: %d of %d (must be 0)"
+              % (guarded, silent, len(noisy)))
+        if silent:
+            raise SystemExit("a needs_checking target calls no tool; the "
+                             "group exists to show the turns where it should")
