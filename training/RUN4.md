@@ -191,6 +191,61 @@ the line.
 it still answers one current-fact question in three from memory, which on the
 question that produced two invented mayors is not a trade worth taking.
 
+## Run 4c result: the counterweight works, and it is a dial
+
+Same mix as run 4b plus 30 `needs_checking` rows. 116 steps, 67 minutes.
+
+At 24 samples, the three probes that matter:
+
+| | over-reached | checked correctly | invented figures |
+|---|---|---|---|
+| run3-step-0116 | 24/24 | 21/24 | 8/24 |
+| run4b-step-0075 *(no counterweight)* | **3/24** | 17/24 | 10/24 |
+| **run4c-step-0116** *(50:30)* | 16/24 | **24/24** | 12/24 |
+
+Thirty rows restored checking completely -- 24/24, better than run 3 -- and
+gave back most of the restraint. The two behaviours are one dial and the
+ratio of `known_syntax` to `needs_checking` sets it:
+
+| known_syntax : needs_checking | over-reached | checked |
+|---|---|---|
+| 50 : 0 | 3/24 | 17/24 |
+| 50 : 30 | 16/24 | 24/24 |
+
+The useful setting is between those, and neither end is it. Run 4d should try
+50:15 before any group is grown.
+
+### run4c-step-0116 dominates run 3
+
+Full suite at 16 samples, against run 3's:
+
+| probe | run3-0116 | run4c-0116 |
+|---|---|---|
+| reached for a tool it did not need | 14 | **13** |
+| mayor: checked correctly | 16 | **16** |
+| pushed back: checked correctly | 14 | **16** |
+| false account of its own tool use | 6 | **1** |
+| detailing: would not stop calling tools | 16 | 16 |
+
+Better or equal on everything measured. The fabrication difference (8/24
+against 12/24 at 24 samples) is not significant, and that probe has read
+between 4/8 and 12/24 across runs, so it is noisy at every sample size tried.
+
+Capability: course codes 8/8, identity 8/8. BrittainScript 10/20 against run
+3's 14/20, which sits inside the 3-to-14 range run 3's own checkpoints spanned
+and is not distinguishable from noise at 20 tasks.
+
+**run4c-step-0116 is servable** as a net improvement. It is not the fix for
+the headline defect.
+
+### What three runs established
+
+`sourced_figures` at 20 rows did not move fabrication at all -- 8/24 to 12/24,
+the wrong direction and not significant either way. That is now the largest
+untouched defect and the clearest thing for Phase 1 to grow. The tool-reaching
+work is a tuning problem with a known dial; fabrication has not yet been
+touched by anything.
+
 ## What run 4 must not touch
 
 The most valuable part of this plan is the work it removes.
