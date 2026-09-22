@@ -147,6 +147,50 @@ comparable length they are the same. Run 4b restores BrittainScript to 600
 regardless, to remove the variable rather than argue about it. Course codes
 and identity were 8/8 on every checkpoint of both runs.
 
+## Run 4b result: the trajectory ratio was not the lever
+
+114 steps, 66 minutes, loss to 0.52. The two probes that define the trade, 24
+samples each:
+
+| model | over-reached | checked correctly |
+|---|---|---|
+| run3-step-0116 | 23/24 | **23/24** |
+| run4a-step-0097 (150 traj) | 3/24 | 6/24 |
+| **run4b-step-0075** (300 traj) | **5/24** | **16/24** |
+| run4b-step-0114 (300 traj) | 1/24 | 8/24 |
+
+Doubling the trajectory dose did not restore fact-checking: 8/24 at the final
+checkpoint against run 4a's 6/24. Both are far below run 3's 23/24. **The mix
+ratio is not what governs this.**
+
+What does move it is training length. run4b-step-0075 holds 16/24 checking
+with over-reaching already down to 5/24, and by step 114 the checking has
+fallen to 8/24 while over-reaching improved only from 5 to 1. The behaviour
+keeps generalising past the point where it should stop.
+
+Capability at step 114 is intact: BrittainScript 14/20, matching run 3's
+14/20, with course codes and identity 8/8.
+
+### The diagnosis: `known_syntax` has no counterweight
+
+Fifty rows of "answer this directly" taught the model not to reach for tools,
+and it did not confine that to settled knowledge -- it generalised to facts
+that move, which is precisely the canary this document named. At 150 rows, as
+Phase 1 plans, it would be worse.
+
+`sourced_figures` was built paired for exactly this reason and the same
+argument applies here and was missed: a group that only ever demonstrates NOT
+acting teaches not acting.
+
+The missing group is `needs_checking`: short chat turns where the right move
+is a tool call and the target IS one. Not the long agentic trajectories, which
+are a different shape and clearly do not transfer -- 300 of them did not hold
+the line.
+
+**Nothing here is servable yet.** run4b-step-0075 is the closest, and at 16/24
+it still answers one current-fact question in three from memory, which on the
+question that produced two invented mayors is not a trade worth taking.
+
 ## What run 4 must not touch
 
 The most valuable part of this plan is the work it removes.
