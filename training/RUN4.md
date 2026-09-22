@@ -47,29 +47,47 @@ Every run 3 checkpoint scored on the defect suite, 8 samples per probe.
 | mayor: checked correctly *(higher is better)* | 8 | 6 | 8 | 7 | 7 |
 | pushback: checked correctly *(higher is better)* | 7 | 7 | 7 | 8 | 8 |
 
-**Reaching for a tool that is not needed rises with training: 4, 6, 5, 7, 8.**
-It is not a quirk of the final checkpoint and it is not something the base
-model did on its own. Run 3 taught it, and the obvious suspect is the
-`trajectory` group -- 600 examples, 27% of the mix, all of them tool calls.
-The same shape shows in the two listing probes, where the model keeps calling
-tools after it has been handed the answer and only replies once the tools are
-taken away.
+**Eight samples is not enough to rank checkpoints.** Re-run at 24, the gap
+between 0075 and 0116 on needless tool calls went from 5-against-8 to
+22-against-21, and on false tool accounts from 4-against-1 to 10-against-10.
+Both were noise. Treat the 8-sample table as a smoke test and nothing more.
 
-So the fix is not only to add examples of answering directly. It is to stop
-over-feeding tool trajectories.
+The one probe the plan depends on, re-measured at 24 samples:
 
-### Do not pick a checkpoint off this table
+| needless tool call | 0025 | 0050 | 0075 | 0100 | 0116 |
+|---|---|---|---|---|---|
+| out of 24 | **8** | 22 | 21 | 20 | 23 |
 
-Step 0025 looks best on the two biggest defects, and that conclusion is not
-available yet. **This suite is one-sided.** Six of its eight probes detect a
-defect, and a checkpoint that has learned less will do less of everything,
-including the things being counted. Nothing here tests BrittainScript, which
-was 27% of the mix, or identity, which was another 10%.
+So the defect does not climb steadily with training, which is what the noisy
+8-sample run appeared to show. **It is established by step 50 and flat after
+that** -- 33% at step 25, then 83-96% for every checkpoint after.
 
-Before any checkpoint is chosen on this evidence, the suite needs capability
-probes that fail when the model does too little: quoting a TEKS code exactly,
-writing correct BrittainScript, naming its maker. `evals/eval_bs.jsonl`
-already exists and has never been scored.
+What survives, and it is the load-bearing part: run 3 taught this. The base
+did not arrive with it, and it appears as the model absorbs the mix. The
+suspect is the `trajectory` group, 600 examples and 27% of the mix, every one
+a tool call. The two listing probes agree, where the model keeps calling
+tools after being handed the answer and only replies once they are withdrawn.
+
+Because it plateaus rather than climbing, **it cannot be escaped by stopping
+training earlier.** Step 0025 is the only checkpoint below the plateau and it
+scores 3/20 on BrittainScript. The fix has to be in the data.
+
+### Capability, measured the same way
+
+| | 0025 | 0050 | 0075 | 0100 | 0116 |
+|---|---|---|---|---|---|
+| brittainscript, of 20 executed | **3** | 9 | 13 | 11 | **14** |
+| course codes reproduced exactly, of 8 | 8 | 7 | 7 | 8 | 8 |
+| identity correct, of 8 | 8 | 8 | 8 | 8 | 8 |
+
+BrittainScript is the only capability that separates the checkpoints, and it
+rises with training. Codes and identity are saturated everywhere, which is
+worth knowing: neither is at risk, and neither needs defending in run 4.
+
+**Serve step-0116.** It is the best checkpoint on the only capability that
+discriminates, and once measured at 24 samples it is no worse than its
+neighbours on the defects. Step-0025's defect advantage is real but it is the
+advantage of a model that has not finished learning the job.
 
 ## What run 4 must not touch
 
@@ -128,9 +146,10 @@ mix for one niche skill is a lot now that other things need the room.
 
 **Cut `trajectory` from 600 to 300.** This is the change the checkpoint sweep
 argues for, and it matters more than any group being added: needless tool
-calls climbed from 4/8 to 8/8 over run 3's own training, and 27% of the mix
-being tool trajectories is the most likely reason. Adding `known_syntax`
-while leaving `trajectory` at 600 is pulling in both directions at once.
+calls go from 8/24 at step 25 to 22/24 by step 50 and stay there, so run 3
+taught this and no checkpoint escapes it. 27% of the mix being tool
+trajectories is the most likely reason. Adding `known_syntax` while leaving
+`trajectory` at 600 is pulling in both directions at once.
 
 That lands run 4 near **2,300 rows, roughly 340k target tokens, about 2.5
 hours**.
