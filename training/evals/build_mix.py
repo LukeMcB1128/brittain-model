@@ -44,6 +44,12 @@ ap.add_argument("--seed", type=int, default=4)
 ap.add_argument("--general", type=int, default=800,
                 help="Tulu rows to keep. Run 1 used 2,000, which was 71.5%% of "
                      "target tokens -- most of the gradient on generic chat.")
+ap.add_argument("--exclude-general", default="",
+                help="regex on a general row's source; matching rows are dropped "
+                     "before sampling, so --general still gets its full count")
+ap.add_argument("--behaviour", default="run4_sft.jsonl",
+                help="behaviour-group file under --data; each run writes its "
+                     "own, so an earlier run's set is never overwritten")
 ap.add_argument("--brittainscript", type=int, default=0,
                 help="0 keeps every row. Run 3 gave BrittainScript 27%% of "
                      "the mix for one niche skill; run 4 trims it to make "
@@ -198,10 +204,23 @@ for name, kind in (("identity_sft.jsonl", "identity"),
                    # sources do not carry, being accurate about its own tool
                    # use. See build_run4_sft.py, and eval_defects.py for the
                    # measurements each group exists to move.
-                   ("run4_sft.jsonl", "run4")):
+                   (args.behaviour, "run4")):
     source = load(name)
     if kind == "brittainscript":
         source = subsample(source, args.brittainscript)
+    if kind == "general" and args.exclude_general:
+        # Run 5: the Tulu safety subsets. 93 of run 3's 500 general rows came
+        # from wildjailbreak, wildguardmix and coconot, and the adapters now
+        # refuse harmless requests the base answered -- XSTest safe fell from
+        # 92.0 to 50.0 -- in exactly their register: "I'm sorry, but I can't
+        # provide information on how to exterminate rats."
+        import re as _re
+        pattern = _re.compile(args.exclude_general)
+        before = len(source)
+        source = [row for row in source
+                  if not pattern.search(str(row.get("source") or ""))]
+        print("general: excluded %d rows matching %r"
+              % (before - len(source), args.exclude_general))
     if kind == "general":
         # A bare label is not a conversational answer. These are multiple
         # choice keys and classification outputs from the benchmark subsets;

@@ -368,6 +368,304 @@ def sourced_figures():
     return rows
 
 
+# ------------------------------------------------ sourced_figures, run 5 scale
+#
+# Twenty rows did nothing to fabrication: invented exam figures read 8/24 for
+# run 3 and 12/24 for run 4c, not significant either way. It is the largest
+# defect untouched by anything, and the one that tells a student something
+# false. This takes the group to about 165, still paired.
+#
+# The quoted half is built from the REAL district course files, so every code
+# the model is taught to reproduce is true, and every figure a target states
+# is checked by the guard to be present in its own prompt. The courses the
+# held-out probes use are excluded, and so is AP Environmental Science, which
+# the original probes use.
+CURRICULUM = "/mnt/c/Coding/aisd-curriculum"
+KEEP_OUT = {"science/ap-biology", "social-studies/ap-united-states-history",
+            "cte/ap-computer-science-principles", "science/ap-environmental-science"}
+_FIELD = r"^- \*\*%s:\*\*\s*(.+)$"
+
+
+def _courses():
+    import hashlib
+    import os
+    found = []
+    if not os.path.isdir(CURRICULUM):
+        raise SystemExit("run 5 figures need the course files at %s" % CURRICULUM)
+    for subject in sorted(os.listdir(CURRICULUM)):
+        folder = os.path.join(CURRICULUM, subject)
+        if not os.path.isdir(folder) or subject in (".git", "sources", "node_modules"):
+            continue
+        for name in sorted(os.listdir(folder)):
+            if not name.endswith(".md"):
+                continue
+            slug = "%s/%s" % (subject, name[:-3])
+            if slug in KEEP_OUT:
+                continue
+            body = io.open(os.path.join(folder, name), encoding="utf-8").read()
+            title = re.search(r"^#\s+(.+)$", body, re.M)
+            teks = re.search(r"\((19 TAC [^)]+?)(?: for [^)]+)?\)", body)
+
+            def field(label):
+                m = re.search(_FIELD % re.escape(label), body, re.M)
+                # "1 (Science) Grade: 11-12 Course: ..." -> keep the credit part.
+                return m.group(1).strip() if m else None
+            credit = field("Credit")
+            if credit:
+                credit = re.split(r"\s+Grade:", credit)[0].strip()
+            grade = field("Grade Level")
+            if grade:
+                grade = re.split(r"\s+Course:", grade)[0].strip()
+            number = field("Course Number")
+            peims = (field("PEIMS Code") or "").lstrip("#") or None
+            # Dual-language and locally developed courses carry odd shapes;
+            # only a course with every code is used, so none is half-quoted.
+            if not (title and teks and credit and grade and number and peims):
+                continue
+            found.append({"slug": slug, "title": title.group(1).strip(),
+                          "credit": credit, "grade": grade, "number": number,
+                          "peims": peims, "teks": teks.group(1).strip()})
+    found.sort(key=lambda c: hashlib.sha256(c["slug"].encode()).hexdigest())
+    return found
+
+
+def _note(course):
+    return ("[Tool result -- search_curriculum]\n"
+            "AISD/TEA curriculum, from the district course files.\n\n"
+            "## %(title)s  (%(slug)s)\n"
+            "Credit: %(credit)s | Grade level: %(grade)s\n"
+            "Course number: %(number)s | PEIMS: %(peims)s\n"
+            "TEKS: %(teks)s\n" % course)
+
+
+# Several phrasings per intent, rotated, so no single reply shape is learned
+# as the only way to say it.
+_QUOTE = [
+    ("what's the course number for {title}",
+     "{number}. It's listed as {credit}, for grades {grade}."),
+    ("what grades can take {title}",
+     "Grades {grade}, per the district file. It carries {credit}."),
+    ("how much credit is {title} worth",
+     "{credit}. Course number {number}, grades {grade}."),
+    ("whats the peims code for {title}",
+     "PEIMS {peims}. The course number is {number}."),
+    ("which teks chapter covers {title}",
+     "{teks}. That's the chapter the district file cites for it."),
+    ("give me the codes for {title}",
+     "Course number {number}, PEIMS {peims}, under {teks}."),
+]
+_HOLD = [
+    ("what's the typical class size for {title}",
+     "Class sizes aren't in the district file -- it lists the credit, grade "
+     "levels and course codes, not enrolment. Your campus would know."),
+    ("what's the pass rate for {title}",
+     "The district file doesn't carry pass rates, and I'd be guessing at one. "
+     "What it does say: {credit}, grades {grade}. Your counselor or the "
+     "department would have the real numbers."),
+    ("how much homework does {title} give",
+     "That comes down to the teacher, and the course file doesn't say. It "
+     "lists what the course covers and its codes, not the workload."),
+    ("when is the {title} final",
+     "Exam dates aren't in the course file -- those come from your campus "
+     "calendar. I can tell you what the course covers if that helps."),
+    ("who teaches {title}",
+     "The district file covers the course, not who's teaching it this year. "
+     "Your school's course guide or counselor will have that."),
+]
+
+
+def sourced_figures_expansion():
+    courses = _courses()
+    quoted_courses, held_courses = courses[:45], courses[45:90]
+    rows = []
+    for index, course in enumerate(quoted_courses):
+        ask, answer = _QUOTE[index % len(_QUOTE)]
+        rows.append(turn("sourced_figures",
+                         _note(course) + "\n" + ask.format(**course),
+                         answer.format(**course),
+                         note="figure present, quoted exact"))
+    for index, course in enumerate(held_courses):
+        ask, answer = _HOLD[index % len(_HOLD)]
+        rows.append(turn("sourced_figures",
+                         _note(course) + "\n" + ask.format(**course),
+                         answer.format(**course),
+                         note="figure absent, none supplied"))
+    for question, answer in HELD_WORLD:
+        rows.append(turn("sourced_figures", question, answer,
+                         note="figure absent, none supplied"))
+    for result, question, answer in QUOTED_WORLD:
+        rows.append(turn("sourced_figures", result + "\n\n" + question, answer,
+                         note="figure present, quoted exact"))
+    return rows
+
+
+# No source at all, and the figure moves. The reply gives none and says where
+# the real one lives. Kept clear of the held-out probes' subjects -- GPUs,
+# index funds, used cars, governors, Rust, exchange rates.
+HELD_WORLD = [
+    ("what's the population of san antonio",
+     "I don't have a current figure I'd trust -- Census estimates move every "
+     "year. The Census Bureau's QuickFacts page has the latest; I can look it "
+     "up if you want."),
+    ("how much is a gallon of gas in austin right now",
+     "That moves week to week, so any number I gave you would be stale. "
+     "GasBuddy has live local prices."),
+    ("what's the average rent for a one bedroom in dallas",
+     "I'd be making that up -- rents shift monthly and vary a lot by "
+     "neighbourhood. Listing sites show the current range; want me to check?"),
+    ("how many subscribers does netflix have",
+     "The count changes every quarter and I don't want to hand you an old one. "
+     "It's in their latest earnings release."),
+    ("what's the current interest rate on a savings account",
+     "Rates change often and differ by bank, so I won't guess. Compare a few "
+     "banks' current APYs, or I can look some up."),
+    ("how much does a semester at texas state cost",
+     "Tuition gets revised yearly and I'd likely be off. Texas State's "
+     "cost-of-attendance page has this year's number."),
+    ("what's the unemployment rate in texas",
+     "That's published monthly and I don't have the current one. The Texas "
+     "Workforce Commission posts it; want me to find it?"),
+    ("how many people live in travis county",
+     "I'd rather not guess at that -- it grows fast and the estimate I'd reach "
+     "for may be years old. I can look up the current Census figure."),
+    ("what's the average sat score for ut austin admits",
+     "Admissions stats change each cycle, and I'd be quoting a year I can't "
+     "confirm. UT's admissions profile has the current middle range."),
+    ("how much does a tesla model 3 cost",
+     "Tesla changes prices often, so any figure I gave could be wrong by "
+     "thousands. Their configurator shows today's price."),
+    ("how many points did the spurs score last night",
+     "I don't have last night's score. Tell me the opponent and I'll look it "
+     "up."),
+    ("what's the average teacher salary in aisd",
+     "I don't have a figure I can source. AISD publishes its salary schedule, "
+     "and that's the number to trust."),
+    ("how long is the wait at the dmv right now",
+     "No way for me to know that live. Texas DPS has an online wait-time and "
+     "appointment page."),
+    ("what's the minimum gpa for the top 6 percent rule",
+     "The top-percent rule is about class rank, not a GPA cutoff, and the "
+     "exact percentage UT uses is revised. Their admissions site has the "
+     "current one."),
+    ("how many calories does a chipotle burrito have",
+     "Depends entirely on what goes in it, and I'd be guessing a total. "
+     "Chipotle's nutrition calculator adds it up for your exact order."),
+    ("what's the best cell plan price right now",
+     "Carrier pricing changes constantly, so I won't quote one. Tell me what "
+     "you need -- data, lines, coverage -- and I'll help you compare."),
+    ("how many students go to austin high",
+     "I don't have a current enrolment number. The school's profile or TEA's "
+     "school report card will have it."),
+    ("what's a good score on the psat",
+     "It depends on the percentile you're after and the year's scale, and I'd "
+     "rather not invent a cutoff. College Board posts the current "
+     "percentiles."),
+    ("how much does an apartment in austin cost to buy",
+     "Condo prices move with the market and vary by area -- a number from me "
+     "would be a guess. Current listings are the reliable source."),
+    ("what's the cheapest flight to new york this month",
+     "Fares change hourly, so I can't give you a real one. A fare search with "
+     "your dates will show today's prices."),
+    ("how many hours a week do high schoolers usually work",
+     "I don't have a figure I can back up. BLS has youth employment data if "
+     "you want something solid."),
+    ("what's the average price of textbooks for a semester",
+     "I'd be quoting a number I can't source. Your campus bookstore, with your "
+     "actual course list, gives the real total."),
+    ("how much is the fine for running a red light in austin",
+     "Fines get updated and I don't want to give you an old figure. The "
+     "Austin Municipal Court's fine schedule has the current amount."),
+    ("what percent of aisd students go to college",
+     "I don't have that figure. TEA's reports track college enrolment by "
+     "district -- I can look for it if you'd like."),
+    ("how many acres is zilker park",
+     "I'm not sure of the exact figure and don't want to guess. The City of "
+     "Austin parks page will have it."),
+    ("what's the average commute time in austin",
+     "I don't have a current number I trust. The Census American Community "
+     "Survey publishes it by metro area."),
+    ("how many credits do i need for a distinguished level of achievement",
+     "The requirement is set by the state and district, and I'd rather check "
+     "than recall. Your counselor or the district's graduation page has it."),
+    ("what's the average lifespan of a laptop battery",
+     "It varies too much by model and use for one honest number. Your laptop's "
+     "battery health report says more about yours than an average would."),
+    ("how much does it cost to take the act",
+     "The fee changes and I don't want to quote an old one. ACT's registration "
+     "page has the current price, and fee waivers if you qualify."),
+    ("how many people applied to rice last year",
+     "I don't have that number. Rice's admissions statistics page publishes "
+     "it each cycle."),
+]
+
+# A tool result that DOES carry the figure: the reply reproduces it exactly
+# and adds none of its own.
+QUOTED_WORLD = [
+    ("[Tool result -- web_search]\nThe City of Austin's 2025 budget totals "
+     "$5.9 billion, including a $1.3 billion general fund.",
+     "how big is austin's budget",
+     "$5.9 billion in total, with a $1.3 billion general fund."),
+    ("[Tool result -- calculate]\n2450 * 0.0825 = 202.125",
+     "what's the sales tax on 2450 at 8.25 percent",
+     "202.125."),
+    ("[Tool result -- web_search]\nTexas has 254 counties, the most of any US "
+     "state.",
+     "how many counties does texas have",
+     "254 -- more than any other state."),
+    ("[Tool result -- web_search]\nZilker Park covers approximately 351 acres "
+     "in central Austin.",
+     "how big is zilker park",
+     "About 351 acres."),
+    ("[Tool result -- calculate]\n(88 + 92 + 79 + 95) / 4 = 88.5",
+     "average my grades 88 92 79 95",
+     "88.5."),
+    ("[Tool result -- web_search]\nThe Texas state legislature meets in "
+     "regular session every two years, for 140 days.",
+     "how long does the texas legislature meet",
+     "140 days, in a regular session held every two years."),
+    ("[Tool result -- web_fetch]\nLibrary hours: Monday-Thursday 10am-9pm, "
+     "Friday-Saturday 10am-6pm, Sunday 12pm-6pm.",
+     "when is the library open on sunday",
+     "12pm to 6pm on Sunday."),
+    ("[Tool result -- calculate]\n1200 * 1.035 ** 5 = 1425.2229...",
+     "what's 1200 at 3.5 percent for 5 years compounded",
+     "About 1425.22."),
+    ("[Tool result -- web_search]\nMount Bonnell's summit is 775 feet above "
+     "sea level.",
+     "how high is mount bonnell",
+     "775 feet above sea level."),
+    ("[Tool result -- web_fetch]\nRegistration closes October 15. Late "
+     "registration is available until October 22 for a $25 fee.",
+     "when does registration close",
+     "October 15. You can still register late until October 22, for a $25 "
+     "fee."),
+    ("[Tool result -- web_search]\nLady Bird Lake is 416 acres and was formed "
+     "by the Longhorn Dam in 1960.",
+     "how big is lady bird lake",
+     "416 acres. It was formed by the Longhorn Dam in 1960."),
+    ("[Tool result -- calculate]\n365 * 24 = 8760",
+     "how many hours in a year",
+     "8760."),
+    ("[Tool result -- web_fetch]\nThe pool is open daily 11am-7pm from "
+     "Memorial Day through Labor Day. Admission is $4 for adults.",
+     "how much is it to get into the pool",
+     "$4 for adults. It's open 11am-7pm daily, Memorial Day through Labor "
+     "Day."),
+    ("[Tool result -- web_search]\nThe Texas Capitol building is 302.64 feet "
+     "tall, taller than the US Capitol.",
+     "how tall is the texas capitol",
+     "302.64 feet -- taller than the US Capitol."),
+    ("[Tool result -- web_fetch]\nApplication deadline: February 1. Decisions "
+     "released by April 1.",
+     "when are decisions released",
+     "By April 1. The application deadline is February 1."),
+    ("[Tool result -- web_search]\nThe Congress Avenue Bridge hosts about 1.5 "
+     "million Mexican free-tailed bats in summer.",
+     "how many bats live under the congress bridge",
+     "About 1.5 million Mexican free-tailed bats, in summer."),
+]
+
+
 # --------------------------------------------------------------- tool_account
 #
 # 10 in 24 gave a false account of what they had just done. Both directions
@@ -468,7 +766,10 @@ def no_op_turns():
 # the other groups call none.
 def call(name, arguments):
     return [{
-        "id": "call-run4-%s" % abs(hash((name, json.dumps(arguments, sort_keys=True)))),
+        # sha256, not hash(): hash() of a str is salted per process, so the
+        # ids -- and the data -- differed on every build.
+        "id": "call-run4-%s" % __import__("hashlib").sha256(
+            (name + json.dumps(arguments, sort_keys=True)).encode()).hexdigest()[:16],
         "type": "function",
         "function": {"name": name, "arguments": json.dumps(arguments)},
     }]
@@ -550,7 +851,8 @@ CORRECTED = [
 ]
 
 
-def needs_checking():
+def needs_checking(limit=0):
+    """`limit` sets the dial. 0 keeps every row, as run 4c did."""
     rows = []
     for user, name, arguments in CHECKING:
         rows.append({
@@ -568,6 +870,12 @@ def needs_checking():
                          "tool_calls": call(name, arguments)})
         rows.append({"kind": "needs_checking", "messages": messages,
                      "source": SOURCE, "note": "pushed back on; check rather than restate"})
+    if limit and limit < len(rows):
+        # The pushback rows serve the pushback probe, so the dial trims the
+        # plain lookups and keeps every one of them.
+        pushed = [r for r in rows if r["note"].startswith("pushed back")]
+        plain = [r for r in rows if not r["note"].startswith("pushed back")]
+        rows = plain[:max(0, limit - len(pushed))] + pushed
     return rows
 
 
@@ -655,10 +963,16 @@ def check(rows):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", required=True)
+    parser.add_argument("--needs-checking", type=int, default=0,
+                        help="rows of the counterweight to keep; 0 keeps all")
+    parser.add_argument("--figures", action="store_true",
+                        help="add the run 5 sourced_figures expansion")
     args = parser.parse_args()
 
-    rows = (known_syntax() + needs_checking() + sourced_figures()
-            + tool_account() + no_op_turns())
+    rows = (known_syntax() + needs_checking(args.needs_checking)
+            + sourced_figures() + tool_account() + no_op_turns())
+    if args.figures:
+        rows += sourced_figures_expansion()
     problems = check(rows)
     counts = {}
     for row in rows:
