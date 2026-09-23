@@ -105,10 +105,13 @@ def main():
     ap.add_argument("--think", action="store_true")
     ap.add_argument("--skip-exec", action="store_true")
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--server", default="",
+                    help="score NAME (the base or an adapter) through the running "
+                         "server instead of loading the model offline; see "
+                         "served_generate.py")
     args = ap.parse_args()
 
     from transformers import AutoTokenizer
-    from vllm import LLM, SamplingParams
 
     rows = [json.loads(l) for l in open(args.eval, encoding="utf-8")]
     if args.skip_exec:
@@ -122,11 +125,16 @@ def main():
                                        add_generation_prompt=True, tokenize=False, **kw)
                for r in rows]
 
-    llm = LLM(model=args.model, max_model_len=8192, gpu_memory_utilization=0.90,
-              max_num_seqs=16, max_num_batched_tokens=2048,
-              attention_backend="TRITON_ATTN")
-    params = [SamplingParams(max_tokens=r["max_tokens"], temperature=0.0) for r in rows]
-    outs = llm.generate(prompts, params)
+    if args.server:
+        from served_generate import served_generate
+        outs = served_generate(prompts, [r["max_tokens"] for r in rows], args.server)
+    else:
+        from vllm import LLM, SamplingParams
+        llm = LLM(model=args.model, max_model_len=8192, gpu_memory_utilization=0.90,
+                  max_num_seqs=16, max_num_batched_tokens=2048,
+                  attention_backend="TRITON_ATTN")
+        params = [SamplingParams(max_tokens=r["max_tokens"], temperature=0.0) for r in rows]
+        outs = llm.generate(prompts, params)
 
     tally = collections.defaultdict(lambda: [0, 0])   # task -> [correct, total]
     records = []

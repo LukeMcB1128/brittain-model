@@ -74,10 +74,13 @@ def main():
     ap.add_argument("--spec", action="store_true")
     ap.add_argument("--think", action="store_true")
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--server", default="",
+                    help="score NAME (the base or an adapter) through the running "
+                         "server instead of loading the model offline; see "
+                         "served_generate.py")
     args = ap.parse_args()
 
     from transformers import AutoTokenizer
-    from vllm import LLM, SamplingParams
 
     rows = [json.loads(l) for l in open(args.eval, encoding="utf-8")]
     if args.limit:
@@ -96,10 +99,15 @@ def main():
               % (head, r["python"].strip())}],
             add_generation_prompt=True, tokenize=False, **kw))
 
-    llm = LLM(model=args.model, max_model_len=8192, gpu_memory_utilization=0.90,
-              max_num_seqs=16, max_num_batched_tokens=2048,
-              attention_backend="TRITON_ATTN")
-    outs = llm.generate(prompts, SamplingParams(max_tokens=768, temperature=0.0))
+    if args.server:
+        from served_generate import served_generate
+        outs = served_generate(prompts, [768] * len(prompts), args.server)
+    else:
+        from vllm import LLM, SamplingParams
+        llm = LLM(model=args.model, max_model_len=8192, gpu_memory_utilization=0.90,
+                  max_num_seqs=16, max_num_batched_tokens=2048,
+                  attention_backend="TRITON_ATTN")
+        outs = llm.generate(prompts, SamplingParams(max_tokens=768, temperature=0.0))
 
     tally = collections.Counter()
     reasons = collections.Counter()
