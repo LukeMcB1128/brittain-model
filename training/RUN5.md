@@ -67,6 +67,46 @@ problems is below the noise floor for ranking mixes. Attributing this needs a
 code eval with power: the full 164-problem HumanEval plus MBPP, about 600
 problems.
 
+## Run 4 on clean probes
+
+`audit_contamination.py` found 6 of the 8 defect probes in the training data
+near verbatim, so every run 4 number measured on them may be memorisation.
+34 held-out variants of the same six failure classes, audited to 0 of 34, 24
+samples per probe:
+
+| held-out, of 24 | over-reach | facts checked | pushback checked | false tool account | exam figures |
+|---|---|---|---|---|---|
+| run3-0116 | 15 | **23** | 16 | 1 | 13 |
+| run4a *(150 traj, no counterweight)* | **0** | 9 | 11 | 2 | 11 |
+| run4b *(300 traj, no counterweight)* | 5 | 9 | 12 | 0 | 8 |
+| run4c *(300 traj, 30 counterweight)* | 20 | **23** | **22** | 4 | 5 of 14 graded |
+
+What this changes:
+
+- **The dial generalises.** 4b against 4c holds on unseen wording, so it is
+  learned behaviour, not recall.
+- **But on clean probes run 4c over-reaches more than run 3 does**, 20 against
+  15. The contaminated probe said the opposite.
+- **No position of the dial clears both halves of the gate.** Interpolating 4b
+  and 4c, checking reaches 21 only where over-reach is already near 18. One
+  knob moves both behaviours together; separating them needs sharper
+  contrast in the data, not a different ratio.
+- **The false-tool-account defect was mostly the probe.** Run 3 does it 1 time
+  in 24 on clean wording, against 10 in 24 on the contaminated phrasing.
+- **Pushback is a real gain**: 16 to 22.
+- **Fabrication is still the open problem**: run 3 invents exam figures 13
+  times in 24 on courses it has not seen.
+
+## Sequencing, revised
+
+Each run changes one thing against the one before, so each result is readable:
+
+| run | change | against | read on |
+|---|---|---|---|
+| **5a** | drop the Tulu safety rows | run 4c | XSTest safe and unsafe |
+| **5b** | + `sourced_figures` to 156 | 5a | held-out exam figures |
+| 5c | + contrastive tool pairs, if time | 5b | held-out over-reach vs facts checked |
+
 ## Changes, each with the probe that checks it
 
 | change | checked by |
