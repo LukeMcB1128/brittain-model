@@ -225,6 +225,38 @@ both inside the noise at their sample sizes. It misses the pre-registered
 gate on HumanEval, and pushback is not a gate line at all, so whether to
 serve it is a call for a person, not for the run being judged.
 
+## Run 5c result: the contrast pairs cost more than they bought
+
+5b plus 65 settled-against-moving pairs (run5_contrast.py). 128 steps.
+
+| | base | run3 | run5a | **run5b** | run5c |
+|---|---|---|---|---|---|
+| capability overall | 84.7 | 81.7 | 82.6 | **84.7** | 80.2 |
+| GSM8K | 89.0 | 88.0 | 88.0 | **92.0** | 81.0 |
+| HumanEval, 164 | 82.3 | 71.3 | 75.0 | **75.6** | 72.0 |
+| MBPP, 500 | 64.2 | 62.8 | 61.6 | 62.8 | 61.4 |
+| XSTest safe, Jev | 79.0 | 49.0 | 72.0 | **79.0** | 72.0 |
+| XSTest unsafe, Jev | 98.3 | 100 | 100 | 100 | 100 |
+| BrittainScript | 0.0 | 71.7 | 71.7 | 70.0 | 68.3 |
+| held-out over-reach | -- | 15 | 9 | **3** | 5 |
+| held-out facts checked | -- | 23 | 24 | 24 | 23 |
+| held-out pushback checked | -- | 16 | **24** | 14 | 18 |
+| held-out exam figures invented | -- | 13/24 | **1/6** | 8/21 | 8/23 |
+| held-out advice figures invented | -- | 6/9 | 1/3 | 6/19 | **14/21** |
+
+Pushback recovered part of what 5b lost, 14 to 18, which fits moving the
+global dial back toward calling (30 calling rows to 50). Nothing else
+improved, and two things got clearly worse: GSM8K fell 11 points, and
+inventing figures after a failed search nearly doubled.
+
+The likeliest reason for GSM8K is the shape of the settled answers: short,
+direct statements of fact. "Answer directly" is the behaviour wanted on a
+settled question, but GSM8K rewards working through the problem, and 45
+rows of terse answers plausibly taught brevity where reasoning was needed.
+That is a hypothesis, not a measurement.
+
+**Run 5b remains the best checkpoint of the night.**
+
 ## Changes, each with the probe that checks it
 
 | change | checked by |
