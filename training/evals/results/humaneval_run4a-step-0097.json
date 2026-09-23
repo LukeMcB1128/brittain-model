@@ -1,0 +1,332 @@
+{
+  "summary": {
+    "label": "run4a-step-0097",
+    "thinking": false,
+    "scores": {
+      "humaneval": 72.5,
+      "capability_overall": 72.5
+    }
+  },
+  "records": [
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\nfrom typing import List\n\n\ndef factorize(n: int) -> List[int]:\n    \"\"\" Return list of prime factors of given integer in the order from smallest to largest.\n    Each of the factors should be listed number of times corresponding to how many times it appeares in factorization.\n    Input number should be equal to the product of all factors\n    >>> factorize(8)\n    [2, 2, 2]\n    >>> factorize(25)\n    [5, 5]\n    >>> factorize(70)\n    [2, 5, 7]\n    \"\"\"\n    factors = []\n    d = 2\n    while d * d <= n:\n        while n % d == 0:\n            factors.append(d)\n            n //= d\n        d += 1\n "
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef decimal_to_binary(decimal):\n    return \"db\" + bin(decimal)[2:] + \"db\"\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": false,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef fix_spaces(text):\n    \"\"\"\n    Given a string text, replace all spaces in it with underscores, \n    and if a string has more than 2 consecutive spaces, \n    then replace all consecutive spaces with - \n    \n    fix_spaces(\"Example\") == \"Example\"\n    fix_spaces(\"Example 1\") == \"Example_1\"\n    fix_spaces(\" Example 2\") == \"_Example_2\"\n    fix_spaces(\" Example   3\") == \"_Example-3\"\n    \"\"\"\n    result = []\n    i = 0\n    while i < len(text):\n        if text[i] == ' ':\n            j = i\n            while j < len(text) and text[j] == ' ':\n                j += 1\n            if j - i > 2:\n  "
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef modp(n: int, p: int):\n    \"\"\"Return 2^n modulo p (be aware of numerics).\n    >>> modp(3, 5)\n    3\n    >>> modp(1101, 101)\n    2\n    >>> modp(0, 101)\n    1\n    >>> modp(3, 11)\n    8\n    >>> modp(100, 101)\n    1\n    \"\"\"\n    return pow(2, n, p)\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef sum_to_n(n: int):\n    return n * (n + 1) // 2\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": false,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef next_smallest(lst):\n    if len(lst) < 2:\n        return None\n    sorted_lst = sorted(lst)\n    return sorted_lst[1]\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef common(l1: list, l2: list):\n    return sorted(set(l1) & set(l2))\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\nfrom typing import List, Any\n\n\ndef filter_integers(values: List[Any]) -> List[int]:\n    \"\"\" Filter given list of any python values only for integers\n    >>> filter_integers(['a', 3.14, 5])\n    [5]\n    >>> filter_integers([1, 2, 3, 'abc', {}, []])\n    [1, 2, 3]\n    \"\"\"\n    return [x for x in values if isinstance(x, int) and not isinstance(x, bool)]\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef int_to_mini_roman(number):\n    \"\"\"\n    Given a positive integer, obtain its roman numeral equivalent as a string,\n    and return it in lowercase.\n    Restrictions: 1 <= num <= 1000\n\n    Examples:\n    >>> int_to_mini_roman(19) == 'xix'\n    >>> int_to_mini_roman(152) == 'clii'\n    >>> int_to_mini_roman(426) == 'cdxxvi'\n    \"\"\"\n    roman = {1000: 'm', 900: 'cm', 500: 'd', 400: 'cd', 100: 'c', 90: 'xc', 50: 'l', 40: 'xl', 10: 'x', 9: 'ix', 5: 'v', 4: 'iv', 1: 'i'}\n    res = ''\n    for i in sorted(roman.keys(), reverse=True):\n        while number >= i:\n            res += roman[i]\n    "
+    },
+    {
+      "task": "humaneval",
+      "ok": false,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef order_by_points(nums):\n    \"\"\"\n    Write a function which sorts the given list of integers\n    in ascending order according to the sum of their digits.\n    Note: if there are several items with similar sum of their digits,\n    order them based on their index in original list.\n\n    For example:\n    >>> order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\n    >>> order_by_points([]) == []\n    \"\"\"\n    def sum_digits(n):\n        return sum(int(d) for d in str(abs(n)))\n    return sorted(nums, key=lambda n: (sum_digits(n), nums.index(n)))\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef flip_case(string: str) -> str:\n    \"\"\" For a given string, flip lowercase characters to uppercase and uppercase to lowercase.\n    >>> flip_case('Hello')\n    'hELLO'\n    \"\"\"\n    return string.swapcase()\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef search(lst):\n    from collections import Counter\n    counts = Counter(lst)\n    return max([i for i in counts if counts[i] >= i and i > 0], default=-1)\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef file_name_check(file_name):\n    if file_name.count('.') != 1:\n        return 'No'\n    name, ext = file_name.split('.')\n    if not name or not name[0].isalpha():\n        return 'No'\n    if ext not in ['txt', 'exe', 'dll']:\n        return 'No'\n    if len([c for c in file_name if c.isdigit()]) > 3:\n        return 'No'\n    return 'Yes'\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\nfrom typing import List, Tuple\n\n\ndef find_closest_elements(numbers: List[float]) -> Tuple[float, float]:\n    \"\"\" From a supplied list of numbers (of length at least two) select and return two that are the closest to each\n    other and return them in order (smaller number, larger number).\n    >>> find_closest_elements([1.0, 2.0, 3.0, 4.0, 5.0, 2.2])\n    (2.0, 2.2)\n    >>> find_closest_elements([1.0, 2.0, 3.0, 4.0, 5.0, 2.0])\n    (2.0, 2.0)\n    \"\"\"\n    min_diff = float('inf')\n    closest_pair = (None, None)\n    for i in range(len(numbers)):\n        for j in range(i + 1, len(numbers)):\n"
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef move_one_ball(arr):\n    if len(arr) <= 1:\n        return True\n    count = 0\n    for i in range(len(arr)):\n        if arr[i] > arr[(i + 1) % len(arr)]:\n            count += 1\n    return count <= 1\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef strange_sort_list(lst):\n    '''\n    Given list of integers, return list in strange order.\n    Strange sorting, is when you start with the minimum value,\n    then maximum of the remaining integers, then minimum and so on.\n\n    Examples:\n    strange_sort_list([1, 2, 3, 4]) == [1, 4, 2, 3]\n    strange_sort_list([5, 5, 5, 5]) == [5, 5, 5, 5]\n    strange_sort_list([]) == []\n    '''\n    if not lst:\n        return []\n    lst = sorted(lst)\n    res = []\n    while lst:\n        res.append(lst.pop(0))\n        if lst:\n            res.append(lst.pop(-1))\n    return res\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef car_race_collision(n: int):\n    return n * n\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": false,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\nimport math\n\ndef poly(xs: list, x: float):\n    \"\"\"\n    Evaluates polynomial with coefficients xs at point x.\n    return xs[0] + xs[1] * x + xs[1] * x^2 + .... xs[n] * x^n\n    \"\"\"\n    return sum([coeff * math.pow(x, i) for i, coeff in enumerate(xs)])\n\n\ndef find_zero(xs: list):\n    \"\"\" xs are coefficients of a polynomial.\n    find_zero find x such that poly(x) = 0.\n    find_zero returns only only zero point, even if there are many.\n    Moreover, find_zero only takes list xs having even number of coefficients\n    and largest non zero coefficient as it guarantees\n    a solution.\n    >>> "
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef get_max_triples(n):\n    a = [i * i - i + 1 for i in range(1, n + 1)]\n    count = 0\n    for i in range(n):\n        for j in range(i + 1, n):\n            for k in range(j + 1, n):\n                if (a[i] + a[j] + a[k]) % 3 == 0:\n                    count += 1\n    return count\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef monotonic(l: list):\n    \"\"\"Return True is list elements are monotonically increasing or decreasing.\n    >>> monotonic([1, 2, 4, 20])\n    True\n    >>> monotonic([1, 20, 4, 10])\n    False\n    >>> monotonic([4, 1, 0, -10])\n    True\n    \"\"\"\n    if len(l) <= 2:\n        return True\n    increasing = l[1] > l[0]\n    decreasing = l[1] < l[0]\n    for i in range(2, len(l)):\n        if increasing and l[i] < l[i-1]:\n            return False\n        if decreasing and l[i] > l[i-1]:\n            return False\n    return True\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef sum_squares(lst):\n    \"\"\"\"\n    This function will take a list of integers. For all entries in the list, the function shall square the integer entry if its index is a \n    multiple of 3 and will cube the integer entry if its index is a multiple of 4 and not a multiple of 3. The function will not \n    change the entries in the list whose indexes are not a multiple of 3 or 4. The function shall then return the sum of all entries. \n    \n    Examples:\n    For lst = [1,2,3] the output should be 6\n    For lst = []  the output should be 0\n    For lst = [-1,-5,2,-1,-5]  the output should "
+    },
+    {
+      "task": "humaneval",
+      "ok": false,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef circular_shift(x, shift):\n    \"\"\"Circular shift the digits of the integer x, shift the digits right by shift\n    and return the result as a string.\n    If shift > number of digits, return digits reversed.\n    >>> circular_shift(12, 1)\n    \"21\"\n    >>> circular_shift(12, 2)\n    \"12\"\n    \"\"\"\n    s = str(x)\n    n = len(s)\n    if shift >= n:\n        return s[::-1]\n    return s[-shift:] + s[:-shift]\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef fib4(n: int):\n    \"\"\"The Fib4 number sequence is a sequence similar to the Fibbonacci sequnece that's defined as follows:\n    fib4(0) -> 0\n    fib4(1) -> 0\n    fib4(2) -> 2\n    fib4(3) -> 0\n    fib4(n) -> fib4(n-1) + fib4(n-2) + fib4(n-3) + fib4(n-4).\n    Please write a function to efficiently compute the n-th element of the fib4 number sequence.  Do not use recursion.\n    >>> fib4(5)\n    4\n    >>> fib4(6)\n    8\n    >>> fib4(7)\n    14\n    \"\"\"\n    if n == 0:\n        return 0\n    if n == 1:\n        return 0\n    if n == 2:\n        return 2\n    if n == 3:\n        return 0\n    a, b, c"
+    },
+    {
+      "task": "humaneval",
+      "ok": false,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef is_nested(string):\n    stack = []\n    for char in string:\n        if char == '[':\n            stack.append(char)\n        elif char == ']':\n            if not stack:\n                return False\n            stack.pop()\n    return len(stack) > 1\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\nfrom typing import List\n\n\ndef has_close_elements(numbers: List[float], threshold: float) -> bool:\n    \"\"\" Check if in given list of numbers, are any two numbers closer to each other than\n    given threshold.\n    >>> has_close_elements([1.0, 2.0, 3.0], 0.5)\n    False\n    >>> has_close_elements([1.0, 2.8, 3.0, 4.0, 5.0, 2.0], 0.3)\n    True\n    \"\"\"\n    for i in range(len(numbers)):\n        for j in range(i + 1, len(numbers)):\n            if abs(numbers[i] - numbers[j]) < threshold:\n                return True\n    return False\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef sort_array(array):\n    if len(array) == 0:\n        return array\n    if (array[0] + array[-1]) % 2 == 0:\n        return sorted(array, reverse=True)\n    return sorted(array)\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef minSubArraySum(nums):\n    \"\"\"\n    Given an array of integers nums, find the minimum sum of any non-empty sub-array\n    of nums.\n    Example\n    minSubArraySum([2, 3, 4, 1, 2, 4]) == 1\n    minSubArraySum([-1, -2, -3]) == -6\n    \"\"\"\n    min_sum = nums[0]\n    current_sum = nums[0]\n    for num in nums[1:]:\n        current_sum = min(num, current_sum + num)\n        min_sum = min(min_sum, current_sum)\n    return min_sum\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\nfrom typing import List\n\n\ndef intersperse(numbers: List[int], delimeter: int) -> List[int]:\n    \"\"\" Insert a number 'delimeter' between every two consecutive elements of input list `numbers'\n    >>> intersperse([], 4)\n    []\n    >>> intersperse([1, 2, 3], 4)\n    [1, 4, 2, 4, 3]\n    \"\"\"\n    result = []\n    for i, num in enumerate(numbers):\n        result.append(num)\n        if i != len(numbers) - 1:\n            result.append(delimeter)\n    return result\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": false,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef prime_fib(n: int):\n    \"\"\"\n    prime_fib returns n-th number that is a Fibonacci number and it's also prime.\n    >>> prime_fib(1)\n    2\n    >>> prime_fib(2)\n    3\n    >>> prime_fib(3)\n    5\n    >>> prime_fib(4)\n    13\n    >>> prime_fib(5)\n    89\n    \"\"\"\n    def is_prime(num):\n        if num < 2:\n            return False\n        if num == 2:\n            return True\n        if num % 2 == 0:\n            return False\n        for i in range(3, int(num**0.5) + 1, 2):\n            if num % i == 0:\n                return False\n        return True\n\n    def fib(n):\n        a, b = 0, 1\n     "
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef is_prime(n):\n    \"\"\"Return true if a given number is prime, and false otherwise.\n    >>> is_prime(6)\n    False\n    >>> is_prime(101)\n    True\n    >>> is_prime(11)\n    True\n    >>> is_prime(13441)\n    True\n    >>> is_prime(61)\n    True\n    >>> is_prime(4)\n    False\n    >>> is_prime(1)\n    False\n    \"\"\"\n    if n < 2:\n        return False\n    if n == 2:\n        return True\n    if n % 2 == 0:\n        return False\n    for i in range(3, int(n ** 0.5) + 1, 2):\n        if n % i == 0:\n            return False\n    return True\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": false,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef make_palindrome(string: str) -> str:\n    \"\"\" Find the shortest palindrome that begins with a supplied string.\n    Algorithm idea is simple:\n    - Find the longest postfix of supplied string that is a palindrome.\n    - Append to the end of the string reverse of a string prefix that comes before the palindromic suffix.\n    >>> make_palindrome('')\n    ''\n    >>> make_palindrome('cat')\n    'catac'\n    >>> make_palindrome('cata')\n    'catac'\n    \"\"\"\n    for i in range(len(string)):\n        if is_palindrome(string[i:]):\n            return string + string[:i][::-1]\n    return string\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": false,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef max_fill(grid, capacity):\n    import math\n    total = 0\n    for row in grid:\n        total += sum(row)\n    return math.ceil(total / capacity)\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef greatest_common_divisor(a: int, b: int) -> int:\n    \"\"\" Return a greatest common divisor of two integers a and b\n    >>> greatest_common_divisor(3, 5)\n    1\n    >>> greatest_common_divisor(25, 15)\n    5\n    \"\"\"\n    while b:\n        a, b = b, a % b\n    return a\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef match_parens(lst):\n    def is_good(s):\n        balance = 0\n        for c in s:\n            balance += 1 if c == '(' else -1\n            if balance < 0:\n                return False\n        return balance == 0\n\n    return 'Yes' if is_good(lst[0] + lst[1]) or is_good(lst[1] + lst[0]) else 'No'\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef how_many_times(string: str, substring: str) -> int:\n    \"\"\" Find how many times a given substring can be found in the original string. Count overlaping cases.\n    >>> how_many_times('', 'a')\n    0\n    >>> how_many_times('aaa', 'a')\n    3\n    >>> how_many_times('aaaa', 'aa')\n    3\n    \"\"\"\n    if not substring:\n        return 0\n    count = 0\n    for i in range(len(string) - len(substring) + 1):\n        if string[i:i+len(substring)] == substring:\n            count += 1\n    return count\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef double_the_difference(lst):\n    '''\n    Given a list of numbers, return the sum of squares of the numbers\n    in the list that are odd. Ignore numbers that are negative or not integers.\n    \n    double_the_difference([1, 3, 2, 0]) == 1 + 9 + 0 + 0 = 10\n    double_the_difference([-1, -2, 0]) == 0\n    double_the_difference([9, -2]) == 81\n    double_the_difference([0]) == 0  \n   \n    If the input list is empty, return 0.\n    '''\n    return sum(x ** 2 for x in lst if isinstance(x, int) and x >= 0 and x % 2 == 1)\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\nfrom typing import List\n\n\ndef sort_numbers(numbers: str) -> str:\n    \"\"\" Input is a space-delimited string of numberals from 'zero' to 'nine'.\n    Valid choices are 'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight' and 'nine'.\n    Return the string with numbers sorted from smallest to largest\n    >>> sort_numbers('three one five')\n    'one three five'\n    \"\"\"\n    mapping = {\n        'zero': 0, 'one': 1, 'two': 2, 'three': 3, 'four': 4,\n        'five': 5, 'six': 6, 'seven': 7, 'eight': 8, 'nine': 9\n    }\n    return ' '.join(sorted(numbers.split(), key=mapping.get)"
+    },
+    {
+      "task": "humaneval",
+      "ok": true,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef is_happy(s):\n    if len(s) < 3:\n        return False\n    for i in range(len(s) - 2):\n        if s[i] == s[i + 1] or s[i] == s[i + 2] or s[i + 1] == s[i + 2]:\n            return False\n    return True\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": false,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef find_max(words):\n    \"\"\"Write a function that accepts a list of strings.\n    The list contains different words. Return the word with maximum number\n    of unique characters. If multiple strings have maximum number of unique\n    characters, return the one which comes first in lexicographical order.\n\n    find_max([\"name\", \"of\", \"string\"]) == \"string\"\n    find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\n    find_max([\"aaaaaaa\", \"bb\" ,\"cc\"]) == \"\"aaaaaaa\"\n    \"\"\"\n    return max(words, key=lambda word: (len(set(word)), word))\n```"
+    },
+    {
+      "task": "humaneval",
+      "ok": false,
+      "got": null,
+      "expected": null,
+      "xtype": null,
+      "raw": "```python\ndef vowels_count(s):\n    vowels = \"aeiouAEIOU\"\n    count = 0\n    for i in range(len(s)):\n        if s[i] in vowels:\n            count += 1\n        elif s[i] == 'y' and i == len(s) - 1:\n            count += 1\n    return count\n```"
+    }
+  ]
+}

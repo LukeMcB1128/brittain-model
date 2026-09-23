@@ -1,0 +1,1091 @@
+{
+  "summary": {
+    "label": "run3-step-0116 via server",
+    "spec_given": false,
+    "n": 120,
+    "parses": 79.2,
+    "matches": 71.7
+  },
+  "records": [
+    {
+      "hash": "b8d98106b27ebe9f",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "hello world!\nthis is my first attempt",
+      "got": "hello world!\nthis is my first attempt",
+      "code": "push(\"hello world!\")\npush(\"this is my first attempt\")"
+    },
+    {
+      "hash": "95e978f8c16bb894",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "30",
+      "got": "30",
+      "code": "func calculate_sum(data1, data2):\n    result_sum = (data1 + data2)\n    return result_sum\nend\nresult = calculate_sum(10, 20)\npush(result)"
+    },
+    {
+      "hash": "1391f4cd03f0035d",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "34\n34\nnome\n13\nOla me chamo Gabriel! Como e seu nome?",
+      "got": "34\n34\nnome\n13\nOla me chamo Gabriel! Como e seu nome?",
+      "code": "frase = \"Ola me chamo Leonardo! Como e seu nome?\"\npush(frase.index(\"nome\"))\npush(frase.find(\"nome\"))\npush(frase[34:38])\npush(frase.find(\"Leonardo\"))\npush(frase[:13] + \"Gabriel\" + frase[21:])"
+    },
+    {
+      "hash": "c133d8f6b94472c3",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "meu primeiro programa em python\n5",
+      "got": "meu primeiro programa em python\n5",
+      "code": "push(\"meu primeiro programa em python\")\na = 2\nb = 3\nsoma = (a + b)\npush(soma)"
+    },
+    {
+      "hash": "50b75e0ee37fc716",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "CPuPrPsPoP PePmP PVP\u00edPdPePoP PPPyPtPhPoPn",
+      "got": "CPuPrPsPoP PePmP PVP\u00edPdPePoP PPPyPtPhPoPn",
+      "code": "frase = \"Curso em V\u00eddeo Python\"\npush(\"P\".join(frase))"
+    },
+    {
+      "hash": "863e8eace0cca168",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at end of input",
+      "expected": "a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|",
+      "got": "Syntax error at end of input\nSyntax error at end of input\nSyntax error at end of input\nSyntax error at end of input\nSyntax error at end of input",
+      "code": "N = 500000\npush((\"a\" + (\"|\" + (\"a\" * (N - 1))))\npush((\"a\" + (\"|\" + (\"a\" * (N - 1))))\npush((\"a\" + (\"|\" + (\"a\" * (N - 1))))\npush((\"a\" + (\"|\" + (\"a\" * (N - 1))))\npush((\"a\" + (\"|\" + (\"a\" * (N - 1))))"
+    },
+    {
+      "hash": "3aee2d2f57f1715a",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "|\\_/|\n|q p|   /}\n( 0 )\"\"\"\\\n|\"^\"`    |\n||_/=\\\\__|",
+      "got": "|\\_/|\n|q p|   /}\n( 0 )\"\"\"\\\n|\"^\"`    |\n||_/=\\\\__|",
+      "code": "push(\"|\\_/|\")\npush(\"|q p|   /}\")\npush(\"( 0 )\\\"\\\"\\\"\\\\\")\npush(\"|\\\"^\\\"`    |\")\npush(\"||_/=\\\\\\\\__|\")"
+    },
+    {
+      "hash": "430a441ac45918c1",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'L'",
+      "expected": "5\n4\n3\n2\n1",
+      "got": "Syntax error at 'L'\n\nTraceback (most recent call last):\n  File \"/home/lukeb/venv/bin/bs\", line 8, in <module>\n    sys.exit(cli_entry())\n             ~~~~~~~~~^^\n  File \"/home/lukeb/venv/lib/python3.14",
+      "code": "L = [3, 2, 1, 5, 4]\nfim = 5\nwhile fim > 1:\n    trocou = false\n    x = 0\n    while x < (fim - 1):\n        if L[x] < L[x + 1]:\n            trocou = true\n            temp = L[x]\n            L[x] = L[x + 1]\n            L[x + 1] = temp\n        x = x + 1\n    if not trocou:\n        break\n    fim = fim - 1\nfor e in L:\n    push(e)\nend"
+    },
+    {
+      "hash": "017643fa883efec9",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "2021-04-15 16:56:44.613",
+      "got": "2021-04-15 16:56:44.613",
+      "code": "s = \"2021-04-15T16:56:44.613Z\"\ndate = s.split(\"T\")[0]\ntime = s.split(\"T\")[1].split(\"Z\")[0]\ns = date + \" \" + time\npush(s)"
+    },
+    {
+      "hash": "a3a16a155379fc67",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "10500.0\n11025.0\n11576.25\n12155.0625\n12762.815625000001",
+      "got": "10500.0\n11025.0\n11576.25\n12155.0625\n12762.815625000001",
+      "code": "a = 10000\nfor i in space(5):\n    a = a * (1 + 0.05)\n    push(a)\nend"
+    },
+    {
+      "hash": "38ab7ef787ea7e6f",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "Man viss izdodas!",
+      "got": "Man viss izdodas!",
+      "code": "txt = \"Man viss izdodas!\"\npush(txt)"
+    },
+    {
+      "hash": "b28321690d4e834a",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'mod'",
+      "expected": "0",
+      "got": "Syntax error at 'mod'",
+      "code": "push((5 mod 5) div 2)"
+    },
+    {
+      "hash": "4870fdb20455c3a0",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "[1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765, 10946, 17711, 28657, 46368, 75025, 121393, 196418, 317811, 514229, 832040, 1346269, 2178309, 3524578, 5702887, 9",
+      "got": "[1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765, 10946, 17711, 28657, 46368, 75025, 121393, 196418, 317811, 514229, 832040, 1346269, 2178309, 3524578, 5702887, 9",
+      "code": "a = 1\nb = 1\nc = 0\nn = []\nn.append(b)\nwhile a < 10000000000:\n    n.append(a)\n    c = a\n    a = a + b\n    b = c\nend\npush(n)"
+    },
+    {
+      "hash": "271a22bb56095f50",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "a is greater",
+      "got": "a is greater",
+      "code": "a = 44\nb = 32\ncond (a > b):\n    push(\"a is greater\")\nelif (a == b):\n    push(\"Both are equal\")\nelse:\n    push(\"b is greater than a\")\nend"
+    },
+    {
+      "hash": "61dec9557b09fb1c",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "['q', 1, 2, 3, 4]\n['q', 1, 'two and a half', 2, 3, 4]",
+      "got": "['q', 1, 2, 3, 4]\n['q', 1, 'two and a half', 2, 3, 4]",
+      "code": "nums = [1, 2, 3, 4]\nnums.insert(0, \"q\")\npush(nums)\nnums.insert(2, \"two and a half\")\npush(nums)"
+    },
+    {
+      "hash": "144a0b4cb8318553",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "1\n2\n3\n4\n6\n7\n8\n9\n10\n11",
+      "got": "1\n2\n3\n4\n6\n7\n8\n9\n10\n11",
+      "code": "x = 0\nwhile x <= 10:\n    x = x + 1\n    cond (x == 5):\n        continue\n    end\n    push(x)\nend"
+    },
+    {
+      "hash": "3ae95fc1f500f47c",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "#\n#\n#",
+      "got": "#\n#\n#",
+      "code": "for i in space(3):\n    push(\"#\")\nend"
+    },
+    {
+      "hash": "0b07da0a4f60bdf8",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "['Gado-gado', 'Ayam Goreng', 'Rendang', 'Es Teh', 'Es Jeruk', 'Es Campur']",
+      "got": "['Gado-gado', 'Ayam Goreng', 'Rendang', 'Es Teh', 'Es Jeruk', 'Es Campur']",
+      "code": "list_makanan = [\"Gado-gado\", \"Ayam Goreng\", \"Rendang\"]\nlist_minuman = [\"Es Teh\", \"Es Jeruk\", \"Es Campur\"]\nlist_menu = list_makanan + list_minuman\npush(list_menu)"
+    },
+    {
+      "hash": "5f4999f893a8969e",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "x=5",
+      "got": "x=5",
+      "code": "x = 5\ncond (x == 3):\n    push(\"x=3\")\nelif (x == 4):\n    push(\"x=4\")\nelif (x == 5):\n    push(\"x=5\")\nelse:\n    push(\"x!=3v4v5\")\nend"
+    },
+    {
+      "hash": "0d0b08495d602fe8",
+      "parses": true,
+      "matches": false,
+      "reason": null,
+      "expected": "Mary had a little lamb.\nIts fleece was white as snow\nAnd everywhere that Mary went.\n..........\nCheese\nBurger",
+      "got": "Mary had a little lamb.\nIts fleece was white as snow\nAnd everywhere that Mary went.\n..........\nCheese, \nBurger",
+      "code": "push(\"Mary had a little lamb.\")\npush(\"Its fleece was white as \" + tostr(\"snow\"))\npush(\"And everywhere that Mary went.\")\npush(\"..........\")\nend1 = \"C\"\nend2 = \"h\"\nend3 = \"e\"\nend4 = \"e\"\nend5 = \"s\"\nend6 = \"e\"\nend7 = \"B\"\nend8 = \"u\"\nend9 = \"r\"\nend10 = \"g\"\nend11 = \"e\"\nend12 = \"r\"\npush(end1 + end2 + end3 + end4 + end5 + end6 + \", \")\npush(end7 + end8 + end9 + end10 + end11 + end12)"
+    },
+    {
+      "hash": "9971db79c8468a5e",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "1",
+      "got": "1",
+      "code": "my_list = [\"\u043e\u0434\u0438\u043d\", \"\u0434\u0432\u0430\", \"\u0442\u0440\u0438\", \"\u0447\u0435\u0442\u044b\u0440\u0435\", \"\u043f\u044f\u0442\u044c\"]\npush(my_list.index(\"\u0434\u0432\u0430\"))"
+    },
+    {
+      "hash": "c2cdc11efa190f37",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "one of Python's strengths is its diverse community.",
+      "got": "one of Python's strengths is its diverse community.",
+      "code": "message = \"one of Python's strengths is its diverse community.\"\npush(message)"
+    },
+    {
+      "hash": "903c16698ec69da0",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: if",
+      "expected": "False\nTrue\nFalse\n5 is lower than 6\nTrue\nFalse\nTrue\nFalse\nTrue",
+      "got": "Undefined function: if\nSyntax error at ':'\nYes\nSyntax error: unexpected end\nFalse\nTrue\nFalse\nSyntax error at 'result'\n5 is lower than 6\nSyntax error: unexpected end\nTrue\nFalse\nTrue\nFalse\nTrue\nSyntax e",
+      "code": "if (6 < 5):\n    push(\"Yes\")\nend\npush((6 < 5))\npush((5 < 6))\nb = false\npush(b)\nresult = (5 < 6)\nif result:\n    push(\"5 is lower than 6\")\nend\npush((5 < 6))\nword = \"Hello\"\npush((word != \"Hello\"))\npush((word != \"world\"))\nab = 5\npush((ab != 5))\npush((ab != 6))\nend"
+    },
+    {
+      "hash": "9f14abdec7697009",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "String with the use of Single Quotes:\nWelcome to the Geeks World\n\nString with the use of Double Quotes:\nI'm a Geek\n\nString witht he use of Triple Quotes:\nI'm a Geek and I liive in a world of \"Geeks\"\n\n",
+      "got": "String with the use of Single Quotes:\nWelcome to the Geeks World\n\nString with the use of Double Quotes:\nI'm a Geek\n\nString witht he use of Triple Quotes:\nI'm a Geek and I liive in a world of \"Geeks\"\n\n",
+      "code": "String1 = \"Welcome to the Geeks World\"\npush(\"String with the use of Single Quotes:\")\npush(String1)\nString1 = \"I'm a Geek\"\npush(\"\\nString with the use of Double Quotes:\")\npush(String1)\nString1 = \"I'm a Geek and I liive in a world of \\\"Geeks\\\"\"\npush(\"\\nString witht he use of Triple Quotes:\")\npush(String1)\nString1 = \"Geeks\\nFor\\nLife\"\npush(\"\\nCreating a multiline string: \")\npush(String1)"
+    },
+    {
+      "hash": "4968c26d5688ffb6",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at ','",
+      "expected": "2\n4\n8\n16\n16 4",
+      "got": "2\n4\n8\n16\nSyntax error at ','",
+      "code": "X = 4\nY = 1\nZ = 0\nwhile Z < X:\n    Y = (Y * 2)\n    push(Y)\n    Z = (Z + 1)\nend\npush(Y, Z)"
+    },
+    {
+      "hash": "3b45f435d3046e29",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "You get 5 points.",
+      "got": "You get 5 points.",
+      "code": "alien_color = \"green\"\ncond (alien_color == \"green\"):\n    push(\"You get 5 points.\")\nend\nalien_color = \"yellow\"\ncond (alien_color == \"green\"):\n    push(\"You get 5 points.\")\nend"
+    },
+    {
+      "hash": "1159f6d3f3518042",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "5.4",
+      "got": "5.4",
+      "code": "a = 2\nb = 2.7\na = a * b\npush(a)"
+    },
+    {
+      "hash": "cf087253cada173b",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at ','",
+      "expected": "2.7\n2.7 11.4\n2.7 11.4 6.0\n2.7 5.4 6.0\n18.0 5.4 6.0",
+      "got": "2.7\nSyntax error at ','\nSyntax error at ','\nSyntax error at ','\nSyntax error at ','",
+      "code": "d = 2.7\npush(d)\nb = ((d + 3) * 2)\npush(d, b)\nc = ((b * 10) % (d * 10))\npush(d, b, c)\nb = (b - c)\npush(d, b, c)\nd = (c * 3)\npush(d, b, c)"
+    },
+    {
+      "hash": "7a1ecd5225a091d4",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "200\n198\n196\n194\n192\n190\n188\n186\n184\n182\n180\n178\n176\n174\n172\n170\n168\n166\n164\n162\n160\n158\n156\n154\n152\n150\n148\n146\n144\n142\n140\n138\n136\n134\n132\n130\n128\n126\n124\n122\n120\n118\n116\n114\n112\n110\n108\n106\n104\n102\n",
+      "got": "200\n198\n196\n194\n192\n190\n188\n186\n184\n182\n180\n178\n176\n174\n172\n170\n168\n166\n164\n162\n160\n158\n156\n154\n152\n150\n148\n146\n144\n142\n140\n138\n136\n134\n132\n130\n128\n126\n124\n122\n120\n118\n116\n114\n112\n110\n108\n106\n104\n102\n",
+      "code": "c = 200\nwhile c > 99:\n    push(c)\n    c = c - 2\nend"
+    },
+    {
+      "hash": "48fe988a139d1ca4",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "[100, [1, 2, 3, 100]]\n[1, [1, 2, 3, 100]]\n[1, [1, 2, 3]]\n[100, [1, 2, 3, 100]]",
+      "got": "[100, [1, 2, 3, 100]]\n[1, [1, 2, 3, 100]]\n[1, [1, 2, 3]]\n[100, [1, 2, 3, 100]]",
+      "code": "copy = pyimport(\"copy\")\na = [1, [1, 2, 3]]\nb = copy.copy(a)\nc = copy.deepcopy(a)\nd = a\na[0] = 100\na[1].append(100)\npush(a)\npush(b)\npush(c)\npush(d)"
+    },
+    {
+      "hash": "dc101bb064ca275a",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "0.8",
+      "got": "0.8",
+      "code": "func sakura_fall(v):\n    cond (v > 0):\n        return (400 / v)\n    else:\n        return 0\n    end\nend\npush(sakura_fall(500))"
+    },
+    {
+      "hash": "ab79fdf6bdf700dd",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "Suma: 661",
+      "got": "Suma: 661",
+      "code": "numbers = [1, 3, 510, 123, 24]\nnumbers_sum = 0\nnumber_index = 0\nwhile number_index < len(numbers):\n    numbers_sum = numbers_sum + numbers[number_index]\n    number_index = number_index + 1\nend\npush(\"Suma: \" + tostr(numbers_sum))"
+    },
+    {
+      "hash": "c16625d6d70bc419",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "Hello Bharath",
+      "got": "Hello Bharath",
+      "code": "func display(fun):\n    return \"Hello \" + fun\nend\nfunc name():\n    return \"Bharath\"\nend\npush(display(name()))"
+    },
+    {
+      "hash": "cf45b660b6bb4620",
+      "parses": false,
+      "matches": false,
+      "reason": "Illegal character: '\"'",
+      "expected": "You have succesfully created `{{ cookiecutter.repository_slug }}`\nwith these cookiecutter parameters:\n\n{% for key, value in cookiecutter.items()|sort %}\n  {{ \"{0:24}\".format(key + \":\") }} {{ \"{0!r}\".f",
+      "got": "Illegal character: '\"'\nSyntax error at end of input\nSyntax error at 'have'\nIllegal character: '`'\nIllegal character: '{'\nIllegal character: '{'\nUndefined variable: cookiecutter\nIllegal character: '}'\n",
+      "code": "push(\"\nYou have succesfully created `{{ cookiecutter.repository_slug }}`\nwith these cookiecutter parameters:\n\n{% for key, value in cookiecutter.items()|sort %}\n  {{ \"{0:24}\".format(key + \":\") }} {{ \"{0!r}\".format(value).strip(\"u\") }}\n{%- endfor %}\n\n-----------------------------------------------------------------\n\nNow:\n\n- Run `awesome_bot README.md` to verify the links.\n- Activate your repository in your Travis account.\n- Please read awesome's PR requirements before submitting a Pull Request:\n  https://github.com/sindresorhus/awesome/blob/master/pull_request_template.md\n\")"
+    },
+    {
+      "hash": "7e6c34044ef5b723",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "Hello Docker world!",
+      "got": "Hello Docker world!",
+      "code": "var = \"Docker\"\npush(\"Hello \" + var + \" world!\")"
+    },
+    {
+      "hash": "0046a7af3c27ea0b",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "1 * 1 = 1\n1 * 2 = 2\n1 * 3 = 3\n1 * 4 = 4\n1 * 5 = 5\n1 * 6 = 6\n1 * 7 = 7\n1 * 8 = 8\n1 * 9 = 9\n1 * 10 = 10\n\n\n2 * 1 = 2\n2 * 2 = 4\n2 * 3 = 6\n2 * 4 = 8\n2 * 5 = 10\n2 * 6 = 12\n2 * 7 = 14\n2 * 8 = 16\n2 * 9 = 18\n2",
+      "got": "1 * 1 = 1\n1 * 2 = 2\n1 * 3 = 3\n1 * 4 = 4\n1 * 5 = 5\n1 * 6 = 6\n1 * 7 = 7\n1 * 8 = 8\n1 * 9 = 9\n1 * 10 = 10\n\n\n2 * 1 = 2\n2 * 2 = 4\n2 * 3 = 6\n2 * 4 = 8\n2 * 5 = 10\n2 * 6 = 12\n2 * 7 = 14\n2 * 8 = 16\n2 * 9 = 18\n2",
+      "code": "for i in space(1, 11):\n    for j in space(1, 11):\n        push(tostr(i) + \" * \" + tostr(j) + \" = \" + tostr(i * j))\n    push(\"\\n\")\nend"
+    },
+    {
+      "hash": "3e8eeef8daa744a9",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at '-'",
+      "expected": "[3, 1, 2, 5, 3]",
+      "got": "Syntax error at '-'",
+      "code": "func make_positive(a):\n    for i in space(len(a)):\n        cond (a[i] < 0):\n            a[i] = (-1 * a[i])\n        end\n    end\n    return a\nend\npush(make_positive([-3, 1, -2, 5, -3]))"
+    },
+    {
+      "hash": "e29f9aec4abb3659",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "Hello World\nAdding Update\nhello world again\nAdding more updates\nAdding further more updates\nAdding more further updates\nAdded update\nSorted the issue\nadded a new line\nHello world again!",
+      "got": "Hello World\nAdding Update\nhello world again\nAdding more updates\nAdding further more updates\nAdding more further updates\nAdded update\nSorted the issue\nadded a new line\nHello world again!",
+      "code": "push(\"Hello World\")\npush(\"Adding Update\")\npush(\"hello world again\")\npush(\"Adding more updates\")\npush(\"Adding further more updates\")\npush(\"Adding more further updates\")\npush(\"Added update\")\npush(\"Sorted the issue\")\npush(\"added a new line\")\npush(\"Hello world again!\")"
+    },
+    {
+      "hash": "ae7b851fb32b9762",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "[0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 78, 80, 82, 84, 86, 88, 90, 92, 94, 96, 98, 100]",
+      "got": "[0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 78, 80, 82, 84, 86, 88, 90, 92, 94, 96, 98, 100]",
+      "code": "even_numbers = []\nodd_numbers = []\nfor number in range(0, 101):\n    cond (number % 2 == 0):\n        even_numbers.append(number)\n    else:\n        odd_numbers.append(number)\n    end\nend\npush(even_numbers)\npush(\"\\n\")\npush(\"\\n\")\npush(odd_numbers)"
+    },
+    {
+      "hash": "029bed70d76778e8",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "6\n11\n30",
+      "got": "6\n11\n30",
+      "code": "func sum(lst):\n    tot = 0\n    for num in lst:\n        tot = (tot + num)\n    return tot\nend\nfunc prod(lst):\n    res = 1\n    for num in lst:\n        res = (res * num)\n    return res\nend\nfunc count_num(lst):\n    num_count = 0\n    for num in lst:\n        num_count = (num_count + 1)\n    return num_count\nend\npush(count_num([1, 2, 4, 5, 7, 9]))\nsum_list = sum([1, 2, 3, 5])\npush(sum_list)\nprod_list = prod([1, 2, 3, 5])\npush(prod_list)"
+    },
+    {
+      "hash": "837d777ca7c04f89",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "A soma final \u00e9 de 20667\nTotal de n\u00fameros: 83",
+      "got": "A soma final \u00e9 de 20667\nTotal de n\u00fameros: 83",
+      "code": "cont = 0\nsoma = 0\nfor c in space(1, 501, 2):\n    cond (c % 3 == 0):\n        soma = soma + c\n        cont = cont + 1\n    end\nend\npush(\"A soma final \u00e9 de \" + tostr(soma))\npush(\"Total de n\u00fameros: \" + tostr(cont))"
+    },
+    {
+      "hash": "b2fce9b566d7f7c3",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "There is no python solution (in hackerrank) for this day.\nI'm very \"happy\" about it...\nI had to copy and paste a code in Java. I don't like this, but ...",
+      "got": "There is no python solution (in hackerrank) for this day.\nI'm very \"happy\" about it...\nI had to copy and paste a code in Java. I don't like this, but ...",
+      "code": "push(\"There is no python solution (in hackerrank) for this day.\")\npush(\"I'm very \\\"happy\\\" about it...\")\npush(\"I had to copy and paste a code in Java. I don't like this, but ...\")"
+    },
+    {
+      "hash": "9edc1f540801aea6",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at '-'",
+      "expected": "2\n7\n0\n4",
+      "got": "2\n7\n0\nSyntax error at '-'",
+      "code": "func count_unique_values(array1):\n    array_len = len(array1)\n    cond (array_len == 0):\n        return 0\n    else:\n        next_index = 0\n        unique_count = 1\n        for curr_index in range(len(array1)):\n            next_index = curr_index + 1\n            cond (next_index == len(array1)):\n                break\n            cond (array1[curr_index] != array1[next_index]):\n                unique_count = unique_count + 1\n        end\n        return unique_count\n    end\nend\npush(count_unique_values([1, 1, 1, 1, 1, 2]))\npush(count_unique_values([1, 2, 3, 4, 4, 4, 7, 7, 12, 12, 13]))\npush(count_unique_values([]))\npush(count_unique_values([-2, -1, -1, 0, 1]))"
+    },
+    {
+      "hash": "8860e00cf1ede04c",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "['qqrq', 'bob', 'cat', 'drone']\n['qqrq', 'bob', 'cat', 'drone']\n['qqrq', 'bob', 'cat', 'drone']\n['apple', 'bob', 'cat', 'drone']",
+      "got": "['qqrq', 'bob', 'cat', 'drone']\n['qqrq', 'bob', 'cat', 'drone']\n['qqrq', 'bob', 'cat', 'drone']\n['apple', 'bob', 'cat', 'drone']",
+      "code": "x = [\"apple\", \"bob\", \"cat\", \"drone\"]\ny = x\nx[0] = \"qqrq\"\npush(x)\npush(y)\ndeepcopy = pyimport(\"copy\").deepcopy\nx = [\"apple\", \"bob\", \"cat\", \"drone\"]\ny = deepcopy(x)\nx[0] = \"qqrq\"\npush(x)\npush(y)"
+    },
+    {
+      "hash": "d9383189574d1b23",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "True\nTrue",
+      "got": "True\nTrue",
+      "code": "name = \"John\"\nage = 17\npush(name == \"John\" or name == \"Jane\")\npush(name == \"John\" and age >= 16)"
+    },
+    {
+      "hash": "8ea437d2f9467bea",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "-10 -9 -8 -7 -6 -5 -4 -3 -2 -1\n1 2 3 4 5 6 7 8 9\n11 12 13 14 15 16 17 18 19\n21 22 23 24 25 26 27 28 29\n31 32 33 34 35 36 37 38 39\n41 42 43 44 45 46 47 48 49\n51 52 53 54 55 56 57 58 59\n61 62 63 64 65 6",
+      "got": "-10 -9 -8 -7 -6 -5 -4 -3 -2 -1\n1 2 3 4 5 6 7 8 9\n11 12 13 14 15 16 17 18 19\n21 22 23 24 25 26 27 28 29\n31 32 33 34 35 36 37 38 39\n41 42 43 44 45 46 47 48 49\n51 52 53 54 55 56 57 58 59\n61 62 63 64 65 6",
+      "code": "ints = []\nfor n in space(210):\n    cond (n % 10 == 0 and n != 0):\n        push(\" \".join(ints))\n        ints = []\n    else:\n        ints.append(tostr(n - 10))\n    end\nend"
+    },
+    {
+      "hash": "83fabd7d36cefe73",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "[' Watching', 'my grandparents and my parents pay all these bills, really excites me for the future. -___- ']\n[' Watching my', 'grandparents and my parents pay all these bills, really excites me for t",
+      "got": "[' Watching', 'my grandparents and my parents pay all these bills, really excites me for the future. -___- ']\n[' Watching my', 'grandparents and my parents pay all these bills, really excites me for t",
+      "code": "str1 = \"Watching my grandparents and my parents pay all these bills, really excites me for the future. -___- \"\nfunc cut_sentence(str1):\n    count = len(str1.split())\n    block = \"\"\n    listn = []\n    for c in range(0, count):\n        save = str1.split(\" \", 1)[0]\n        str1 = str1.split(\" \", 1)[1]\n        block = (block + \" \" + save)\n        push([block, str1])\n    end\nend\ncut_sentence(str1)"
+    },
+    {
+      "hash": "b12608f1fa15757e",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "H\na\nC\nk\nC\nl\nU\nb",
+      "got": "H\na\nC\nk\nC\nl\nU\nb",
+      "code": "text = \"HACKCLUB\"\npush(text[0].upper())\npush(text[1].lower())\npush(text[2].upper())\npush(text[3].lower())\npush(text[4].upper())\npush(text[5].lower())\npush(text[6].upper())\npush(text[7].lower())"
+    },
+    {
+      "hash": "2a2c82e90be108ae",
+      "parses": false,
+      "matches": false,
+      "reason": "Error: cannot add int and str",
+      "expected": "str1 + str2 =  HelloWorld!\nstr1 * 3 = HelloHelloHello\n3 letters found\nabcabcabcef\nABCABCABCEF\n9\nbbcbbcbbcef",
+      "got": "str1 + str2 = HelloWorld!\nstr1 * 3 = HelloHelloHello\nError: cannot add int and str\nnull\nabcabcabcef\nABCABCABCEF\n9\nbbcbbcbbcef",
+      "code": "str1 = \"Hello\"\nstr2 = \"World!\"\npush(\"str1 + str2 = \" + (str1 + str2))\npush(\"str1 * 3 = \" + (str1 * 3))\ncount = 0\nfor letter in \"Hello World\":\n    cond ((letter == \"l\")):\n        count = (count + 1)\n    end\nend\npush(count + \"letters found\")\na = \"abcabcabcef\"\npush(a.lower())\npush(a.upper())\npush(a.find(\"e\"))\npush(a.replace(\"a\", \"b\"))"
+    },
+    {
+      "hash": "d12b0a8472fa17e7",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n30\n31\n32\n33\n34\n35\n36\n37\n38\n39\n40\n41\n42\n43\n44\n45\n46\n47\n48\n49\n50\n51\n52\n53\n54\n55\n56\n57\n58\n59\n60\n61\n62\n63\n64\n65\n66\n67\n68\n69\n70\n7",
+      "got": "2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n30\n31\n32\n33\n34\n35\n36\n37\n38\n39\n40\n41\n42\n43\n44\n45\n46\n47\n48\n49\n50\n51\n52\n53\n54\n55\n56\n57\n58\n59\n60\n61\n62\n63\n64\n65\n66\n67\n68\n69\n70\n7",
+      "code": "a = 0\ni = 1\nwhile a < 10000:\n    a = a + i\n    i = i + 1\n    push(i)\nend\na = 0\ni = 2\nwhile a < 10000:\n    a = a + i\n    i = i + 2\n    push(i)\nend"
+    },
+    {
+      "hash": "e8122784dbf29f11",
+      "parses": true,
+      "matches": false,
+      "reason": null,
+      "expected": "Tails",
+      "got": "Heads",
+      "code": "random = pyimport(\"random\")\nrandom_number = random.randint(0, 1)\ncond (random_number == 1):\n    push(\"Heads\")\nelif (random_number == 0):\n    push(\"Tails\")\nelse:\n    push(\"Something went wrong. Please try again\")\nend"
+    },
+    {
+      "hash": "d68c2d32d4160e2a",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at '/'",
+      "expected": "2",
+      "got": "Syntax error at '/'\nSyntax error at '/'\nError: invalid index\nSyntax error at '-'\nError: invalid index\nSyntax error at '-'\nnull",
+      "code": "func find_max(l):\n    cond (len(l) == 1):\n        return l[0]\n    else:\n        n = len(l)\n        left = l[:n // 2]\n        right = l[n // 2:]\n        l_start = left[0]\n        l_end = left[-1]\n        r_start = right[0]\n        r_end = right[-1]\n        cond (l_end == r_start):\n            return l_end\n        elif l_end < r_start:\n            return find_max(right)\n        else:\n            return find_max(left)\n    end\nend\nl = [1, 2]\npush(find_max(l))"
+    },
+    {
+      "hash": "3f6a9a82ef2031f9",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at '-'",
+      "expected": "Barang 0 = apel\nBarang 1 = mangga\nBarang 2 = wortel\nBarang 3 = pisang\nBarang -1 = pisang\nBarang -2 = wortel\nKarakter 0 = b\nBarang 1 ke 3: ['mangga', 'wortel']\nBarang 2 ke terakhir: ['wortel', 'pisang'",
+      "got": "Barang 0 = apel\nBarang 1 = mangga\nBarang 2 = wortel\nBarang 3 = pisang\nSyntax error at '-'\nSyntax error at '-'\nKarakter 0 = b\nBarang 1 ke 3: ['mangga', 'wortel']\nBarang 2 ke terakhir: ['wortel', 'pisan",
+      "code": "daftar_belanja = [\"apel\", \"mangga\", \"wortel\", \"pisang\"]\nnama = \"budi\"\npush(\"Barang 0 = \" + tostr(daftar_belanja[0]))\npush(\"Barang 1 = \" + tostr(daftar_belanja[1]))\npush(\"Barang 2 = \" + tostr(daftar_belanja[2]))\npush(\"Barang 3 = \" + tostr(daftar_belanja[3]))\npush(\"Barang -1 = \" + tostr(daftar_belanja[-1]))\npush(\"Barang -2 = \" + tostr(daftar_belanja[-2]))\npush(\"Karakter 0 = \" + tostr(nama[0]))\npush(\"Barang 1 ke 3: \" + tostr(daftar_belanja[1:3]))\npush(\"Barang 2 ke terakhir: \" + tostr(daftar_belanja[2:]))\npush(\"Barang 1 ke -1: \" + tostr(daftar_belanja[1:-1]))\npush(\"Barang dari awal ke akhir: \" + tostr(daftar_belanja[:]))\npush(\"Karakter 1 ke 3: \" + tostr(nama[1:3]))\npush(\"Karakter 2 ke terakhir: \" + tostr(nama[2:]))\npush(\"Karakter 1 ke -1: \" + tostr(nama[1:-1]))\npush(\"Karakter dari awal ke akhir: \" + tostr(nama[:]))"
+    },
+    {
+      "hash": "7f692867450822a8",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "suzuki",
+      "got": "suzuki",
+      "code": "motorcycles = [\"honda\", \"yamaha\", \"suzuki\"]\npush(motorcycles[2])"
+    },
+    {
+      "hash": "cbdf6d3ce5261332",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "[1, 3, 5, 7, 9, 2, 4, 6, 8, 10]",
+      "got": "[1, 3, 5, 7, 9, 2, 4, 6, 8, 10]",
+      "code": "L = [1, 3, 5, 7, 9]\nL2 = [2, 4, 6, 8, 10]\nL3 = (L + L2)\npush(L3)"
+    },
+    {
+      "hash": "6de6d36459343659",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: exp",
+      "expected": "21",
+      "got": "Undefined function: exp\nError: cannot multiply float and NoneType\n\nTraceback (most recent call last):\n  File \"/home/lukeb/venv/bin/bs\", line 8, in <module>\n    sys.exit(cli_entry())\n             ~~~~~",
+      "code": "func termeDeLaSuite():\n    n = 1\n    u = (0.5 * exp(1)) - (0.5 * 0.5)\n    while (n < 21):\n        u = ((0.5 * exp(1)) - ((n + 1) * (0.5 * u)))\n        n = (n + 2)\n    end\n    return n\nend\npush(termeDeLaSuite())"
+    },
+    {
+      "hash": "1f4ebc22653614b3",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "\u043f\u0440\u0438\u0432\u0435\u0442\nygs boga!",
+      "got": "\u043f\u0440\u0438\u0432\u0435\u0442\nygs boga!",
+      "code": "push(\"\u043f\u0440\u0438\u0432\u0435\u0442\")\npush(\"ygs boga!\")"
+    },
+    {
+      "hash": "180ec4498c1ff29d",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "True\nFalse",
+      "got": "True\nFalse",
+      "code": "push((\"string\" == \"string\"))\npush((\"string\" != \"string\"))"
+    },
+    {
+      "hash": "2b029c2108bbed62",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "['a', 2, 4.5]\n['a', 'hello', 4.5]",
+      "got": "['a', 2, 4.5]\n['a', 'hello', 4.5]",
+      "code": "mylist = [\"a\", 2, 4.5]\nmyotherlist = mylist[:]\nmylist[1] = \"hello\"\npush(myotherlist)\nmytext = \"Hello world\"\nmyothertext = mytext\nmytext = \"Hallo Welt!\"\npush(mylist[:])"
+    },
+    {
+      "hash": "6ec0374e7f498424",
+      "parses": true,
+      "matches": false,
+      "reason": null,
+      "expected": "Busca em vetor ordenado. Exemplo, buscar o n\u00famero 8.\nVetor:  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]\nPosi\u00e7\u00e3o:  8",
+      "got": "Busca em vetor ordenado. Exemplo, buscar o n\u00famero 8.\nVetor: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]\nPosi\u00e7\u00e3o: 8",
+      "code": "func buscaSeqOrd(vetor, n, chave):\n    for i in space(1, n):\n        cond chave <= vetor[i]:\n            cond chave == vetor[i]:\n                return i\n            else:\n                return -1\n        end\n    end\n    return -1\nend\npush(\"Busca em vetor ordenado. Exemplo, buscar o n\u00famero 8.\")\nvetor = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]\npush(\"Vetor: \" + tostr(vetor))\nn = len(vetor)\npush(\"Posi\u00e7\u00e3o: \" + tostr(buscaSeqOrd(vetor, n, 8) + 1))"
+    },
+    {
+      "hash": "7f0185903813ba9a",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at ','",
+      "expected": "==== \u6570\u5b57 ====\n1 1.01\n==== \u5b57\u7b26\u4e32 ====\nhello\nhello\n\nThis is the second line.\n\"What's your name?,\" I asked.\nHe said \"Bond, James Bond.\"",
+      "got": "==== \u6570\u5b57 ====\nSyntax error at ','\n==== \u5b57\u7b26\u4e32 ====\nhello\nhello\n\nThis is the second line.\n\"What's your name?,\" I asked.\nHe said \"Bond, James Bond.\"",
+      "code": "\"==== \u6570\u5b57 ====\"\na = 1\nb = 1.01\npush(a, b)\n\"==== \u5b57\u7b26\u4e32 ====\"\nstra = \"hello\"\npush(stra)\nstrb = \"hello\"\npush(strb)\nstrc = \"\\nThis is the second line.\\n\\\"What's your name?,\\\" I asked.\\nHe said \\\"Bond, James Bond.\\\"\\n\"\npush(strc)"
+    },
+    {
+      "hash": "ca16b3855773db9e",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at '-'",
+      "expected": "[180, 600, 360, 300, 900]",
+      "got": "Syntax error at '-'\n[1, 10, 30, 150, 900]",
+      "code": "func computeProductArray(array, size):\n    prod = [1] * size\n    left = [1] * size\n    right = [1] * size\n    for i in space(1, size):\n        left[i] = (array[i - 1] * left[i - 1])\n    for j in space(size - 2, -1, -1):\n        right[j] = (array[j + 1] * right[j + 1])\n    for k in space(0, size):\n        prod[k] = (left[k] * right[k])\n    push(prod)\nend\narr = [10, 3, 5, 6, 2]\ncomputeProductArray(arr, len(arr))"
+    },
+    {
+      "hash": "b3766204dce14631",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "****^^1^^****\n1\n2\n3\n4\n5\n****^^2^^****\n1\n3\n5\n****^^3^^****\n1\n2\n3\n4\n****^^4^^****\n1\n2\n3\n4\n6\n7\n8\n9",
+      "got": "****^^1^^****\n1\n2\n3\n4\n5\n****^^2^^****\n1\n3\n5\n****^^3^^****\n1\n2\n3\n4\n****^^4^^****\n1\n2\n3\n4\n6\n7\n8\n9",
+      "code": "push(\"****^^1^^****\")\nfor number in space(1, 6):\n    push(number)\nend\npush(\"****^^2^^****\")\nfor number in space(1, 6, 2):\n    push(number)\nend\npush(\"****^^3^^****\")\nfor number in space(1, 10):\n    cond(number == 5):\n        break\n    end\n    push(number)\nend\npush(\"****^^4^^****\")\nfor number in space(1, 10):\n    cond(number == 5):\n        continue\n    end\n    push(number)\nend"
+    },
+    {
+      "hash": "adfbdd44f6b663cf",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined variable: math",
+      "expected": "4",
+      "got": "Undefined variable: math\nError: no method 'ceil' on int\nError: invalid index\nSyntax error at 'guess'\nnull",
+      "code": "func binary_search(array, value):\n    low = 0\n    high = len(array) - 1\n    while low <= high:\n        mid = math.ceil((low + high) / 2)\n        guess = array[mid]\n        if guess == value:\n            return mid\n        if guess > value:\n            high = mid - 1\n        else:\n            low = mid + 1\n    end\n    return null\nend\nmy_list = [1, 3, 5, 7, 9]\npush(binary_search(my_list, 9))"
+    },
+    {
+      "hash": "d58daf7a23fa26f1",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error: unexpected end",
+      "expected": "[1, 9, 5]",
+      "got": "Syntax error: unexpected end\n[1, 9, 5]",
+      "code": "func larger_sum(lst1, lst2):\n    sum1 = 0\n    sum2 = 0\n    for num1 in lst1:\n        sum1 = sum1 + num1\n    end\n    for num2 in lst2:\n        sum2 = sum2 + num2\n    end\n    cond (sum1 > sum2):\n        return lst1\n    end\n    cond (sum2 > sum1):\n        return lst2\n    end\n    cond (sum1 == sum2):\n        return lst1\n    end\n    end\nend\npush(larger_sum([1, 9, 5], [2, 3, 7]))"
+    },
+    {
+      "hash": "a1e30508974a43c4",
+      "parses": true,
+      "matches": false,
+      "reason": null,
+      "expected": "Number of months needed =  183",
+      "got": "Number of months needed = 183",
+      "code": "annual_salary = 120000.0\nportion_saved = 0.1\ntotal_cost = 1000000.0\nportion_downpayment = 0.25\nmonthly_salary = annual_salary / 12\nrate = 4 / 100\nmonths_needed = 0\ncurrent_savings = 0.0\nwhile current_savings <= total_cost * portion_downpayment:\n    months_needed = months_needed + 1\n    current_savings = current_savings + current_savings * (rate / 12) + portion_saved * monthly_salary\nend\npush(\"Number of months needed = \" + tostr(months_needed))"
+    },
+    {
+      "hash": "64eaba75cacba2f2",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "0.2998",
+      "got": "0.2998",
+      "code": "speed_of_light = 299800000.0\nnano_per_sec = 1000000000.0\nnanodistance = (speed_of_light * (1 / nano_per_sec))\npush(nanodistance)"
+    },
+    {
+      "hash": "b7b5102d954a542a",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "5050",
+      "got": "5050",
+      "code": "func sum100():\n    total = 0\n    for i in range(101):\n        total = total + i\n    end\n    return total\nend\npush(sum100())"
+    },
+    {
+      "hash": "af5ccbce5fb3cec2",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "120",
+      "got": "120",
+      "code": "push(90 - 80 + 70 - 60 + (50 * 2))"
+    },
+    {
+      "hash": "9d39b2b1b1867ee2",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "x berkisar antara 10 dan 30\ny lebih kecil dari 10 atau lebih besar dari 30\nz bukan 77",
+      "got": "x berkisar antara 10 dan 30\ny lebih kecil dari 10 atau lebih besar dari 30\nz bukan 77",
+      "code": "x = 20\ncond (x >= 10 and x <= 30):\n    push(\"x berkisar antara 10 dan 30\")\nend\ny = 60\ncond (y < 10 or y > 30):\n    push(\"y lebih kecil dari 10 atau lebih besar dari 30\")\nend\nz = 55\ncond (not (z == 77)):\n    push(\"z bukan 77\")\nend"
+    },
+    {
+      "hash": "c6835e067bb12b30",
+      "parses": false,
+      "matches": false,
+      "reason": "timeout",
+      "expected": "True",
+      "got": "",
+      "code": "func search(arr, ele):\n    first = 0\n    last = len(arr) - 1\n    f = false\n    while (first <= last and not f):\n        mid = (first + last) // 2\n        cond (arr[mid] == ele):\n            f = true\n        else:\n            cond (ele < arr[mid]):\n                last = mid - 1\n            else:\n                first = mid + 1\n        end\n    end\n    return f\nend\npush(search([1, 2, 3, 4, 5, 6, 7, 8], 8))"
+    },
+    {
+      "hash": "5a267aecedd8865d",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "[2, 4, 6]",
+      "got": "[2, 4, 6]",
+      "code": "func physics(vet1, vet2):\n    frx = vet1[0] + vet2[0]\n    fry = vet1[1] + vet2[1]\n    frz = vet1[2] + vet2[2]\n    fr = [frx, fry, frz]\n    return fr\nend\npush(physics([1, 2, 3], [1, 2, 3]))"
+    },
+    {
+      "hash": "c32390d2cf93c40a",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "[[], [], [], [], []]",
+      "got": "[[], [], [], [], []]",
+      "code": "func make_hashtable(nbuckets):\n    table = []\n    for i in space(0, nbuckets):\n        table.append([])\n    return table\nend\npush(make_hashtable(5))"
+    },
+    {
+      "hash": "11f5a4a525ea33f1",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at '-'",
+      "expected": "42",
+      "got": "Syntax error at '-'\nnull",
+      "code": "absolute = abs(-42)\npush(absolute)"
+    },
+    {
+      "hash": "024dd7d37ab43e1b",
+      "parses": false,
+      "matches": false,
+      "reason": "Error: invalid index",
+      "expected": "2\n[2, 3, 1]",
+      "got": "Error: invalid index\nError: invalid index\n\nTraceback (most recent call last):\n  File \"/home/lukeb/venv/bin/bs\", line 8, in <module>\n    sys.exit(cli_entry())\n             ~~~~~~~~~^^\n  File \"/home/luk",
+      "code": "arr = [1, 2, 3]\nn = len(arr)\nshift = 1\narr = arr[shift:] + arr[:shift]\ni = 0\nj = n - 1\ncond (arr[i] < arr[j]):\n    push(\"There is no shift\")\nelse:\n    i = i + 1\n    while i < j:\n        m = (i + j) / 2\n        cond (arr[m] < arr[m - 1]):\n            break\n        elif arr[m] > arr[0]:\n            i = m + 1\n        elif arr[m] < arr[0]:\n            j = m - 1\n        else:\n            push(\"Something went wrong!\")\n        end\n    end\n    m = (i + j) / 2\n    push(m)\nend\npush(arr)"
+    },
+    {
+      "hash": "5610077d89e90a1d",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "45.124450303050196",
+      "got": "45.124450303050196",
+      "code": "s = 1.0\nx = 3.0\nsum1 = 0\nwhile s <= 97:\n    sum1 = sum1 + (s / x)\n    s = s + 2\n    x = x + 2\nend\npush(sum1)"
+    },
+    {
+      "hash": "1925caf19b1de755",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "<re.Match object; span=(3, 6), match='nam'>",
+      "got": "<re.Match object; span=(3, 6), match='nam'>",
+      "code": "re = pyimport(\"re\")\npattern = \"apurv\"\ns = \"my name is apurv\"\npush(re.search(\"nam?\", s))"
+    },
+    {
+      "hash": "08891521721b512c",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "12\n[3, 5, 4]\nredgreenblue\nRGB",
+      "got": "12\n[3, 5, 4]\nredgreenblue\nRGB",
+      "code": "total = 0\nfor word in [\"red\", \"green\", \"blue\"]:\n    total = total + len(word)\nend\npush(total)\nlengths = []\nfor word in [\"red\", \"green\", \"blue\"]:\n    lengths.append(len(word))\nend\npush(lengths)\nwords = [\"red\", \"green\", \"blue\"]\nresult = \"\"\nfor word in words:\n    result = result + word\nend\npush(result)\nacronym = \"\"\nfor word in [\"red\", \"green\", \"blue\"]:\n    acronym = acronym + word[0].upper()\nend\npush(acronym)"
+    },
+    {
+      "hash": "93d00773955bfdc7",
+      "parses": true,
+      "matches": false,
+      "reason": null,
+      "expected": "3",
+      "got": "",
+      "code": "func bus(k, arr, last):\n    s = 0\n    r = 0\n    m = 0\n    cond (last - arr[-1] > k):\n        return 0\n    else:\n        for i in range(len(arr) - 1):\n            cond (arr[i] - s <= k):\n                r += (arr[i] - s)\n                cond (r == k):\n                    m += 1\n                    r = 0\n                else:\n                    cond (r + arr[i + 1] - arr[i] > k):\n                        m += 1\n                        r = 0\n                    end\n                end\n                s = arr[i]\n            else:\n                return 0\n            end\n        end\n        cond (arr[-1] - s <= k):\n            r += (arr[-1] - s)\n            cond (r == k):\n                m += 1\n                r = 0\n                return m\n            else:\n                cond (r + last - arr[-1] > k):\n                    m += 1\n                    r = 0\n                end\n                return m\n            end\n        else:\n            return 0\n        end\n    end\nend\nfunc main():\n    print(bus(5, [5, 10, 15], 20))\nend"
+    },
+    {
+      "hash": "d49ffb08dfb8b2c7",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "Let's talk about Xu Yi.\nHe's 188 cm tall.\nHe's 80 kg heavy.\nActually that's not too heavy.\nHe's got Brown eyes and Black hair.\nHis teeth are usually White depending on the coke.\nIf I add 32, 188, and ",
+      "got": "Let's talk about Xu Yi.\nHe's 188 cm tall.\nHe's 80 kg heavy.\nActually that's not too heavy.\nHe's got Brown eyes and Black hair.\nHis teeth are usually White depending on the coke.\nIf I add 32, 188, and ",
+      "code": "name = \"Xu Yi\"\nage = 32\nheight = 188\nweight = 80\neyes = \"Brown\"\nteeth = \"White\"\nhair = \"Black\"\npush(\"Let's talk about \" + name + \".\")\npush(\"He's \" + tostr(height) + \" cm tall.\")\npush(\"He's \" + tostr(weight) + \" kg heavy.\")\npush(\"Actually that's not too heavy.\")\npush(\"He's got \" + eyes + \" eyes and \" + hair + \" hair.\")\npush(\"His teeth are usually \" + teeth + \" depending on the coke.\")\ntotal = age + height + weight\npush(\"If I add \" + tostr(age) + \", \" + tostr(height) + \", and \" + tostr(weight) + \" I get \" + tostr(total) + \".\")"
+    },
+    {
+      "hash": "a05885980bc8ce99",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error: unexpected end",
+      "expected": "10\n9\n8\n7\n6\n5\n4\n3\n2\n1\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n==========================\n120",
+      "got": "Syntax error: unexpected end\n10\n9\n8\n7\n6\n5\n4\n3\n2\n1\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n==============\n120",
+      "code": "func recursiveFunction(i):\n    cond (i == 0):\n        return\n    end\n    push(i)\n    recursiveFunction(i - 1)\n    push(i)\n    end\nend\nrecursiveFunction(10)\npush(\"==============\")\nfunc factorialFunction(i):\n    cond (i == 1):\n        return 1\n    end\n    return (i * factorialFunction(i - 1))\nend\npush(factorialFunction(5))"
+    },
+    {
+      "hash": "f727001b67ccaf84",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at ','",
+      "expected": "Cont\u00e9m muitas calorias! \n\nDesconhe\u00e7o as especifica\u00e7\u00f5es! \n\nMe chame!",
+      "got": "Syntax error at ','\nSyntax error at ','\nMe chame!",
+      "code": "comida = \"pizza\"\ncond (comida == \"pizza\"):\n    push(\"Cont\u00e9m muitas calorias!\", \"\\n\")\nend\ncomida = \"macarr\u00e3o\"\ncond (comida == \"feij\u00e3o\"):\n    push(\"Cont\u00e9m muito ferro!\")\nelse:\n    push(\"Desconhe\u00e7o as especifica\u00e7\u00f5es!\", \"\\n\")\nend\ncomida = \"churrasco\"\ncond (comida == \"macarr\u00e3o\"):\n    push(\"Cont\u00e9m 'infinitas' calorias\")\nelif (comida == \"feij\u00e3o\"):\n    push(\"Cont\u00e9m 'infinitos' ferros\")\nelif (comida == \"churrasco\"):\n    push(\"Me chame!\")\nelse:\n    push(\"Sem informa\u00e7\u00f5es para passar!\")\nend"
+    },
+    {
+      "hash": "1b020c11a4228b87",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "\u70b9\u6570\u306f 75 \u3067\u3059\u3002\n\u70b9\u6570\u306f 88 \u3067\u3059\u3002\n\u70b9\u6570\u306f 100 \u3067\u3059\u3002\n\u7e70\u308a\u8fd4\u3057\u7d42\u4e86",
+      "got": "\u70b9\u6570\u306f 75 \u3067\u3059\u3002\n\u70b9\u6570\u306f 88 \u3067\u3059\u3002\n\u70b9\u6570\u306f 100 \u3067\u3059\u3002\n\u7e70\u308a\u8fd4\u3057\u7d42\u4e86",
+      "code": "point_list = [75, 88, 100]\nfor point in point_list:\n    push(tostr(\"\u70b9\u6570\u306f \") + tostr(point) + \" \u3067\u3059\u3002\")\nend\npush(\"\u7e70\u308a\u8fd4\u3057\u7d42\u4e86\")"
+    },
+    {
+      "hash": "5e6365fb951fb253",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "Hello, World!",
+      "got": "Hello, World!",
+      "code": "ur_string = \"Hello, World!\"\npush(ur_string)"
+    },
+    {
+      "hash": "c17accb978759853",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "Hello Python world!\nHello Python Crash Course world!\nHello Python Crash Course reader!",
+      "got": "Hello Python world!\nHello Python Crash Course world!\nHello Python Crash Course reader!",
+      "code": "message = \"Hello Python world!\"\npush(message)\nmessage = \"Hello Python Crash Course world!\"\npush(message)\nmesage = \"Hello Python Crash Course reader!\"\npush(mesage)"
+    },
+    {
+      "hash": "e9e7950e8c9b7842",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "Letra actual : d\nLetra actual : a\nLetra actual : t",
+      "got": "Letra actual : d\nLetra actual : a\nLetra actual : t",
+      "code": "for letter in \"datospordatos\":\n    cond (letter == \"o\" or letter == \"s\"):\n        break\n    end\n    push(\"Letra actual : \" + tostr(letter))\nend"
+    },
+    {
+      "hash": "6f643bb1ccbbdcc2",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "\u5b57\u7b26\u4e32\u4e2d\u5305\u542bPython\n['Python']",
+      "got": "\u5b57\u7b26\u4e32\u4e2d\u5305\u542bPython\n['Python']",
+      "code": "re = pyimport(\"re\")\na = \"C|C++|Java|C#|Python|Javascript\"\nr = re.findall(\"Python\", a)\ncond (len(r) != 0):\n    push(\"\u5b57\u7b26\u4e32\u4e2d\u5305\u542bPython\")\nelse:\n    push(\"No\")\nend\npush(r)"
+    },
+    {
+      "hash": "1f238bd4be1f2a24",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "vasanthi\nvasanthiyerramothu@gmail.com",
+      "got": "vasanthi\nvasanthiyerramothu@gmail.com",
+      "code": "push(\"vasanthi\")\npush(\"vasanthiyerramothu@gmail.com\")"
+    },
+    {
+      "hash": "1104f2a3ebe1eb01",
+      "parses": true,
+      "matches": false,
+      "reason": null,
+      "expected": "Greater number is 3\nGreater number is  3",
+      "got": "Greater number is 3\nGreater number is 3",
+      "code": "func checkgreaternumber(number1, number2):\n    cond (number1 > number2):\n        push(\"Greater number is \" + tostr(number1))\n    else:\n        push(\"Greater number is \" + tostr(number2))\n    end\nend\ncheckgreaternumber(2, 3)\ncheckgreaternumber(3, 1)"
+    },
+    {
+      "hash": "de0f01885f10127a",
+      "parses": true,
+      "matches": false,
+      "reason": null,
+      "expected": "-10",
+      "got": "10",
+      "code": "push(10)"
+    },
+    {
+      "hash": "3c94d7a2899cedeb",
+      "parses": true,
+      "matches": false,
+      "reason": null,
+      "expected": "vor foo: 12\n  in foo: 9\nnach foo: 12",
+      "got": "vor foo: 12\n  in foo: 9\nnach foo: 9",
+      "code": "var = 12\nfunc foo():\n    var = 9\n    push(\"  in foo: \" + tostr(var))\nend\npush(\" vor foo: \" + tostr(var))\nfoo()\npush(\"nach foo: \" + tostr(var))"
+    },
+    {
+      "hash": "8c90776a8235d598",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "the hallway is 11.25 sqm\nthe kitchen is 18.0 sqm\nthe living room is 20.0 sqm\nthe bedroom is 10.75 sqm\nthe bathroom is 9.5 sqm",
+      "got": "the hallway is 11.25 sqm\nthe kitchen is 18.0 sqm\nthe living room is 20.0 sqm\nthe bedroom is 10.75 sqm\nthe bathroom is 9.5 sqm",
+      "code": "house = [[\"hallway\", 11.25], [\"kitchen\", 18.0], [\"living room\", 20.0], [\"bedroom\", 10.75], [\"bathroom\", 9.50]]\nfor x in house:\n    push((\"the \" + x[0] + \" is \" + tostr(x[1]) + \" sqm\"))\nend"
+    },
+    {
+      "hash": "a60dc52bc28b2478",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "selim\nmuhammet\nselim muhammet",
+      "got": "selim\nmuhammet\nselim muhammet",
+      "code": "full_name = \"SELIM MUHAMMET\"\nfirst_name = \"SeLiM\"\nlast_name = \"Muhammet\"\npush(first_name.lower())\npush(last_name.lower())\npush(full_name.lower())"
+    },
+    {
+      "hash": "db523559fbfdafde",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at '-'",
+      "expected": "13",
+      "got": "Syntax error at '-'\nSyntax error at ')'\nnull",
+      "code": "func solve(arr, duration):\n    cond (len(arr) == 0):\n        return 0\n    end\n    result = 0\n    start = arr[0]\n    for i in range(1, len(arr)):\n        cond (arr[i] - arr[i - 1] > duration):\n            result = result + (arr[i - 1] + duration - start)\n            start = arr[i]\n        end\n    end\n    result = result + (arr[-1] + duration - start)\n    return result\nend\nA = [1, 2, 3, 4, 5, 6, 7, 8, 9]\nB = 5\npush(solve(A, B))"
+    },
+    {
+      "hash": "c7a80c93b36dc34f",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at '-'",
+      "expected": "Hi, I am an student of python. I have a lot to do in another branch too.\nThats the second commit in branch test1.\nBranch mesclado.",
+      "got": "Hi, I am an student of python. I have a lot to do in another branch too.\nSyntax error at '-'\nThats the second commit in branch test1.\nBranch mesclado.",
+      "code": "push(\"Hi, I am an student of python. I have a lot to do in another branch too.\")\na = 0\nd = -1\nb = 1\nfor i in space(5):\n    a = a + 1\n    b = a + 1\n    d = d - a\nend\nc = b * a\npush(\"Thats the second commit in branch test1.\")\npush(\"Branch mesclado.\")"
+    },
+    {
+      "hash": "8a82488ede25b7e2",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "55",
+      "got": "55",
+      "code": "soma = 0\nfor c in range(1, 11):\n    soma = soma + c\nend\npush(soma)"
+    },
+    {
+      "hash": "9a666404deffc560",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "9",
+      "got": "9",
+      "code": "y = 8\ncond (y == 0):\n    push(\"1\")\nelse:\n    cond (y % 2 == 1):\n        x = (2 * (y / 2))\n        push(x)\n    else:\n        y = (y + 1)\n        push(y)\n    end\nend"
+    },
+    {
+      "hash": "33086ce45dfbdc25",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "1 * 1 = 1\n1 * 2 = 2\n1 * 3 = 3\n1 * 4 = 4\n1 * 5 = 5\n1 * 6 = 6\n1 * 7 = 7\n1 * 8 = 8\n1 * 9 = 9\n1 * 10 = 10\n2 * 1 = 2\n2 * 2 = 4\n2 * 3 = 6\n2 * 4 = 8\n2 * 5 = 10\n2 * 6 = 12\n2 * 7 = 14\n2 * 8 = 16\n2 * 9 = 18\n2 *",
+      "got": "1 * 1 = 1\n1 * 2 = 2\n1 * 3 = 3\n1 * 4 = 4\n1 * 5 = 5\n1 * 6 = 6\n1 * 7 = 7\n1 * 8 = 8\n1 * 9 = 9\n1 * 10 = 10\n2 * 1 = 2\n2 * 2 = 4\n2 * 3 = 6\n2 * 4 = 8\n2 * 5 = 10\n2 * 6 = 12\n2 * 7 = 14\n2 * 8 = 16\n2 * 9 = 18\n2 *",
+      "code": "for x1 in space(1, 11):\n    for x2 in space(1, 11):\n        result = (x1 * x2)\n        push(tostr(x1) + \" * \" + tostr(x2) + \" = \" + tostr(result))\n    end\nend"
+    },
+    {
+      "hash": "53d2b54cac838ab8",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "1\n1\n2\n6\n24\n120\n720\n5040\n40320\n362880\n3628800\n39916800\n479001600\n6227020800\n87178291200\n1307674368000\n20922789888000\n355687428096000\n6402373705728000\n121645100408832000",
+      "got": "1\n1\n2\n6\n24\n120\n720\n5040\n40320\n362880\n3628800\n39916800\n479001600\n6227020800\n87178291200\n1307674368000\n20922789888000\n355687428096000\n6402373705728000\n121645100408832000",
+      "code": "func _fact(a, b):\n    cond (b == 0):\n        return a\n    end\n    return _fact(a * b, b - 1)\nend\nfunc fact(n):\n    return _fact(1, n)\nend\nfor i in range(20):\n    push(fact(i))\nend"
+    },
+    {
+      "hash": "317690ebb6080794",
+      "parses": true,
+      "matches": false,
+      "reason": null,
+      "expected": "Neighbors of vertex 0:  [1, 2]\nNeighbors of vertex 3:  [4, 5]\n\nPrint all adjacency lists with corresponding vertex\n0 : [1, 2]\n1 : [2, 3]\n2 : [4]\n3 : [4, 5]\n4 : [5]\n5 : []",
+      "got": "Neighbors of vertex 0: [1, 2]\nNeighbors of vertex 3: [4, 5]\n\nPrint all adjacency lists with corresponding vertex\n0: [1, 2]\n1: [2, 3]\n2: [4]\n3: [4, 5]\n4: [5]\n5: []",
+      "code": "adjLists = [[1, 2], [2, 3], [4], [4, 5], [5], []]\npush(\"Neighbors of vertex 0: \" + tostr(adjLists[0]))\npush(\"Neighbors of vertex 3: \" + tostr(adjLists[3]))\npush(\"\\nPrint all adjacency lists with corresponding vertex\")\nn = len(adjLists)\nfor v in space(0, n):\n    push(tostr(v) + \": \" + tostr(adjLists[v]))\nend"
+    },
+    {
+      "hash": "9c3fc067d193d5c0",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "3.5500000000000003\n3.5500000000000003",
+      "got": "3.5500000000000003\n3.5500000000000003",
+      "code": "func recusion(n):\n    cond (n <= 0):\n        return 0\n    end\n    cond (n == 1):\n        return (1 / 2)\n    end\n    return (n / (n + 1)) + recusion(n - 1)\nend\nfunc iterator(n):\n    sum = 0\n    for i in range(1, n + 1):\n        sum = sum + ((i / (i + 1)))\n    end\n    return sum\nend\npush(recusion(5))\npush(iterator(5))"
+    },
+    {
+      "hash": "21532f24d99e89b0",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "French\nPolish",
+      "got": "French\nPolish",
+      "code": "language = [\"French\", \"German\", \"English\", \"Polish\"]\npush(language[0])\npush(language[3])"
+    },
+    {
+      "hash": "6dec101a2f955652",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "40",
+      "got": "40",
+      "code": "x = 35\ny = (x + 5)\npush(y)"
+    },
+    {
+      "hash": "081304c5b37fc759",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "0:0\n0:1\n0:2\n0:3\n0:4\n0:5\n0:6\n0:7\n0:8\n0:9\n0:10\n0:11\n0:12\n0:13\n0:14\n0:15\n0:16\n0:17\n0:18\n0:19\n0:20\n0:21\n0:22\n0:23\n0:24\n0:25\n0:26\n0:27\n0:28\n0:29\n0:30\n0:31\n0:32\n0:33\n0:34\n0:35\n0:36\n0:37\n0:38\n0:39\n0:40\n0:41\n",
+      "got": "0:0\n0:1\n0:2\n0:3\n0:4\n0:5\n0:6\n0:7\n0:8\n0:9\n0:10\n0:11\n0:12\n0:13\n0:14\n0:15\n0:16\n0:17\n0:18\n0:19\n0:20\n0:21\n0:22\n0:23\n0:24\n0:25\n0:26\n0:27\n0:28\n0:29\n0:30\n0:31\n0:32\n0:33\n0:34\n0:35\n0:36\n0:37\n0:38\n0:39\n0:40\n0:41\n",
+      "code": "for hours in space(24):\n    for minutes in space(60):\n        push(tostr(hours) + \":\" + tostr(minutes))\n    end\nend"
+    },
+    {
+      "hash": "6e4bc24e58c07e37",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "[1, 2, 3, 4, 5, 6]",
+      "got": "[1, 2, 3, 4, 5, 6]",
+      "code": "liste = [1, 2, 3, 4, 5]\nliste.append(6)\npush(liste)"
+    },
+    {
+      "hash": "324f7db5c1da4bf2",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "Hello Guild!",
+      "got": "Hello Guild!",
+      "code": "msg = \"Hello Guild!\"\npush(msg)"
+    },
+    {
+      "hash": "1f7b643d28778393",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "['01', '2021', '1', '0', '5', '0']",
+      "got": "['01', '2021', '1', '0', '5', '0']",
+      "code": "re = pyimport(\"re\")\nLine = \"Dec-01-2021\\t1.0 miles\\t5.0 min\"\nSearchStr = \"\\\\d+\"\nResult = re.findall(SearchStr, Line)\npush(Result)"
+    },
+    {
+      "hash": "447d2c2fb8801ca7",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "xxxxxxxxxx",
+      "got": "xxxxxxxxxx",
+      "code": "func multiply(num1, num2):\n    return num1 * num2\nend\npush(multiply(10, \"x\"))"
+    },
+    {
+      "hash": "c8e8c7019185f7e5",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at '-'",
+      "expected": "1\n-2\n3\n-4\n5\n-6\n7\n-8\n9\n-10\n11\n-12\n13\n-14\n15\n-16\n17\n-18\n19\n-20\n21\n-22\n23\n-24\n25\n-26\n27\n-28\n29\n-30\n31\n-32\n33\n-34\n35\n-36\n37\n-38\n39\n-40\n41\n-42\n43\n-44\n45\n-46\n47\n-48\n49\n-50\n51\n-52\n53\n-54\n55\n-56\n57\n-58\n59\n-60",
+      "got": "1\nSyntax error at '-'\n3\nSyntax error at '-'\n5\nSyntax error at '-'\n7\nSyntax error at '-'\n9\nSyntax error at '-'\n11\nSyntax error at '-'\n13\nSyntax error at '-'\n15\nSyntax error at '-'\n17\nSyntax error at '-",
+      "code": "num = 1\nwhile num <= 100:\n    cond (num % 2 == 0):\n        push(num * -1)\n    else:\n        push(num)\n    end\n    num = num + 1\nend"
+    },
+    {
+      "hash": "18f2ee8fb14b3917",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "Hello, I am SKL\nWelcome to my learning space",
+      "got": "Hello, I am SKL\nWelcome to my learning space",
+      "code": "push(\"Hello, I am SKL\")\npush(\"Welcome to my learning space\")"
+    },
+    {
+      "hash": "8ae0ee0b9a40a1cc",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "[1, 4, 9, 16, 25]\n[4, 9, 16]",
+      "got": "[1, 4, 9, 16, 25]\n[4, 9, 16]",
+      "code": "squares = [1, 4, 9, 16, 25]\npush(squares)\nslice = squares[1:4]\npush(slice)"
+    },
+    {
+      "hash": "512036b8610b5ad9",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "88\n99\n89\n90\n78\n89\n99\n79",
+      "got": "88\n99\n89\n90\n78\n89\n99\n79",
+      "code": "data = [88, 99, 89, 90, 78, 89, 99, 79]\ni = 0\nwhile i <= 7:\n    push(data[i])\n    i = i + 1\nend"
+    },
+    {
+      "hash": "274772dc723651ed",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "\u0413\u043e\u0434\u043e\u0432\u0430\u044f \u0434\u043e\u0445\u043e\u0434\u043d\u043e\u0441\u0442\u044c \u043d\u0430\u0448\u0435\u0433\u043e \u0434\u0435\u043f\u043e\u0437\u0438\u0442\u0430 10.55%.",
+      "got": "\u0413\u043e\u0434\u043e\u0432\u0430\u044f \u0434\u043e\u0445\u043e\u0434\u043d\u043e\u0441\u0442\u044c \u043d\u0430\u0448\u0435\u0433\u043e \u0434\u0435\u043f\u043e\u0437\u0438\u0442\u0430 10.55%.",
+      "code": "percent = 10.55\npercent_str = \"\u0413\u043e\u0434\u043e\u0432\u0430\u044f \u0434\u043e\u0445\u043e\u0434\u043d\u043e\u0441\u0442\u044c \u043d\u0430\u0448\u0435\u0433\u043e \u0434\u0435\u043f\u043e\u0437\u0438\u0442\u0430 %.2f%%.\" % percent\npush(percent_str)"
+    },
+    {
+      "hash": "bf3f7b9ac10fb83c",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "here is the demo line",
+      "got": "here is the demo line",
+      "code": "tmp = \" here is the demo line \"\npush(tmp)"
+    },
+    {
+      "hash": "a6702a3a084d3ce1",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "E",
+      "got": "E",
+      "code": "kuukiondo = 70\nshitsudo = 100\ncond (kuukiondo >= 100):\n    push(\"A\")\nelif (kuukiondo >= 92 and shitsudo > 75):\n    push(\"B\")\nelif (kuukiondo > 88 and shitsudo >= 85):\n    push(\"C\")\nelif (kuukiondo == 75 and shitsudo <= 65):\n    push(\"D\")\nelse:\n    push(\"E\")\nend"
+    },
+    {
+      "hash": "a23a6f2330308d4e",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "ol\u00e1 mundo cru\u00e9l\nnossa, s\u00e3o iguais :-> 5\n1\n2\n3\n4\n5\n6\n7\n8\n9",
+      "got": "ol\u00e1 mundo cru\u00e9l\nnossa, s\u00e3o iguais :-> 5\n1\n2\n3\n4\n5\n6\n7\n8\n9",
+      "code": "minha_var = \"ol\u00e1 mundo cru\u00e9l\"\npush(minha_var)\nX = 5\nY = 5\nZ = 5\ncond(X > Y):\n    push((\"O X \u00e9 Maior D\u00e3rrrr :-> \" + tostr(X)))\nelif (X == Y):\n    push((\"nossa, s\u00e3o iguais :-> \" + tostr(X)))\nelse:\n    push((\"O X \u00e9 menir  Y  :-> \" + tostr(Y)))\nend\nx = 1\nwhile (x < 10):\n    push(x)\n    x = (x + 1)\nend"
+    },
+    {
+      "hash": "e39843ca7d3f5bb8",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "Curso de p\n4",
+      "got": "Curso de p\n4",
+      "code": "mistring = \"Curso de python3\"\npush(mistring[0:10])\npalabra = \"hola\"\npush(len(palabra))"
+    },
+    {
+      "hash": "cb2876edd3d84568",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "hello world\nhey i did something\nwhat happens if i do a ;\napparently nothing",
+      "got": "hello world\nhey i did something\nwhat happens if i do a ;\napparently nothing",
+      "code": "push(\"hello world\")\npush(\"hey i did something\")\npush(\"what happens if i do a ;\")\npush(\"apparently nothing\")"
+    },
+    {
+      "hash": "cb712eca1eedd65c",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "Hello Hello Hello",
+      "got": "Hello Hello Hello",
+      "code": "str = \"Hello \" * 3\npush(str)"
+    },
+    {
+      "hash": "c744c1a0bd7764eb",
+      "parses": true,
+      "matches": true,
+      "reason": null,
+      "expected": "~~~~~~~~~~~~~~~~~\n  Allan Nemesio  \n~~~~~~~~~~~~~~~~~\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n  Futuro Programador em Python  \n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n~~~~~~~~~~~~~~~\n  Em breve...  \n~~~~~~~~~~~~~~~",
+      "got": "~~~~~~~~~~~~~~~~~\n  Allan Nemesio  \n~~~~~~~~~~~~~~~~~\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n  Futuro Programador em Python  \n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n~~~~~~~~~~~~~~~\n  Em breve...  \n~~~~~~~~~~~~~~~",
+      "code": "func texto(msg):\n    push((\"~\" * ((len(msg) + 4))))\n    push((\"  \" + msg + \"  \"))\n    push((\"~\" * ((len(msg) + 4))))\nend\ntexto(\"Allan Nemesio\")\ntexto(\"Futuro Programador em Python\")\ntexto(\"Em breve...\")"
+    }
+  ]
+}
