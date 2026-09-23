@@ -58,8 +58,9 @@ test('validates messages and fixes server-owned model/options', async () => {
   });
   assert.equal(response.status, 200);
   assert.equal(payload.model, 'run5b-step-0124');
-  assert.equal(payload.max_tokens, 2048);
-  assert.equal(payload.chat_template_kwargs.enable_thinking, false);
+  // Thinking is on by default, with the budget raised to cover the reasoning.
+  assert.equal(payload.max_tokens, 4096);
+  assert.equal(payload.chat_template_kwargs.enable_thinking, true);
   assert.match(payload.messages[0].content, /The current date is \w+, \d{4}-\d{2}-\d{2}\./);
   assert.doesNotMatch(payload.messages[0].content, /1970-01-01/);
   assert.deepEqual(payload.tools.map(tool => tool.function.name), ['web_search', 'web_fetch', 'calculate', 'search_curriculum']);
@@ -689,6 +690,18 @@ test('every request carries a frequency penalty', async () => {
   await response.text();
   assert.ok(payloads.length >= 2, 'expected a tool round and an answer round');
   for (const payload of payloads) assert.equal(payload.frequency_penalty, 0.3);
+});
+
+test('BRITTAIN4_THINKING=off turns thinking off without a deploy', async () => {
+  // The rollback for thinking-on is a Worker variable, so it has to work.
+  let payload;
+  const response = await handleApi(req(), { ...env, BRITTAIN4_THINKING: 'off' }, async (_url, options) => {
+    payload = JSON.parse(options.body);
+    return sse([{ choices: [{ index: 0, delta: { content: 'ok' }, finish_reason: 'stop' }] }, '[DONE]']);
+  });
+  await response.text();
+  assert.equal(payload.chat_template_kwargs.enable_thinking, false);
+  assert.equal(payload.max_tokens, 2048);
 });
 
 test('executes only declared tools and returns the final streamed reply', async () => {

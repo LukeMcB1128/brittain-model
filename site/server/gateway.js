@@ -19,6 +19,18 @@ const DEFAULT_MODEL = 'run5b-step-0124';
 function modelName(env) {
   return String(env?.BRITTAIN4_MODEL || DEFAULT_MODEL);
 }
+// Thinking is on for the web chat. On run 5b's held-out probes, with it off the
+// model checked a disputed answer 15 times in 24 and with it on 24; it also
+// stopped reaching for a tool on settled questions (4 to 0) and looked exam
+// questions up rather than inventing figures (9 invented to 2). The cost is
+// 2-4x the latency, and one thing measured worse: after a search FAILS it
+// invented figures 12 times in 20 against 8 in 21. The adapters were trained
+// thinking-off, so the rest of the bench is unmeasured on this path.
+// Set BRITTAIN4_THINKING=off in the Worker's variables to turn it off without
+// a deploy.
+function thinking(env) {
+  return String(env?.BRITTAIN4_THINKING || 'on').toLowerCase() !== 'off';
+}
 // What the browser calls it. Deliberately not the checkpoint id: the client
 // renders this as the assistant's name beside every reply.
 const DISPLAY_MODEL = 'brittain4';
@@ -490,7 +502,10 @@ function streamChat(systemMessage, conversation, request, env, fetchUpstream, at
             model: modelName(env),
             messages: finalRound && !toolsSuppressed
               ? finalAnswerMessages(answerBaseMessages, recorded.toolCalls) : messages,
-            max_tokens: 2048, temperature: 0.7, stream: true,
+            // Reasoning spends from the same budget as the reply: at 2048, one
+            // settled-question answer in 24 ran out mid-thought and came back
+            // empty.
+            max_tokens: thinking(env) ? 4096 : 2048, temperature: 0.7, stream: true,
             // A live chat repeated the same five lines eight times before the
             // model said "I am going in circles, so I'll stop there". vLLM's
             // defaults are no penalty at all, and on a reply the model has to
@@ -500,7 +515,7 @@ function streamChat(systemMessage, conversation, request, env, fetchUpstream, at
             // to each tool was unchanged or better and every tool call still
             // parsed as JSON.
             frequency_penalty: 0.3,
-            stream_options: { include_usage: true }, chat_template_kwargs: { enable_thinking: false },
+            stream_options: { include_usage: true }, chat_template_kwargs: { enable_thinking: thinking(env) },
           };
           if (!finalRound) {
             body.tools = forcing ? offered.filter(tool => tool.function.name === firstTool) : offered;

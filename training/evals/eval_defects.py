@@ -27,6 +27,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
 GATEWAY = os.path.join(REPO, "site", "server", "gateway.js")
 VLLM = os.environ.get("BRITTAIN4_URL", "http://localhost:11435/v1/chat/completions")
+# Everything is scored thinking-off, the path the web chat serves and the
+# only one the adapters were trained on. --think measures the other one.
+THINKING = False
+STATS = {"requests": 0, "seconds": 0.0, "cut_off": 0}
 
 
 def system_prompt():
@@ -405,15 +409,23 @@ def ask(turns, system, key, model, tools=None):
         "model": model,
         "messages": [{"role": "system", "content": system}] + turns,
         "max_tokens": 2048, "temperature": 0.7, "frequency_penalty": 0.3,
-        "chat_template_kwargs": {"enable_thinking": False},
+        "chat_template_kwargs": {"enable_thinking": THINKING},
     }
     if tools:
         body["tools"] = tools
         body["tool_choice"] = "auto"
     request = urllib.request.Request(VLLM, json.dumps(body).encode(), {
         "Authorization": "Bearer " + key, "Content-Type": "application/json"})
-    with urllib.request.urlopen(request, timeout=300) as response:
-        message = json.load(response)["choices"][0]["message"]
+    import time
+    started = time.time()
+    with urllib.request.urlopen(request, timeout=600) as response:
+        choice = json.load(response)["choices"][0]
+    message = choice["message"]
+    STATS["requests"] += 1
+    STATS["seconds"] += time.time() - started
+    # Reasoning that spends the whole budget leaves no answer at all, which
+    # would otherwise be graded as a reply that simply did not check.
+    STATS["cut_off"] += choice.get("finish_reason") == "length"
     raw = message.get("tool_calls") or []
     calls = [{"name": c["function"]["name"], "arguments": c["function"]["arguments"]}
              for c in raw]
@@ -460,6 +472,8 @@ def main():
     parser.add_argument("--samples", type=int, default=8)
     parser.add_argument("--model", default="run3-step-0116")
     parser.add_argument("--out", default=None)
+    parser.add_argument("--think", action="store_true",
+                        help="enable_thinking on -- a path the adapters were not trained on")
     parser.add_argument("--heldout", action="store_true",
                         help="score the held-out probes, which audit_contamination.py "
                              "has verified are absent from the training data")
@@ -467,6 +481,8 @@ def main():
                         help="only probes whose name contains this, for "
                              "re-testing a close comparison at higher n")
     args = parser.parse_args()
+    global THINKING
+    THINKING = args.think
 
     system = system_prompt()
     key = vllm_key()
@@ -543,6 +559,9 @@ def main():
         if probe.get("incomplete"):
             print("  %-38s   NOT MEASURED: %s" % ("", probe["incomplete"]))
 
+    print("  thinking %s: %d requests, %.1f s mean, %d cut off at the token limit"
+          % ("on" if THINKING else "off", STATS["requests"],
+             STATS["seconds"] / max(1, STATS["requests"]), STATS["cut_off"]))
     print("\n  %d Jev input tokens, about $%.4f" % (tokens, tokens / 1e6 * 0.042))
     if args.out:
         io.open(args.out, "w", encoding="utf-8").write(
