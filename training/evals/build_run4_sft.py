@@ -368,6 +368,26 @@ def sourced_figures():
     return rows
 
 
+def contrast():
+    """Run 5c: settled against moving, inside each domain. See run5_contrast.py."""
+    from run5_contrast import MOVING, SETTLED_CODING, SETTLED_GENERAL
+    rows = [turn("known_syntax", q, a, note="settled, answered flat (contrast)")
+            for q, a in SETTLED_CODING]
+    rows += [turn("known_general", q, a, note="settled, answered flat (contrast)")
+             for q, a in SETTLED_GENERAL]
+    for user, name, arguments in MOVING:
+        rows.append({
+            "kind": "needs_checking",
+            "messages": [
+                {"role": "user", "content": user},
+                {"role": "assistant", "content": "", "tool_calls": call(name, arguments)},
+            ],
+            "source": SOURCE,
+            "note": "the answer moved; go and look (contrast)",
+        })
+    return rows
+
+
 # ------------------------------------------------ sourced_figures, run 5 scale
 #
 # Twenty rows did nothing to fabrication: invented exam figures read 8/24 for
@@ -924,6 +944,9 @@ def check(rows):
     for row in groups.get("known_syntax", []):
         if TOOLY.search(target(row)):
             problems.append("known_syntax names a tool: %.60s" % target(row))
+    for row in groups.get("known_general", []):
+        if TOOLY.search(target(row)):
+            problems.append("known_general names a tool: %.60s" % target(row))
     for row in groups.get("no_op_turns", []):
         if TOOLY.search(target(row)):
             problems.append("no_op_turns names a tool: %.60s" % target(row))
@@ -987,12 +1010,17 @@ def main():
                         help="rows of the counterweight to keep; 0 keeps all")
     parser.add_argument("--figures", action="store_true",
                         help="add the run 5 sourced_figures expansion")
+    parser.add_argument("--contrast", action="store_true",
+                        help="add run 5c's settled-against-moving pairs; see "
+                             "run5_contrast.py")
     args = parser.parse_args()
 
     rows = (known_syntax() + needs_checking(args.needs_checking)
             + sourced_figures() + tool_account() + no_op_turns())
     if args.figures:
         rows += sourced_figures_expansion()
+    if args.contrast:
+        rows += contrast()
     problems = check(rows)
     counts = {}
     for row in rows:
