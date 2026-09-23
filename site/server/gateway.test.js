@@ -57,7 +57,7 @@ test('validates messages and fixes server-owned model/options', async () => {
     return new Response('data: [DONE]\n', { headers: { 'Content-Type': 'text/event-stream' } });
   });
   assert.equal(response.status, 200);
-  assert.equal(payload.model, 'run4c-step-0116');
+  assert.equal(payload.model, 'run5b-step-0124');
   assert.equal(payload.max_tokens, 2048);
   assert.equal(payload.chat_template_kwargs.enable_thinking, false);
   assert.match(payload.messages[0].content, /The current date is \w+, \d{4}-\d{2}-\d{2}\./);
@@ -161,7 +161,7 @@ test('session readiness verifies the model server rather than only the key', asy
   const up = await handleApi(session(), env, async () => Response.json({
     data: [
       { id: 'brittain4', max_model_len: 32768 },
-      { id: 'run4c-step-0116', max_model_len: null, parent: 'brittain4' },
+      { id: 'run5b-step-0124', max_model_len: null, parent: 'brittain4' },
     ],
   }));
   const ready = await up.json();

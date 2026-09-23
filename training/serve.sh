@@ -53,6 +53,12 @@ export VLLM_API_KEY="$BRITTAIN_API_KEY"
 # looks perfectly healthy -- which cost a whole scoring pass.
 export VLLM_ALLOW_RUNTIME_LORA_UPDATING=1
 
+# Adapters are loaded at startup, not registered by hand afterwards. The site
+# asks for one by name, and a restart that came back with only the base left it
+# asking for an adapter that was not there -- for seven hours, the night of run
+# 5. The first --lora-modules entry is production; the rest are rollbacks.
+# Changing the served adapter means changing it here AND DEFAULT_MODEL in
+# site/server/gateway.js, then deploying the site.
 exec vllm serve \
     --model /home/lukeb/brittain4/models/brittain4-base-w4a16 \
     --served-model-name brittain4 \
@@ -65,6 +71,10 @@ exec vllm serve \
     --attention-backend TRITON_ATTN \
     --enable-lora \
     --max-lora-rank 32 \
+    --lora-modules \
+        run5b-step-0124=/home/lukeb/brittain4/adapters/run5b/step-0124-mm \
+        run4c-step-0116=/home/lukeb/brittain4/adapters/run4c/step-0116-mm \
+        run3-step-0116=/home/lukeb/brittain4/adapters/run3/step-0116-mm \
     --enable-auto-tool-choice \
     --tool-call-parser qwen3_xml \
     --reasoning-parser "${REASONING_PARSER:-qwen3}" \

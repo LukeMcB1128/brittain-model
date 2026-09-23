@@ -15,7 +15,7 @@ function upstream(env) {
 // resident and applies the adapter per request, so the base cannot be
 // unloaded. Naming the adapter here is what keeps the raw base out of the web
 // app: nothing else in this worker sends a model name.
-const DEFAULT_MODEL = 'run4c-step-0116';
+const DEFAULT_MODEL = 'run5b-step-0124';
 function modelName(env) {
   return String(env?.BRITTAIN4_MODEL || DEFAULT_MODEL);
 }

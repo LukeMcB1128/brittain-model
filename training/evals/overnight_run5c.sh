@@ -42,8 +42,11 @@ start_server() {
     SERVER_PID=$!
     for _ in $(seq 1 90); do healthy && break; sleep 10; done
     healthy || { say "SERVER DID NOT COME UP"; return 1; }
-    # Production first: the site asks for this adapter by name.
-    say "server up; run3-step-0116 -> $(register run3-step-0116 "$A/run3/step-0116-mm")"
+    # serve.sh loads the production adapter and its rollbacks at startup.
+    # This script used to register run3-step-0116 here as "production" --
+    # a name the site had stopped asking for the day before, which left the
+    # site pointing at an unloaded adapter for seven hours. Never hardcode it.
+    say "server up"
 }
 
 stop_server() {
@@ -57,7 +60,7 @@ stop_server() {
 production() {
     # Whatever state the night ended in, leave the site able to answer.
     start_server || true
-    say "production: run3-step-0116 -> $(register run3-step-0116 "$A/run3/step-0116-mm") (409 = already loaded)"
+    say "production: server up with the adapters serve.sh loads"
 }
 trap 'say "exiting; restoring production"; production' EXIT
 
