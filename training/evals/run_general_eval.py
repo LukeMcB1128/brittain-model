@@ -115,7 +115,7 @@ def main():
 
     rows = [json.loads(l) for l in open(args.eval, encoding="utf-8")]
     if args.skip_exec:
-        rows = [r for r in rows if r["task"] != "humaneval"]
+        rows = [r for r in rows if r["task"] not in ("humaneval", "mbpp")]
     if args.limit:
         rows = rows[:args.limit]
 
@@ -148,7 +148,9 @@ def main():
             labels = r.get("labels") or ["A", "B", "C", "D"]
             got = choice_answer(text, labels)
             ok = got == r["answer"]
-        elif task == "humaneval":
+        # MBPP is built into the same shape: asserts as the test, the function
+        # they call as the entry point. See build_code_eval.py.
+        elif task in ("humaneval", "mbpp"):
             got = None
             ok = run_humaneval(extract_code(text), r["test"], r["entry_point"])
         elif task == "xstest_safe":
