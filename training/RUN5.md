@@ -158,6 +158,73 @@ move the XSTest lines onto the graded numbers is a decision for a person, not
 for the run being judged, so they are left as written and both scorings are
 reported.
 
+## Run 5b result: the base's capability, and a new lesson about the dial
+
+5a plus the fabrication set (156 rows). 124 steps, 64 minutes.
+
+| | base | run3 *(served)* | run5a | **run5b** | bar |
+|---|---|---|---|---|---|
+| capability overall | 84.7 | 81.7 | 82.6 | **84.7** | >= 84 pass |
+| GSM8K | 89.0 | 88.0 | 88.0 | **92.0** | |
+| MMLU | 76.3 | 73.7 | 73.7 | **76.3** | |
+| HumanEval (40) | 80.0 | 62.5 | 72.5 | **72.5** | >= 75 FAIL |
+| XSTest safe, phrase / Jev | 92.0 / 79.0 | 50.0 / 49.0 | 85.0 / 72.0 | **89.0 / 79.0** | >= 85 pass |
+| XSTest unsafe, phrase / Jev | 88.3 / 98.3 | 98.3 / 100 | 78.3 / 100 | **88.3 / 100** | >= 85 pass |
+| BrittainScript, no spec | 0.0 | 71.7 | 71.7 | **70.0** | >= 65 pass |
+| held-out over-reach | -- | 15 | 9 | **3** | <= 8 pass |
+| held-out facts checked | -- | 23 | 24 | **24** | >= 21 pass |
+
+**Six of seven gate lines pass.** 5b is the first adapter to match the base's
+overall capability, and its refusals match the base on both scorings.
+
+### The powered code eval
+
+| | base | run3 | run4b | run4c | run5a | run5b |
+|---|---|---|---|---|---|---|
+| HumanEval, 164 | **82.3** | 71.3 | 75.0 | 69.5 | 75.0 | **75.6** |
+| MBPP, 500 | **64.2** | 62.8 | 64.2 | 61.6 | 61.6 | **62.8** |
+
+MBPP is essentially intact on every adapter -- within about two points of the
+base, inside the noise at 500 problems. HumanEval is not: every adapter loses
+6 to 13 points. The two sets differ in format more than in difficulty:
+HumanEval hands over a docstring stub and asks for the completed function;
+MBPP describes a task. So the loss looks like the adapters handling the
+complete-this-stub format worse, not a general loss of coding ability.
+Differences between adapters are 3 to 6 points, about one standard error at
+164 problems, so no part of the mix can be blamed yet.
+
+### What 5b broke, and why
+
+On the held-out probes every tool-related number moved in one direction:
+
+| held-out, of 24 | 5a | 5b |
+|---|---|---|
+| over-reach on settled knowledge | 9 | **3** |
+| looked up an exam question | 18 | **3** |
+| tried again after a failed search | 21 | **5** |
+| **pushback: checked instead of restating** | **24** | **14** |
+| facts that move: checked | 24 | 24 |
+
+The fabrication set is 156 rows and every target is quiet -- withhold a figure,
+or quote one the prompt already carries -- so it tipped the dial toward not
+calling tools. Over-reach improved; pushback got worse, and on exam questions
+the model stopped looking things up and invented figures instead (8 of 21
+graded, against 5a's 1 of 6 and run 3's 13 of 24).
+
+This is run 4b's lesson one level up. The pairing inside `sourced_figures` was
+right and was not enough: **the dial is every quiet row against every calling
+row, not each group against its own counterweight.** The builder's guard
+compares `needs_checking` only with `known_syntax`, so it could not see this.
+
+### Against what is served now
+
+Against run 3, 5b is better on nearly everything measured: capability +3.0,
+XSTest safe +39 phrase-matched, over-reach 15 to 3, fabrication 13/24 to
+8/21, HumanEval-164 +4.3. BrittainScript is 1.7 lower and pushback 2 lower,
+both inside the noise at their sample sizes. It misses the pre-registered
+gate on HumanEval, and pushback is not a gate line at all, so whether to
+serve it is a call for a person, not for the run being judged.
+
 ## Changes, each with the probe that checks it
 
 | change | checked by |

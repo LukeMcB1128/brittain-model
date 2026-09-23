@@ -1,0 +1,1091 @@
+{
+  "summary": {
+    "label": "brittain4",
+    "spec_given": false,
+    "n": 120,
+    "parses": 0.0,
+    "matches": 0.0
+  },
+  "records": [
+    {
+      "hash": "b8d98106b27ebe9f",
+      "parses": false,
+      "matches": false,
+      "reason": "Illegal character: '''",
+      "expected": "hello world!\nthis is my first attempt",
+      "got": "Illegal character: '''\nSyntax error at 'world'\nIllegal character: '!'\nIllegal character: '''\nIllegal character: '''\nSyntax error at 'is'\nIllegal character: '''\nUndefined variable: attempt",
+      "code": "print('hello world!')\nprint('this is my first attempt')"
+    },
+    {
+      "hash": "95e978f8c16bb894",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'calculate_sum'",
+      "expected": "30",
+      "got": "Syntax error at 'calculate_sum'\nUndefined variable: data1\nUndefined variable: data2\nUndefined variable: data1\nUndefined variable: data2\nError: return used outside a function",
+      "code": "# function defination\ndef calculate_sum(data1, data2):\n    # All the statements in the block of code must have the same level of indentation\n    result_sum = data1 + data2\n    return result_sum\n\nresult = calculate_sum(10, 20)\nprint(result)"
+    },
+    {
+      "hash": "1391f4cd03f0035d",
+      "parses": false,
+      "matches": false,
+      "reason": "Illegal character: '''",
+      "expected": "34\n34\nnome\n13\nOla me chamo Gabriel! Como e seu nome?",
+      "got": "Illegal character: '''\nSyntax error at 'me'\nIllegal character: '!'\nIllegal character: '?'\nIllegal character: '''\nIllegal character: '''\nIllegal character: '''\nUndefined variable: nome\nError: no method",
+      "code": "frase = 'Ola me chamo Leonardo! Como e seu nome?'\n\n# a)\nprint(frase.index('nome'))\nprint(frase.find('nome'))\nprint(frase[34:38])\n\n\n# b)\nprint(frase.find('Leonardo'))\nprint(frase[:13] + 'Gabriel' + frase[21:])"
+    },
+    {
+      "hash": "c133d8f6b94472c3",
+      "parses": false,
+      "matches": false,
+      "reason": "Illegal character: '''",
+      "expected": "meu primeiro programa em python\n5",
+      "got": "Illegal character: '''\nSyntax error at 'primeiro'\nIllegal character: '''\nUndefined variable: python\nUndefined function: print",
+      "code": "print('meu primeiro programa em python')\na = 2\nb = 3\nsoma = a + b\nprint(soma)"
+    },
+    {
+      "hash": "50b75e0ee37fc716",
+      "parses": false,
+      "matches": false,
+      "reason": "Illegal character: '''",
+      "expected": "CPuPrPsPoP PePmP PVP\u00edPdPePoP PPPyPtPhPoPn",
+      "got": "Illegal character: '''\nSyntax error at 'em'\nIllegal character: '\u00ed'\nIllegal character: '''\nUndefined variable: Python\nIllegal character: '''\nIllegal character: '''\nUndefined variable: P\nError: no metho",
+      "code": "#len(frase) ---- comprimento\n#frase.count() --- contar quantas x aparece tal letra\n#frase.find()\n#'Curso' in frase --------- true or false\n#frase.replace('Python', 'Android') --- substitui\u00e7ao\n#frase.upper()\n#frase.lower()\n#frase.capitalize() ---- deixa o 1 em maiusc, resto em minusc\n#frase.title() ---- deixa o 1 de cada palavra em maiscu\n#frase.strip() ---- remove os espa\u00e7os inuteis\n#frase.rstrip() --- remove os espa\u00e7os da direita\n#frase.split() --- palavras recebem novas numera\u00e7\u00f5es, como se fossem listas\n#frase.index() --- posi\u00e7ao\nfrase = 'Curso em V\u00eddeo Python'\n#   '-'.join(frase) --- separa palavras com o h\u00edfen\nprint('P'.join(frase))"
+    },
+    {
+      "hash": "863e8eace0cca168",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|a|",
+      "got": "Undefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print",
+      "code": "N = 500000\n\nprint(\"a\" + \"|a\" * (N - 1))\nprint(\"a\" + \"|a\" * (N - 1))\nprint(\"a\" + \"|a\" * (N - 1))\nprint(\"a\" + \"|a\" * (N - 1))\nprint(\"a\" + \"|a\" * (N - 1))"
+    },
+    {
+      "hash": "3aee2d2f57f1715a",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "|\\_/|\n|q p|   /}\n( 0 )\"\"\"\\\n|\"^\"`    |\n||_/=\\\\__|",
+      "got": "Undefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print",
+      "code": "# https://www.acmicpc.net/problem/10172\nprint(\"|\\_/|\")\nprint(\"|q p|   /}\")\nprint(\"( 0 )\\\"\\\"\\\"\\\\\")\nprint(\"|\\\"^\\\"`    |\")\nprint(\"||_/=\\\\\\\\__|\")"
+    },
+    {
+      "hash": "430a441ac45918c1",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined variable: False",
+      "expected": "5\n4\n3\n2\n1",
+      "got": "Undefined variable: False\nSyntax error at 'L'\n\nTraceback (most recent call last):\n  File \"/home/lukeb/venv/bin/bs\", line 8, in <module>\n    sys.exit(cli_entry())\n             ~~~~~~~~~^^\n  File \"/home",
+      "code": "# Exerc\u00edcio 6.16 Modifique o programa da listagem 6.44 para ordenar a lista em\n# ordem decrescente. L=[1,2,3,4,5] deve ser ordenada como L=[5,4,3,2,1].\n\nL = [3, 2, 1, 5, 4]\n\nfim = 5 \n\nwhile fim > 1: \n    trocou = False \n    x = 0 \n    while x < (fim-1): \n        if L[x] < L[x+1]: \n            trocou = True \n            temp = L[x] \n            L[x] = L[x+1]\n            L[x + 1] = temp\n        x += 1\n    if not trocou: \n        break\n    fim -= 1 \n    \nfor e in L:\n    print(e)"
+    },
+    {
+      "hash": "017643fa883efec9",
+      "parses": false,
+      "matches": false,
+      "reason": "Illegal character: '''",
+      "expected": "2021-04-15 16:56:44.613",
+      "got": "Illegal character: '''\nSyntax error at 'T16'\nIllegal character: '''\nIllegal character: '''\nIllegal character: '''\nUndefined variable: T\nError: no method 'split' on NoneType\nError: invalid index\nIllega",
+      "code": "s = '2021-04-15T16:56:44.613Z'\n\ndate = s.split('T')[0]\ntime = s.split('T')[1].split('Z')[0]\n\ns = date + ' ' + time\n\nprint(s)"
+    },
+    {
+      "hash": "a3a16a155379fc67",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error: missing end",
+      "expected": "10500.0\n11025.0\n11576.25\n12155.0625\n12762.815625000001",
+      "got": "Syntax error: missing end\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print",
+      "code": "a = 10000\nfor i in range(5):\n    a = a * (1 + 0.05)\n    print(a)"
+    },
+    {
+      "hash": "38ab7ef787ea7e6f",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "Man viss izdodas!",
+      "got": "Undefined function: print",
+      "code": "txt = \"Man viss izdodas!\"\nprint(txt)"
+    },
+    {
+      "hash": "b28321690d4e834a",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'mod'",
+      "expected": "0",
+      "got": "Syntax error at 'mod'",
+      "code": "print((5 mod 5) div 2)"
+    },
+    {
+      "hash": "4870fdb20455c3a0",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "[1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765, 10946, 17711, 28657, 46368, 75025, 121393, 196418, 317811, 514229, 832040, 1346269, 2178309, 3524578, 5702887, 9",
+      "got": "Undefined function: print",
+      "code": "a = 1\nb = 1\nc = 0\nn = []\nn.append(b)\nwhile a < 10000000000:\n    n.append(a)\n    c = a\n    a += b\n    b = c\n    \nprint(n)"
+    },
+    {
+      "hash": "271a22bb56095f50",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'a'",
+      "expected": "a is greater",
+      "got": "Syntax error at 'a'\nUndefined function: print\nSyntax error: unexpected elif\nUndefined function: print\nSyntax error: unexpected else\nUndefined function: print",
+      "code": "a = 44\nb = 32\nif a > b:\n    print(\"a is greater\")\nelif a == b:\n    print(\"Both are equal\")\nelse:\n    print(\"b is greater than a\")"
+    },
+    {
+      "hash": "61dec9557b09fb1c",
+      "parses": false,
+      "matches": false,
+      "reason": "Illegal character: '''",
+      "expected": "['q', 1, 2, 3, 4]\n['q', 1, 'two and a half', 2, 3, 4]",
+      "got": "Illegal character: '''\nIllegal character: '''\nUndefined variable: q\nUndefined function: print\nIllegal character: '''\nUndefined variable: two\nSyntax error at 'half'\nIllegal character: '''\nUndefined fun",
+      "code": "nums = [1, 2, 3, 4]\nnums.insert(0, 'q')\nprint(nums)\nnums.insert(2, 'two and a half')\nprint(nums)"
+    },
+    {
+      "hash": "144a0b4cb8318553",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error: missing end",
+      "expected": "1\n2\n3\n4\n6\n7\n8\n9\n10\n11",
+      "got": "Syntax error: missing end\nSyntax error at 'x'\nSyntax error at 'x'\nSyntax error at 'x'\nSyntax error at 'x'\nSyntax error at 'x'\nSyntax error at 'x'\nSyntax error at 'x'\nSyntax error at 'x'\nSyntax error a",
+      "code": "x = 0\nwhile x <= 10:\n    x = x + 1\n    if x == 5:\n        continue\n    print(x)"
+    },
+    {
+      "hash": "3ae95fc1f500f47c",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error: missing end",
+      "expected": "#\n#\n#",
+      "got": "Syntax error: missing end\nUndefined function: print\nUndefined function: print\nUndefined function: print",
+      "code": "for i in range(3):\n    print(\"#\")"
+    },
+    {
+      "hash": "0b07da0a4f60bdf8",
+      "parses": false,
+      "matches": false,
+      "reason": "Illegal character: '''",
+      "expected": "['Gado-gado', 'Ayam Goreng', 'Rendang', 'Es Teh', 'Es Jeruk', 'Es Campur']",
+      "got": "Illegal character: '''\nUndefined variable: Gado\nIllegal character: '''\nUndefined variable: gado\nIllegal character: '''\nSyntax error at 'Goreng'\nIllegal character: '''\nIllegal character: '''\nIllegal ch",
+      "code": "list_makanan = ['Gado-gado', 'Ayam Goreng', 'Rendang']\nlist_minuman = ['Es Teh', 'Es Jeruk', 'Es Campur']\nlist_menu = list_makanan + list_minuman\nprint(list_menu)"
+    },
+    {
+      "hash": "5f4999f893a8969e",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at ':'",
+      "expected": "x=5",
+      "got": "Syntax error at ':'\nUndefined function: print\nSyntax error: unexpected elif\nUndefined function: print\nSyntax error: unexpected elif\nUndefined function: print\nSyntax error: unexpected else\nUndefined fu",
+      "code": "x = 5\n\nif x = 3:\n    print(\"x=3\")\nelif x = 4:\n    print(\"x=4\")\nelif x = 5:\n    print(\"x=5\")\nelse:\n    print(\"x!=3v4v5\")"
+    },
+    {
+      "hash": "0d0b08495d602fe8",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "Mary had a little lamb.\nIts fleece was white as snow\nAnd everywhere that Mary went.\n..........\nCheese\nBurger",
+      "got": "Undefined function: print\nSyntax error at 'Its fleece was white as {'snow'}'\nUndefined function: print\nIllegal character: '''\nSyntax error at '.'\nIllegal character: '''\nSyntax error at ')'\nUndefined f",
+      "code": "print(\"Mary had a little lamb.\")\nprint(f\"Its fleece was white as {'snow'}\")\nprint(\"And everywhere that Mary went.\")\nprint('.' * 10) # what'd that do?\n\nend1 = \"C\"\nend2 = \"h\"\nend3 = \"e\"\nend4 = \"e\"\nend5 = \"s\"\nend6 = \"e\"\nend7 = \"B\"\nend8 = \"u\"\nend9 = \"r\"\nend10 = \"g\"\nend11 = \"e\"\nend12 = \"r\"\n\n# watch that comma at the end. try removing it to see what happends\nprint(end1 + end2 + end3 + end4 + end5 + end6, )\nprint(end7 + end8 + end9 + end10 + end11 + end12)"
+    },
+    {
+      "hash": "9971db79c8468a5e",
+      "parses": false,
+      "matches": false,
+      "reason": "Illegal character: '''",
+      "expected": "1",
+      "got": "Illegal character: '''\nIllegal character: '\u043e'\nIllegal character: '\u0434'\nIllegal character: '\u0438'\nIllegal character: '\u043d'\nIllegal character: '''\nSyntax error at ','\nIllegal character: '''\nIllegal character: ",
+      "code": "my_list = ['\u043e\u0434\u0438\u043d', '\u0434\u0432\u0430', '\u0442\u0440\u0438', '\u0447\u0435\u0442\u044b\u0440\u0435', '\u043f\u044f\u0442\u044c']\nprint(my_list.index('\u0434\u0432\u0430'))"
+    },
+    {
+      "hash": "c2cdc11efa190f37",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "one of Python's strengths is its diverse community.",
+      "got": "Undefined function: print",
+      "code": "#Como inserir ap\u00f3strofos em uma string\nmessage = \"one of Python's strengths is its diverse community.\"\nprint(message)"
+    },
+    {
+      "hash": "903c16698ec69da0",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at '6'",
+      "expected": "False\nTrue\nFalse\n5 is lower than 6\nTrue\nFalse\nTrue\nFalse\nTrue",
+      "got": "Syntax error at '6'\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined variable: False\nUndefined function: print\nSyntax error at 'result'\nUndefined function: print",
+      "code": "#!/usr/bin/env python\n# coding: utf-8\n\n# In[3]:\n\n\n# Inequality operators and bools\n\nif 6<5:\n    print(\"Yes\")   #no output\n\nprint(6<5)\nprint(5<6)\n\n\n# In[12]:\n\n\nb = False\n   # print(b)\n    \nprint(b)\n\n\n# In[16]:\n\n\nresult = 5<6\nif result:\n    print(\"5 is lower than 6\")\n\n\n# In[17]:\n\n\nprint(5<6)\n\n\n# In[22]:\n\n\nword = \"Hello\"\nprint(word !=\"Hello\")\nprint(word !=\"world\")\n\n\n# In[23]:\n\n\nab = 5\nprint(ab != 5)\nprint(ab != 6)\n\n\n# In[ ]:"
+    },
+    {
+      "hash": "9f14abdec7697009",
+      "parses": false,
+      "matches": false,
+      "reason": "Illegal character: '''",
+      "expected": "String with the use of Single Quotes:\nWelcome to the Geeks World\n\nString with the use of Double Quotes:\nI'm a Geek\n\nString witht he use of Triple Quotes:\nI'm a Geek and I liive in a world of \"Geeks\"\n\n",
+      "got": "Illegal character: '''\nSyntax error at 'to'\nIllegal character: '''\nUndefined variable: World\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print\nIll",
+      "code": "# BrittainScript program for creation of String\n\n# Creating a String with single quotes\nString1 = 'Welcome to the Geeks World'\nprint(\"String with the use of Single Quotes:\")\nprint(String1)\n\n# Creating a String with double quotes\nString1 = \"I'm a Geek\"\nprint(\"\\nString with the use of Double Quotes:\")\nprint(String1)\n\n# Creating a String with triple quotes\nString1 = '''I'm a Geek and I liive in a world of \"Geeks\"'''\nprint(\"\\nString witht he use of Triple Quotes:\")\nprint(String1)\n\n# Creating String with triple quotes allow multiple lines\nString1 = '''Geeks\\nFor\\nLife'''\nprint(\"\\nCreating a multiline string: \")\nprint(String1)"
+    },
+    {
+      "hash": "4968c26d5688ffb6",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "2\n4\n8\n16\n16 4",
+      "got": "Undefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print",
+      "code": "# test 1\nX = 4\nY = 1\nZ = 0 \n\nwhile Z < X:\n    Y = 2 * Y\n    print(Y)\n    Z = Z + 1\n    \n\nprint(Y, Z)"
+    },
+    {
+      "hash": "3b45f435d3046e29",
+      "parses": false,
+      "matches": false,
+      "reason": "Illegal character: '''",
+      "expected": "You get 5 points.",
+      "got": "Illegal character: '''\nIllegal character: '''\nUndefined variable: green\nSyntax error at 'alien_color'\nIllegal character: '''\nIllegal character: '''\nUndefined variable: green\nUndefined function: print\n",
+      "code": "# Create variables\nalien_color = 'green'\n\nif alien_color == 'green':\n    print(\"You get 5 points.\")\n\n\n# Create variables\nalien_color = 'yellow'\n\nif alien_color == 'green':\n    print(\"You get 5 points.\")"
+    },
+    {
+      "hash": "1159f6d3f3518042",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "5.4",
+      "got": "Undefined function: print",
+      "code": "a = 2\nb = 2.7\na = a * b\nprint(a)"
+    },
+    {
+      "hash": "cf087253cada173b",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "2.7\n2.7 11.4\n2.7 11.4 6.0\n2.7 5.4 6.0\n18.0 5.4 6.0",
+      "got": "Undefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print",
+      "code": "#Programa 10\nd = 2.7\nprint(d)\nb = (d + 3) * 2\nprint(d, b)\nc = (b * 10) % (d * 10)\nprint(d, b, c)\nb = b - c\nprint(d, b, c)\nd = c * 3\nprint(d, b, c)"
+    },
+    {
+      "hash": "7a1ecd5225a091d4",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error: missing end",
+      "expected": "200\n198\n196\n194\n192\n190\n188\n186\n184\n182\n180\n178\n176\n174\n172\n170\n168\n166\n164\n162\n160\n158\n156\n154\n152\n150\n148\n146\n144\n142\n140\n138\n136\n134\n132\n130\n128\n126\n124\n122\n120\n118\n116\n114\n112\n110\n108\n106\n104\n102\n",
+      "got": "Syntax error: missing end\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function",
+      "code": "c = 200\n\nwhile c > 99:\n    print(c)\n    c -= 2"
+    },
+    {
+      "hash": "48fe988a139d1ca4",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'copy'",
+      "expected": "[100, [1, 2, 3, 100]]\n[1, [1, 2, 3, 100]]\n[1, [1, 2, 3]]\n[100, [1, 2, 3, 100]]",
+      "got": "Syntax error at 'copy'\nUndefined variable: copy\nError: no method 'copy' on int\nUndefined variable: copy\nError: no method 'deepcopy' on int\nUndefined function: print\nUndefined function: print\nUndefined",
+      "code": "import copy\n\na = [1, [1, 2, 3]]\nb = copy.copy(a)     # shallow copy \ub9ac\uc2a4\ud2b8\ub294 \ubcc4\ub3c4\ub85c \uc0dd\uc131\ud558\uc9c0\ub9cc \ub0b4\ubd80\uc758 \uac1d\uccb4\ub294 \uc6d0\ub798 \uac1d\uccb4\uc640 \ub3d9\uc77c\ud568. (value\ub294 \uadf8\ub300\ub85c \ubcf5\uc0ac, \ub0b4\ubd80 \uac1d\uccb4\ub294 \ud3ec\uc778\ud130\ub97c \ucc38\uc870)\nc = copy.deepcopy(a) # deep copy \ub9ac\uc2a4\ud2b8\ub97c \ubcc4\ub3c4\ub85c \uc0dd\uc131, \ub0b4\ubd80 \uac1d\uccb4\ub4e4\ub3c4 \uc0c8\ub85c \uc0dd\uc131\nd = a                # \ub2e8\uc21c \uac1d\uccb4 \ubcf5\uc81c (\ub9ac\uc2a4\ud2b8\ub97c \ucc38\uc870)\n\na[0] = 100\na[1].append(100)\nprint(a) # [100, [1, 2, 3, 100]]\nprint(b) # [1, [1, 2, 3, 100]] \nprint(c) # [1, [1, 2, 3]]\nprint(d) # [100, [1, 2, 3, 100]]"
+    },
+    {
+      "hash": "dc101bb064ca275a",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'sakura_fall'",
+      "expected": "0.8",
+      "got": "Syntax error at 'sakura_fall'\nUndefined variable: v\nSyntax error at ':'\nSyntax error at 'v'\nUndefined variable: v\nError: division by zero\nError: return used outside a function",
+      "code": "########################################\n# QUESTION\n########################################\n\n# When it's spring Japanese cherries blossom, it's called \"sakura\"\n# and it's admired a lot. The petals start to fall in late April.\n\n# Suppose that the falling speed of a petal is 5 centimeters per second (5 cm/s),\n# and it takes 80 seconds for the petal to reach the ground from a certain branch.\n\n# Write a function that receives the speed (in cm/s) of a petal as input,\n# and returns the time it takes for that petal to reach the ground from the same branch.\n\n# Notes:\n\n# The movement of the petal is quite complicated,\n# so in this case we can see the velocity as a constant during its falling.\n# Pay attention to the data types.\n# If the initial velocity is non-positive, the return value should be 0\n\n\n###################################\n# SOLUTION\n###################################\n\ndef sakura_fall(v):\n    if v > 0:\n        return 400/v\n    else:\n        return 0\n\n\nprint(sakura_fall(500))"
+    },
+    {
+      "hash": "ab79fdf6bdf700dd",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'Suma: {numbers_sum}'",
+      "expected": "Suma: 661",
+      "got": "Syntax error at 'Suma: {numbers_sum}'",
+      "code": "# Wypisywanie listy ulubionych sport\u00f3w\n# favourite_sports = [\"bieganie\", \"p\u0142ywanie\", \"jazda na rowerze\", \"triathlon\"]\n# sport_index = 0\n# while sport_index < len(favourite_sports):\n#     print(favourite_sports[sport_index])\n#     sport_index += 1\n\n# Wypisywanie co drugiego sportu\n# favourite_sports = [\"bieganie\", \"p\u0142ywanie\", \"jazda na rowerze\", \"triathlon\"]\n# sport_index = 0\n# while sport_index < len(favourite_sports):\n#     if sport_index % 2 == 0:\n#         print(favourite_sports[sport_index])\n#     sport_index += 1\n\n\n# Sumowanie liczb\nnumbers = [1, 3, 510, 123, 24]\nnumbers_sum = 0\nnumber_index = 0\nwhile number_index < len(numbers):\n    numbers_sum += numbers[number_index]\n    number_index += 1\nprint(f\"Suma: {numbers_sum}\")"
+    },
+    {
+      "hash": "c16625d6d70bc419",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'display'",
+      "expected": "Hello Bharath",
+      "got": "Syntax error at 'display'\nUndefined variable: fun\nSyntax error at ':'\nUndefined variable: fun\nError: cannot add str and int\nError: return used outside a function",
+      "code": "def display(fun):\n    return \"Hello \" + fun\n\ndef name():\n    return \"Bharath\"\n\nprint(display(name()))"
+    },
+    {
+      "hash": "cf45b660b6bb4620",
+      "parses": false,
+      "matches": false,
+      "reason": "Illegal character: '\"'",
+      "expected": "You have succesfully created `{{ cookiecutter.repository_slug }}`\nwith these cookiecutter parameters:\n\n{% for key, value in cookiecutter.items()|sort %}\n  {{ \"{0:24}\".format(key + \":\") }} {{ \"{0!r}\".f",
+      "got": "Illegal character: '\"'\nSyntax error at end of input\nSyntax error at 'have'\nIllegal character: '`'\nIllegal character: '{'\nIllegal character: '{'\nUndefined variable: cookiecutter\nIllegal character: '}'\n",
+      "code": "print(\"\"\"\nYou have succesfully created `{{ cookiecutter.repository_slug }}`\nwith these cookiecutter parameters:\n\n{% for key, value in cookiecutter.items()|sort %}\n  {{ \"{0:24}\".format(key + \":\") }} {{ \"{0!r}\".format(value).strip(\"u\") }}\n{%- endfor %}\n\n-----------------------------------------------------------------\n\nNow:\n\n- Run `awesome_bot README.md` to verify the links.\n- Activate your repository in your Travis account.\n- Please read awesome's PR requirements before submitting a Pull Request:\n  https://github.com/sindresorhus/awesome/blob/master/pull_request_template.md\n\"\"\")"
+    },
+    {
+      "hash": "7e6c34044ef5b723",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'Hello {var} world!'",
+      "expected": "Hello Docker world!",
+      "got": "Syntax error at 'Hello {var} world!'",
+      "code": "var = \"Docker\"\n\nprint(f\"Hello {var} world!\")"
+    },
+    {
+      "hash": "0046a7af3c27ea0b",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error: missing end",
+      "expected": "1 * 1 = 1\n1 * 2 = 2\n1 * 3 = 3\n1 * 4 = 4\n1 * 5 = 5\n1 * 6 = 6\n1 * 7 = 7\n1 * 8 = 8\n1 * 9 = 9\n1 * 10 = 10\n\n\n2 * 1 = 2\n2 * 2 = 4\n2 * 3 = 6\n2 * 4 = 8\n2 * 5 = 10\n2 * 6 = 12\n2 * 7 = 14\n2 * 8 = 16\n2 * 9 = 18\n2",
+      "got": "Syntax error: missing end\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function",
+      "code": "for i in range(1, 11):\n  for j in range(1, 11):\n    print(i, \"*\", j, \"=\", i * j)\n  print(\"\\n\")"
+    },
+    {
+      "hash": "3e8eeef8daa744a9",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'make_positive'",
+      "expected": "[3, 1, 2, 5, 3]",
+      "got": "Syntax error at 'make_positive'\nUndefined variable: a\nSyntax error at ':'\nUndefined variable: a\n\nTraceback (most recent call last):\n  File \"/home/lukeb/venv/bin/bs\", line 8, in <module>\n    sys.exit(c",
+      "code": "def make_positive(a):\n  for i in range(len(a)):\n    if a[i] < 0:\n      a[i] = -a[i]\n  return a\n\nprint(make_positive( [-3, 1, -2, 5, -3]))"
+    },
+    {
+      "hash": "e29f9aec4abb3659",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "Hello World\nAdding Update\nhello world again\nAdding more updates\nAdding further more updates\nAdding more further updates\nAdded update\nSorted the issue\nadded a new line\nHello world again!",
+      "got": "Undefined function: print\nUndefined function: print\nIllegal character: '''\nSyntax error at 'world'\nIllegal character: '''\nUndefined variable: again\nIllegal character: '''\nSyntax error at 'more'\nIllega",
+      "code": "print(\"Hello World\")\nprint(\"Adding Update\")\nprint('hello world again')\nprint('Adding more updates')\nprint('Adding further more updates')\nprint('Adding more further updates')\nprint('Added update')\nprint('Sorted the issue')\nprint('added a new line')\nprint('Hello world again!')"
+    },
+    {
+      "hash": "ae7b851fb32b9762",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'number'",
+      "expected": "[0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 78, 80, 82, 84, 86, 88, 90, 92, 94, 96, 98, 100]",
+      "got": "Syntax error at 'number'\nSyntax error at ':'\nSyntax error: unexpected else\nSyntax error at 'number'\nSyntax error at ':'\nSyntax error: unexpected else\nSyntax error at 'number'\nSyntax error at ':'\nSynta",
+      "code": "even_numbers = []\nodd_numbers = []\nfor number in range(0, 101):\n    if number % 2 == 0:\n        even_numbers.append(number)\n    else:\n        odd_numbers.append(number)\nprint(even_numbers)\nprint(\"\\n\")\nprint(\"\\n\")\nprint(odd_numbers)"
+    },
+    {
+      "hash": "029bed70d76778e8",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'sum'",
+      "expected": "6\n11\n30",
+      "got": "Syntax error at 'sum'\nUndefined variable: lst\nSyntax error at ':'\nUndefined variable: lst\nError: for loop target is not iterable\nError: return used outside a function",
+      "code": "# *About* : We'll define various function to implement our program\n\n# define sum(param)\ndef sum(lst):\n    # accum variable\n    tot = 0\n    # iterate through every num and \n    # keep on adding to num tot\n    for num in lst :\n        tot += num\n    # returns total\n    return tot\n\n# define product(by passing list as param)\ndef prod(lst):\n    # initialize prod\n    res = 1\n    # iterate through every num in the list\n    # and keep on mult to num res\n    for num in lst :\n        res *= num\n    # returns res\n    return res\n\n# define a function : count_num()\n# to count the number of elements\n# present in the list given by the user\ndef count_num(lst) :\n    num_count = 0\n    for num in lst :\n        num_count += 1\n    return num_count\n\n# called count_num()\nprint(count_num([1, 2, 4, 5, 7, 9]))\n\n# called\nsum_list = sum([1, 2, 3, 5])\n\n# output result of sum\nprint(sum_list)\n\n# called prod()\nprod_list = prod([1, 2, 3, 5])\n\n# output result\nprint(prod_list)"
+    },
+    {
+      "hash": "837d777ca7c04f89",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'c'",
+      "expected": "A soma final \u00e9 de 20667\nTotal de n\u00fameros: 83",
+      "got": "Syntax error at 'c'\nSyntax error at ':'\nSyntax error at 'c'\nSyntax error at ':'\nSyntax error at 'c'\nSyntax error at ':'\nSyntax error at 'c'\nSyntax error at ':'\nSyntax error at 'c'\nSyntax error at ':'\n",
+      "code": "cont = 0\nsoma = 0\nfor c in range(1, 501, 2):\n    if c % 3 == 0:\n        soma = soma + c\n        cont = cont + 1\nprint('A soma final \u00e9 de ' + str(soma))\nprint('Total de n\u00fameros: ' + str(cont))"
+    },
+    {
+      "hash": "b2fce9b566d7f7c3",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "There is no python solution (in hackerrank) for this day.\nI'm very \"happy\" about it...\nI had to copy and paste a code in Java. I don't like this, but ...",
+      "got": "Undefined function: print\nUndefined function: print\nUndefined function: print",
+      "code": "print(\"There is no python solution (in hackerrank) for this day.\")\nprint(\"I'm very \\\"happy\\\" about it...\")\nprint(\"I had to copy and paste a code in Java. I don't like this, but ...\")"
+    },
+    {
+      "hash": "9edc1f540801aea6",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'count_unique_values'",
+      "expected": "2\n7\n0\n4",
+      "got": "Syntax error at 'count_unique_values'\nUndefined variable: array1\nSyntax error at ':'\nUndefined variable: array1\n\nTraceback (most recent call last):\n  File \"/home/lukeb/venv/bin/bs\", line 8, in <module",
+      "code": "def count_unique_values(array1):\n    # if the next index is the length of the array, break\n    # unique count +1 if the element at curr_index is different from element at next_index\n    array_len = len(array1)\n\n    if array_len == 0:\n        return 0\n    else:\n        next_index = 0\n        unique_count = 1\n        for curr_index in range(len(array1)):\n            next_index = curr_index+1\n            if next_index == len(array1):\n                break\n            if array1[curr_index] != array1[next_index]:\n                unique_count = unique_count + 1\n        return unique_count\n\n\nprint(count_unique_values([1, 1, 1, 1, 1, 2]))\nprint(count_unique_values([1, 2, 3, 4, 4, 4, 7, 7, 12, 12, 13]))\nprint(count_unique_values([]))\nprint(count_unique_values([-2, -1, -1, 0, 1]))"
+    },
+    {
+      "hash": "8860e00cf1ede04c",
+      "parses": false,
+      "matches": false,
+      "reason": "Illegal character: '''",
+      "expected": "['qqrq', 'bob', 'cat', 'drone']\n['qqrq', 'bob', 'cat', 'drone']\n['qqrq', 'bob', 'cat', 'drone']\n['apple', 'bob', 'cat', 'drone']",
+      "got": "Illegal character: '''\nIllegal character: '''\nUndefined variable: apple\nIllegal character: '''\nIllegal character: '''\nUndefined variable: bob\nIllegal character: '''\nIllegal character: '''\nUndefined va",
+      "code": "x = ['apple', 'bob', 'cat', 'drone']\ny = x\nx[0] = 'qqrq'\nprint(x) # ['qqrq', 'bob', 'cat', 'drone']\nprint(y) # ['qqrq', 'bob', 'cat', 'drone']\n# \u2022 There is one list in the memory and two pointers to it.\n# \u2022 If you really want to make a copy the pythonic way is to use the slice syntax.\n# \u2022 It creates a shallow copy\n\nfrom copy import deepcopy\n\nx = ['apple', 'bob', 'cat', 'drone']\ny = deepcopy(x)\n\nx[0] = 'qqrq'\n\nprint(x) # ['qqrq', 'bob', 'cat', 'drone']\nprint(y) # ['apple', 'bob', 'cat', 'drone']"
+    },
+    {
+      "hash": "d9383189574d1b23",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "True\nTrue",
+      "got": "Undefined function: print\nIllegal character: '''\nIllegal character: '''\nUndefined variable: John\nUndefined function: print",
+      "code": "name = \"John\"\nage = 17\n\nprint(name == \"John\" or name == \"Jane\")    # Checks that name either equals to \"John\" to \"Jane\"\n\nprint(name == 'John' and age >= 16)"
+    },
+    {
+      "hash": "8ea437d2f9467bea",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error: missing end",
+      "expected": "-10 -9 -8 -7 -6 -5 -4 -3 -2 -1\n1 2 3 4 5 6 7 8 9\n11 12 13 14 15 16 17 18 19\n21 22 23 24 25 26 27 28 29\n31 32 33 34 35 36 37 38 39\n41 42 43 44 45 46 47 48 49\n51 52 53 54 55 56 57 58 59\n61 62 63 64 65 6",
+      "got": "Syntax error: missing end\nSyntax error at 'n'\nSyntax error at ':'\nUndefined function: print\nSyntax error: unexpected else\nUndefined function: str\nSyntax error at 'n'\nSyntax error at ':'\nError calling ",
+      "code": "ints = []\nfor n in range(210):\n    if n % 10 == 0 and n != 0:\n        print(\" \".join(ints))\n        ints = []\n    else:\n        ints.append(str(n - 10))"
+    },
+    {
+      "hash": "83fabd7d36cefe73",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'cut_sentence'",
+      "expected": "[' Watching', 'my grandparents and my parents pay all these bills, really excites me for the future. -___- ']\n[' Watching my', 'grandparents and my parents pay all these bills, really excites me for t",
+      "got": "Syntax error at 'cut_sentence'\nSyntax error at ':'\nIllegal character: '''\nIllegal character: '''\nSyntax error at ','\nIllegal character: '''\nIllegal character: '''\nSyntax error at ','\nIllegal character",
+      "code": "str1 = \"Watching my grandparents and my parents pay all these bills, really excites me for the future. -___- \"\n\ndef cut_sentence(str1):\n    count = len(str1.split())\n    block = \"\"\n    listn = []\n    for c in range(0, count):\n        save = str1.split(' ', 1)[0]\n        str1 = str1.split(' ', 1)[1]\n        block = block + ' ' + save\n\n        print([block] + [str1])\n\n\ncut_sentence(str1)"
+    },
+    {
+      "hash": "b12608f1fa15757e",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "H\na\nC\nk\nC\nl\nU\nb",
+      "got": "Undefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function",
+      "code": "text = \"HACKCLUB\"\n\nprint(text[0].upper())\nprint(text[1].lower())\nprint(text[2].upper())\nprint(text[3].lower())\nprint(text[4].upper())\nprint(text[5].lower())\nprint(text[6].upper())\nprint(text[7].lower())"
+    },
+    {
+      "hash": "2a2c82e90be108ae",
+      "parses": false,
+      "matches": false,
+      "reason": "Illegal character: '''",
+      "expected": "str1 + str2 =  HelloWorld!\nstr1 * 3 = HelloHelloHello\n3 letters found\nabcabcabcef\nABCABCABCEF\n9\nbbcbbcbbcef",
+      "got": "Illegal character: '''\nIllegal character: '''\nUndefined variable: Hello\nIllegal character: '''\nIllegal character: '!'\nIllegal character: '''\nUndefined variable: World\nIllegal character: '''\nIllegal ch",
+      "code": "# Python String Operations\nstr1 = 'Hello'\nstr2 ='World!'\n\n# using +\nprint('str1 + str2 = ', str1 + str2)\n# using *\nprint('str1 * 3 =', str1 * 3)\n\n\n\n# Iterating through a string\ncount = 0\nfor letter in 'Hello World':\n    if(letter == 'l'):\n        count += 1\nprint(count,'letters found')\n\n\n\na=\"abcabcabcef\"\nprint(a.lower())\nprint(a.upper())\nprint(a.find('e'))\nprint(a.replace('a', 'b'))"
+    },
+    {
+      "hash": "d12b0a8472fa17e7",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n30\n31\n32\n33\n34\n35\n36\n37\n38\n39\n40\n41\n42\n43\n44\n45\n46\n47\n48\n49\n50\n51\n52\n53\n54\n55\n56\n57\n58\n59\n60\n61\n62\n63\n64\n65\n66\n67\n68\n69\n70\n7",
+      "got": "Undefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function",
+      "code": "# Write your solution for 1.3 here!\na = 0\ni = 1\nwhile a < 10000:\n    a += i\n    i += 1\n    print(i)\n\na = 0\ni = 2\nwhile a < 10000:\n    a += i\n    i += 2\n    print(i)"
+    },
+    {
+      "hash": "e8122784dbf29f11",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'random'",
+      "expected": "Tails",
+      "got": "Syntax error at 'random'\nUndefined variable: random\nError: no method 'randint' on int\nSyntax error at 'random_number'\nUndefined function: print\nSyntax error: unexpected elif\nUndefined function: print\n",
+      "code": "import random\n\nrandom_number = random.randint(0, 1)\n\nif random_number == 1:\n    print(\"Heads\")\nelif random_number == 0:\n    print(\"Tails\")\nelse:\n    print(\"Something went wrong. Please try again\")"
+    },
+    {
+      "hash": "d68c2d32d4160e2a",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'find_max'",
+      "expected": "2",
+      "got": "Syntax error at 'find_max'\nUndefined variable: l\nSyntax error at ':'\nSyntax error at 'len'\nUndefined variable: l\nSyntax error at ':'\nUndefined variable: l\nError: invalid index\nError: return used outsi",
+      "code": "def find_max(l):\n    if len(l) == 1:\n        return l[0]\n    else:\n        n = len(l)\n        left = l[:n//2]\n        right = l[n//2:]\n        \n        l_start = left[0]\n        l_end = left[-1]\n        \n        r_start = right[0]\n        r_end = right[-1]\n        \n        if l_end == r_start:\n            return l_end\n        elif l_end < r_start:\n            return find_max(right)\n        else:\n            return find_max(left)\n            \nl = [1,2]\n\nprint(find_max(l))"
+    },
+    {
+      "hash": "3f6a9a82ef2031f9",
+      "parses": false,
+      "matches": false,
+      "reason": "Illegal character: '''",
+      "expected": "Barang 0 = apel\nBarang 1 = mangga\nBarang 2 = wortel\nBarang 3 = pisang\nBarang -1 = pisang\nBarang -2 = wortel\nKarakter 0 = b\nBarang 1 ke 3: ['mangga', 'wortel']\nBarang 2 ke terakhir: ['wortel', 'pisang'",
+      "got": "Illegal character: '''\nIllegal character: '''\nUndefined variable: apel\nIllegal character: '''\nIllegal character: '''\nUndefined variable: mangga\nIllegal character: '''\nIllegal character: '''\nUndefined ",
+      "code": "# lat28.py\n\ndaftar_belanja = ['apel', 'mangga', 'wortel', 'pisang']\nnama = 'budi'\n\nprint(\"Barang 0 =\", daftar_belanja[0])\nprint(\"Barang 1 =\", daftar_belanja[1])\nprint(\"Barang 2 =\", daftar_belanja[2])\nprint(\"Barang 3 =\", daftar_belanja[3])\n\nprint(\"Barang -1 =\", daftar_belanja[-1])\nprint(\"Barang -2 =\", daftar_belanja[-2])\n\nprint(\"Karakter 0 =\", nama[0])\n\n#Slicing pada list\nprint(\"Barang 1 ke 3:\", daftar_belanja[1:3])\nprint(\"Barang 2 ke terakhir:\", daftar_belanja[2:])\nprint(\"Barang 1 ke -1:\", daftar_belanja[1:-1])\nprint(\"Barang dari awal ke akhir:\", daftar_belanja[:])\n\n# Slicing pada string\nprint(\"Karakter 1 ke 3:\", nama[1:3])\nprint(\"Karakter 2 ke terakhir:\", nama[2:])\nprint(\"Karakter 1 ke -1:\", nama[1:-1])\nprint(\"Karakter dari awal ke akhir:\", nama[:])"
+    },
+    {
+      "hash": "7f692867450822a8",
+      "parses": false,
+      "matches": false,
+      "reason": "Illegal character: '''",
+      "expected": "suzuki",
+      "got": "Illegal character: '''\nIllegal character: '''\nUndefined variable: honda\nIllegal character: '''\nIllegal character: '''\nUndefined variable: yamaha\nIllegal character: '''\nIllegal character: '''\nUndefined",
+      "code": "motorcycles = ['honda','yamaha','suzuki']\nprint(motorcycles[2])"
+    },
+    {
+      "hash": "cbdf6d3ce5261332",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "[1, 3, 5, 7, 9, 2, 4, 6, 8, 10]",
+      "got": "Undefined function: print",
+      "code": "L = [1,3,5,7,9]\nL2 = [2,4,6,8,10]\nL3 = L + L2\nprint(L3)"
+    },
+    {
+      "hash": "6de6d36459343659",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'math'",
+      "expected": "21",
+      "got": "Syntax error at 'math'\nSyntax error at 'termeDeLaSuite'\nUndefined variable: math\nError: no method 'exp' on int\nError: cannot multiply float and NoneType\n\nTraceback (most recent call last):\n  File \"/ho",
+      "code": "import math\n\ndef termeDeLaSuite():\n    n = 1\n    u = 0.5 * math.exp(1) - 0.5\n    while n < 21:\n        u = 0.5 * math.exp(1) - (n+1) * 0.5 * u\n        n = n+2\n    return n\n    \nprint(termeDeLaSuite())"
+    },
+    {
+      "hash": "1f4ebc22653614b3",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "\u043f\u0440\u0438\u0432\u0435\u0442\nygs boga!",
+      "got": "Undefined function: print\nUndefined function: print",
+      "code": "print(\"\u043f\u0440\u0438\u0432\u0435\u0442\")\nprint(\"ygs boga!\")"
+    },
+    {
+      "hash": "180ec4498c1ff29d",
+      "parses": false,
+      "matches": false,
+      "reason": "Illegal character: '''",
+      "expected": "True\nFalse",
+      "got": "Illegal character: '''\nIllegal character: '''\nUndefined variable: string\nIllegal character: '''\nIllegal character: '''\nUndefined variable: string\nUndefined function: print\nIllegal character: '''\nIlleg",
+      "code": "print('string' == 'string')\nprint('string' != 'string')"
+    },
+    {
+      "hash": "2b029c2108bbed62",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "['a', 2, 4.5]\n['a', 'hello', 4.5]",
+      "got": "Undefined function: print\nUndefined function: print",
+      "code": "#!/usr/bin/env python3\n# -*- coding: utf-8 -*-\n\nmylist = [ \"a\", 2, 4.5 ]\n\nmyotherlist = mylist[ : ]\n\nmylist[1] = \"hello\"\n\nprint(myotherlist)\n\nmytext = \"Hello world\"\n\nmyothertext = mytext\nmytext = \"Hallo Welt!\"\n\n#print(myothertext)\n\nprint(mylist[ : ])"
+    },
+    {
+      "hash": "6ec0374e7f498424",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'buscaSeqOrd'",
+      "expected": "Busca em vetor ordenado. Exemplo, buscar o n\u00famero 8.\nVetor:  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]\nPosi\u00e7\u00e3o:  8",
+      "got": "Syntax error at 'buscaSeqOrd'\nUndefined variable: vetor\nUndefined variable: n\nUndefined variable: chave\nUndefined variable: n\nSyntax error at '-'\nError: return used outside a function",
+      "code": "def buscaSeqOrd(vetor, n, chave):\n    for i in range(1, n):\n        if chave <= vetor[i]:\n            if chave == vetor[i]:\n                return i\n            else:\n                return -1\n    return -1\n\nprint(\"Busca em vetor ordenado. Exemplo, buscar o n\u00famero 8.\")\nvetor = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]\nprint(\"Vetor: \", vetor)\n\nn = len(vetor)\nprint(\"Posi\u00e7\u00e3o: \", buscaSeqOrd(vetor, n, 8) + 1)"
+    },
+    {
+      "hash": "7f0185903813ba9a",
+      "parses": false,
+      "matches": false,
+      "reason": "Illegal character: '''",
+      "expected": "==== \u6570\u5b57 ====\n1 1.01\n==== \u5b57\u7b26\u4e32 ====\nhello\nhello\n\nThis is the second line.\n\"What's your name?,\" I asked.\nHe said \"Bond, James Bond.\"",
+      "got": "Illegal character: '''\nSyntax error at '=='\nUndefined variable: Numbers\nIllegal character: '''\nUndefined function: print\nIllegal character: '''\nSyntax error at '=='\nUndefined variable: Strings\nIllegal",
+      "code": "# Variables and Data Types\n\n# Numbers\nprint('==== Numbers ====')\na = 1\nb = 1.01\nprint(a, b)\n\n# Strings\nprint('==== Strings ====')\nstra = 'hello'\nprint(stra)\nstrb = \"hello\"\nprint(strb)\n# Triple quotes\nstrc = '''\nThis is the second line.\n\"What's your name?,\" I asked.\nHe said \"Bond, James Bond.\"\n'''\nprint(strc)"
+    },
+    {
+      "hash": "ca16b3855773db9e",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'computeProductArray'",
+      "expected": "[180, 600, 360, 300, 900]",
+      "got": "Syntax error at 'computeProductArray'\nUndefined variable: array\nUndefined variable: size\nUndefined variable: size\nUndefined variable: size\nUndefined variable: size\nUndefined variable: size\nUndefined v",
+      "code": "# Problem: Given an array arr[] of n integers,\n# construct a Product Array prod[] (of same size)\n# such that prod[i] is equal to the product of all\n# the elements of arr[] except arr[i].\n\n# Constraints: Solve it without division operator and in O(n)\n\n\ndef computeProductArray(array, size):\n    # initialize three arrays of the same size as given array\n    # Left: will hold the product of all the elements to the left\n    # Right: will hold the product of all the elements to the right\n    # Product: contains the product value for current element\n\n    prod = [1] * size\n    left = [1] * size\n    right = [1] * size\n\n    for i in range(1, size):\n        left[i] = array[i - 1] * left[i - 1]\n    # decreasing loop in Python {start, end, step(-ve)}\n    # equivalent to (j=size-2; j>=0; j--)\n    for j in range(size - 2, -1, -1):\n        right[j] = array[j + 1] * right[j + 1]\n    for k in range(0, size):\n        prod[k] = left[k] * right[k]\n    print(prod)\n\n\narr = [10, 3, 5, 6, 2]\ncomputeProductArray(arr, len(arr))\n# Result: [180, 600, 360, 300, 900]"
+    },
+    {
+      "hash": "b3766204dce14631",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "****^^1^^****\n1\n2\n3\n4\n5\n****^^2^^****\n1\n3\n5\n****^^3^^****\n1\n2\n3\n4\n****^^4^^****\n1\n2\n3\n4\n6\n7\n8\n9",
+      "got": "Undefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function",
+      "code": "# number = 1\n\n# while number < 6:  # any expression with bool output will do\n#     print(number)\n#     number += 1\n\nprint(\"****^^1^^****\")\nfor number in range(1 , 6): # range is closed on the left and open o the right\n    print(number)\n\nprint(\"****^^2^^****\")\n\nfor number in range(1 , 6, 2): # 3rd optional arg is step\n    print(number)\n\nprint(\"****^^3^^****\")\n\nfor number in range(1, 10):\n    if number == 5:\n        break          # breaks out of the loop\n    print(number)\n\nprint(\"****^^4^^****\")\n\nfor number in range(1 , 10):\n    if number== 5:\n        continue       # exits current step and goes to the next one\n    print(number)"
+    },
+    {
+      "hash": "adfbdd44f6b663cf",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'math'",
+      "expected": "4",
+      "got": "Syntax error at 'math'\nSyntax error at 'binary_search'\nUndefined variable: array\nUndefined variable: value\nUndefined variable: array\nUndefined function: length\n\nTraceback (most recent call last):\n  Fi",
+      "code": "#!/usr/bin/brittainscript\n# -*- coding: UTF-8 -*-\nimport math\n\ndef binary_search(array, value):\n  low = 0\n  high = length(array) - 1\n\n  while(low <= high):\n    mid = math.ceil((low + high)/2)\n    guess = array[mid]\n    if guess == value:\n      return mid\n    if guess > value:\n      high = mid - 1\n    else:\n      low = mid + 1\n\n  return None\n\nmy_list = [1, 3, 5, 7, 9]\n\nprint(binary_search(my_list, 9))"
+    },
+    {
+      "hash": "d58daf7a23fa26f1",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'larger_sum'",
+      "expected": "[1, 9, 5]",
+      "got": "Syntax error at 'larger_sum'\nUndefined variable: lst1\nUndefined variable: lst2\nUndefined variable: lst1\nError: for loop target is not iterable\nUndefined variable: lst2\nError: for loop target is not it",
+      "code": "# Create a function named larger_sum() that takes two lists of numbers as parameters named lst1 and lst2.\n# The function should return the list whose elements sum to the greater number. If the sum of the elements of each list are equal, return lst1.\n\ndef larger_sum(lst1, lst2):\n    sum1 = 0\n    sum2 = 0\n    for num1 in lst1:\n        sum1 += num1\n    for num2 in lst2:\n        sum2 += num2\n    if sum1 > sum2:\n        return lst1\n    elif sum2 > sum1:\n        return lst2\n    elif sum1 == sum2:\n        return lst1\n\n\nprint(larger_sum([1, 9, 5], [2, 3, 7]))"
+    },
+    {
+      "hash": "a1e30508974a43c4",
+      "parses": false,
+      "matches": false,
+      "reason": "Illegal character: '\\'",
+      "expected": "Number of months needed =  183",
+      "got": "Illegal character: '\\'\nSyntax error at end of input\n1000.0033333333333\n\nTraceback (most recent call last):\n  File \"/home/lukeb/venv/bin/bs\", line 8, in <module>\n    sys.exit(cli_entry())\n             ",
+      "code": "# annual_salary = float(input('How much is your annual salary ?'))\n# portion_saved = float(input('The portion of salary to be saved ?'))\n# total_cost = float(input('The cost of your dream home ?'))\n\nannual_salary = 120000.0\nportion_saved = 0.1\ntotal_cost = 1000000.0\nportion_downpayment = 0.25\nmonthly_salary = annual_salary / 12\nrate = 4 / 100\nmonths_needed = 0\ncurrent_savings = 0.0\n\nwhile(current_savings <= total_cost * portion_downpayment):\n    months_needed += 1\n    current_savings = current_savings + current_savings * \\\n        rate / 12 + portion_saved * monthly_salary\n\nprint('Number of months needed = ', months_needed)"
+    },
+    {
+      "hash": "64eaba75cacba2f2",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at end of input",
+      "expected": "0.2998",
+      "got": "Syntax error at end of input\nSyntax error at end of input\n\nTraceback (most recent call last):\n  File \"/home/lukeb/venv/bin/bs\", line 8, in <module>\n    sys.exit(cli_entry())\n             ~~~~~~~~~^^\n ",
+      "code": "# Write Python code that stores the distance \n# in meters that light travels in one \n# nanosecond in the variable, nanodistance. \n\n# These variables are defined for you:\n\nspeed_of_light = 299800000. # meters per second\nnano_per_sec = 1000000000. # 1 billion\n\n# After your code, running the following:\n\n# print nanodistance\n\n# should output: 0.2998\n\n# Note that nanodistance must be a decimal number.\n\n# ASSIGN nanodistance BELOW this line\n\nnanodistance = speed_of_light * (1/nano_per_sec)\n\nprint(nanodistance)"
+    },
+    {
+      "hash": "b7b5102d954a542a",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'sum100'",
+      "expected": "5050",
+      "got": "Syntax error at 'sum100'\nError: return used outside a function",
+      "code": "def sum100():\n  total = 0\n  for i in range(101):\n    total += i\n  return total\n\nprint(sum100())"
+    },
+    {
+      "hash": "af5ccbce5fb3cec2",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "120",
+      "got": "Undefined function: print",
+      "code": "print(90-80+70-60+50*2) #120"
+    },
+    {
+      "hash": "9d39b2b1b1867ee2",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'x'",
+      "expected": "x berkisar antara 10 dan 30\ny lebih kecil dari 10 atau lebih besar dari 30\nz bukan 77",
+      "got": "Syntax error at 'x'\nSyntax error at ':'\nUndefined function: print\nSyntax error at 'y'\nSyntax error at ':'\nUndefined function: print\nSyntax error at 'not'\nSyntax error at ':'\nUndefined function: print",
+      "code": "x = 20\n# Jika x berkisar antara 10 dan 30 (inklusif), cetak 'x berkisar antara 10 dan 30'\nif x >= 10 and x <= 30:\n    print(\"x berkisar antara 10 dan 30\")\n\n\ny = 60\n# Jika y lebih kecil dari 10 atau lebih besar dari 30, cetak 'y lebih kecil dari 10 atau lebih besar dari 30'\nif y < 10 or y > 30:\n    print(\"y lebih kecil dari 10 atau lebih besar dari 30\")\n\n\nz = 55\n# Jika z tidak sama dengan 77, print 'z bukan 77'\nif not z == 77:\n    print(\"z bukan 77\")"
+    },
+    {
+      "hash": "c6835e067bb12b30",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'search'",
+      "expected": "True",
+      "got": "Syntax error at 'search'\nUndefined variable: arr\nUndefined variable: ele\nUndefined variable: arr\nUndefined function: length\n\nTraceback (most recent call last):\n  File \"/home/lukeb/venv/bin/bs\", line 8",
+      "code": "def search(arr, ele):\n    first = 0\n    last = length(arr) - 1\n    f = false\n    while (first <= last and not f):\n        mid = (first + last) // 2\n        if arr[mid] == ele:\n            f = true\n        else:\n            if ele < arr[mid]:\n                last = mid - 1\n            else:\n                first = mid + 1\n    return f\n\nprint(search([1, 2, 3, 4, 5, 6, 7, 8], 8))"
+    },
+    {
+      "hash": "5a267aecedd8865d",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'physics'",
+      "expected": "[2, 4, 6]",
+      "got": "Syntax error at 'physics'\nUndefined variable: vet1\nUndefined variable: vet2\nUndefined variable: vet1\nError: invalid index\nUndefined variable: vet2\nError: invalid index\nError: cannot add NoneType and N",
+      "code": "def physics(vet1, vet2):\n  frx = vet1[0] + vet2[0]\n  fry = vet1[1] + vet2[1]\n  frz = vet1[2] + vet2[2]\n\n  fr = [frx, fry, frz]\n  return fr\n\nprint(physics([1, 2, 3], [1, 2, 3]))"
+    },
+    {
+      "hash": "c32390d2cf93c40a",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'make_hashtable'",
+      "expected": "[[], [], [], [], []]",
+      "got": "Syntax error at 'make_hashtable'\nUndefined variable: nbuckets\nSyntax error at ':'\nUndefined variable: nbuckets\nError: return used outside a function",
+      "code": "# Creating an Empty Hash Table\n# Define a procedure, make_hashtable,\n# that takes as input a number, nbuckets,\n# and returns an empty hash table with\n# nbuckets empty buckets.\n\ndef make_hashtable(nbuckets):\n    table = []\n    for i in range(nbuckets):\n        table.append([])\n    return table\n\nprint(make_hashtable(5))"
+    },
+    {
+      "hash": "11f5a4a525ea33f1",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at '-'",
+      "expected": "42",
+      "got": "Syntax error at '-'\nUndefined function: print",
+      "code": "absolute = abs(-42)\n\nprint(absolute)"
+    },
+    {
+      "hash": "024dd7d37ab43e1b",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: length",
+      "expected": "2\n[2, 3, 1]",
+      "got": "Undefined function: length\n\nTraceback (most recent call last):\n  File \"/home/lukeb/venv/bin/bs\", line 8, in <module>\n    sys.exit(cli_entry())\n             ~~~~~~~~~^^\n  File \"/home/lukeb/venv/lib/pyt",
+      "code": "arr = [1, 2, 3]\nn = length(arr)\nshift = 1\narr = arr[shift:] + arr[:shift]\n\ni = 0\nj = n - 1\n\nif arr[i] < arr[j]:\n    print(\"There is no shift\")\nelse:\n    i += 1\n    while i < j:\n        m = (i + j) // 2\n        if arr[m] < arr[m - 1]:\n            break\n        elif arr[m] > arr[0]:\n            i = m + 1\n        elif arr[m] < arr[0]:\n            j = m - 1\n        else:\n            print(\"Something went wrong!\")\n\n    m = (i + j) // 2\n    print(m)\n\nprint(arr)"
+    },
+    {
+      "hash": "5610077d89e90a1d",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "45.124450303050196",
+      "got": "Undefined function: print",
+      "code": "s = 1.0\nx = 3.0\nsum1 = 0\nwhile s <= 97:\n    sum1 = sum1 + s / x\n    s = s + 2\n    x = x + 2\nprint(sum1)"
+    },
+    {
+      "hash": "1925caf19b1de755",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 're'",
+      "expected": "<re.Match object; span=(3, 6), match='nam'>",
+      "got": "Syntax error at 're'\nUndefined variable: re\nError: no method 'search' on int\nUndefined function: print",
+      "code": "import re\npattern = \"apurv\"\ns = \"my name is apurv\"\n\nprint(re.search(\"nam?\",s))"
+    },
+    {
+      "hash": "08891521721b512c",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: length",
+      "expected": "12\n[3, 5, 4]\nredgreenblue\nRGB",
+      "got": "Undefined function: length\nError: cannot add int and NoneType\nUndefined function: length\nError: cannot add NoneType and NoneType\nUndefined function: length\nError: cannot add NoneType and NoneType\nUnde",
+      "code": "total = 0\nfor word in [\"red\", \"green\", \"blue\"]:\n    total = total + length(word)\nprint(total)\n\nlengths = []\nfor word in [\"red\", \"green\", \"blue\"]:\n    lengths.add(length(word))\nprint(lengths)\n\nwords = [\"red\", \"green\", \"blue\"]\nresult = \"\"\nfor word in words:\n    result = result + word\nprint(result)\n\nacronym = \"\"\nfor word in [\"red\", \"green\", \"blue\"]:\n    acronym = acronym + word[0].upper()\nprint(acronym)"
+    },
+    {
+      "hash": "93d00773955bfdc7",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'bus'",
+      "expected": "3",
+      "got": "Syntax error at 'bus'\nUndefined variable: k\nUndefined variable: arr\nUndefined variable: last\nSyntax error at 'last'\nUndefined variable: arr\nUndefined variable: k\nError: return used outside a function",
+      "code": "def bus(k, arr, last):\n    s = 0\n    r = 0\n    m = 0\n    if last - arr[-1] > k:\n        return 0\n    else:\n        for i in range(len(arr) - 1):\n            if arr[i] - s <= k:\n                r += (arr[i] - s)\n                if r == k:\n                    m += 1\n                    r = 0\n                else:\n                    if r + arr[i + 1] - arr[i] > k:\n                        m += 1\n                        r = 0\n                s = arr[i]\n            else:\n                return 0\n        if arr[-1] - s <= k:\n            r += arr[-1] - s\n            if r == k:\n                m += 1\n                r = 0\n                return m\n            else:\n                if r + last - arr[-1] > k:\n                    m += 1\n                    r = 0\n                return m\n        else:\n            return 0\n\nprint(bus(5, [5, 10, 15], 20))"
+    },
+    {
+      "hash": "d49ffb08dfb8b2c7",
+      "parses": false,
+      "matches": false,
+      "reason": "Illegal character: '''",
+      "expected": "Let's talk about Xu Yi.\nHe's 188 cm tall.\nHe's 80 kg heavy.\nActually that's not too heavy.\nHe's got Brown eyes and Black hair.\nHis teeth are usually White depending on the coke.\nIf I add 32, 188, and ",
+      "got": "Illegal character: '''\nSyntax error at 'Yi'\nIllegal character: '''\nIllegal character: '''\nIllegal character: '''\nUndefined variable: Brown\nIllegal character: '''\nIllegal character: '''\nUndefined varia",
+      "code": "name = 'Xu Yi'\nage = 32 # not a lie\nheight = 188 # cm\nweight = 80 # kg\neyes = 'Brown'\nteeth = 'White'\nhair = 'Black'\n\nprint(f\"Let's talk about {name}.\")\nprint(f\"He's {height} cm tall.\")\nprint(f\"He's {weight} kg heavy.\")\nprint(\"Actually that's not too heavy.\")\nprint(f\"He's got {eyes} eyes and {hair} hair.\")\nprint(f\"His teeth are usually {teeth} depending on the coke.\")\n\n# this line is tricky, try to get it exactly right\ntotal = age + height + weight\nprint(f\"If I add {age}, {height}, and {weight} I get {total}.\")"
+    },
+    {
+      "hash": "a05885980bc8ce99",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'recursiveFunction'",
+      "expected": "10\n9\n8\n7\n6\n5\n4\n3\n2\n1\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n==========================\n120",
+      "got": "Syntax error at 'recursiveFunction'\nUndefined variable: i\nSyntax error at ':'\nSyntax error at 'i'\nError: return used outside a function",
+      "code": "def recursiveFunction(i):\n    if i == 0:\n        return\n\n    print(i)\n    recursiveFunction(i - 1)\n    print(i)\n\nrecursiveFunction(10)\n\nprint(\"==========================\")\n\ndef factorialFunction(i):\n    if i == 1:\n        return 1\n\n    return i * factorialFunction(i - 1)\n\nprint(factorialFunction(5))"
+    },
+    {
+      "hash": "f727001b67ccaf84",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'comida'",
+      "expected": "Cont\u00e9m muitas calorias! \n\nDesconhe\u00e7o as especifica\u00e7\u00f5es! \n\nMe chame!",
+      "got": "Syntax error at 'comida'\nUndefined function: print\nSyntax error at 'comida'\nUndefined function: print\nSyntax error: unexpected else\nUndefined function: print\nSyntax error at 'comida'\nUndefined functio",
+      "code": "# Estrutura if\n\ncomida = \"pizza\"\n\nif comida == \"pizza\":\n    print(\"Cont\u00e9m muitas calorias!\", \"\\n\")\n\n# Estrutura else\n\ncomida = \"macarr\u00e3o\"\n\nif comida == \"feij\u00e3o\":\n    print(\"Cont\u00e9m muito ferro!\")\nelse:\n    print(\"Desconhe\u00e7o as especifica\u00e7\u00f5es!\", \"\\n\")\n\n# Estrutura elif\n\ncomida = \"churrasco\"\n\nif comida == \"macarr\u00e3o\":\n    print(\"Cont\u00e9m 'infinitas' calorias\")\nelif comida == \"feij\u00e3o\":\n    print(\"Cont\u00e9m 'infinitos' ferros\")\nelif comida == \"churrasco\":\n    print(\"Me chame!\")\nelse:\n    print(\"Sem informa\u00e7\u00f5es para passar!\")"
+    },
+    {
+      "hash": "1b020c11a4228b87",
+      "parses": false,
+      "matches": false,
+      "reason": "Illegal character: '''",
+      "expected": "\u70b9\u6570\u306f 75 \u3067\u3059\u3002\n\u70b9\u6570\u306f 88 \u3067\u3059\u3002\n\u70b9\u6570\u306f 100 \u3067\u3059\u3002\n\u7e70\u308a\u8fd4\u3057\u7d42\u4e86",
+      "got": "Illegal character: '''\nIllegal character: '\u70b9'\nIllegal character: '\u6570'\nIllegal character: '\u306f'\nIllegal character: '''\nSyntax error at '+'\nUndefined function: str\nIllegal character: '''\nIllegal character:",
+      "code": "point_list = [75, 88, 100]\nfor point in point_list:\n    print('\u70b9\u6570\u306f ' + str(point) + ' \u3067\u3059\u3002')\nprint('\u7e70\u308a\u8fd4\u3057\u7d42\u4e86')"
+    },
+    {
+      "hash": "5e6365fb951fb253",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "Hello, World!",
+      "got": "Undefined function: print",
+      "code": "ur_string=\"Hello, World!\"\nprint(ur_string)"
+    },
+    {
+      "hash": "c17accb978759853",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "Hello Python world!\nHello Python Crash Course world!\nHello Python Crash Course reader!",
+      "got": "Undefined function: print\nUndefined function: print\nUndefined function: print",
+      "code": "message = \"Hello Python world!\"\nprint(message)\nmessage = \"Hello Python Crash Course world!\"\nprint(message)\nmesage = \"Hello Python Crash Course reader!\"\nprint(mesage)"
+    },
+    {
+      "hash": "e9e7950e8c9b7842",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error: missing end",
+      "expected": "Letra actual : d\nLetra actual : a\nLetra actual : t",
+      "got": "Syntax error: missing end\nIllegal character: '''\nIllegal character: '''\nUndefined variable: datospordatos\nError: for loop target is not iterable",
+      "code": "for letter in 'datospordatos':\n    # Rompe el buble en cuanto detecte la 'o' o 's'\n    if letter == 'o' or letter == 's':\n        break\n    print('Letra actual :', letter)"
+    },
+    {
+      "hash": "6f643bb1ccbbdcc2",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 're'",
+      "expected": "\u5b57\u7b26\u4e32\u4e2d\u5305\u542bPython\n['Python']",
+      "got": "Syntax error at 're'\nIllegal character: '''\nIllegal character: '|'\nSyntax error at 'C'\nIllegal character: '|'\nIllegal character: '|'\nUndefined variable: re\nIllegal character: '''\nIllegal character: ''",
+      "code": "import re\n\na = 'C|C++|Java|C#|Python|Javascript'\n\nr = re.findall('Python',a)\nif len(r) != 0:\n    print('\u5b57\u7b26\u4e32\u4e2d\u5305\u542bPython')\nelse:\n    print('No')\nprint(r)"
+    },
+    {
+      "hash": "1f238bd4be1f2a24",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "vasanthi\nvasanthiyerramothu@gmail.com",
+      "got": "Undefined function: print\nUndefined function: print",
+      "code": "print(\"vasanthi\")\nprint(\"vasanthiyerramothu@gmail.com\")"
+    },
+    {
+      "hash": "1104f2a3ebe1eb01",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'checkgreaternumber'",
+      "expected": "Greater number is 3\nGreater number is  3",
+      "got": "Syntax error at 'checkgreaternumber'\nUndefined variable: number1\nUndefined variable: number2\nSyntax error at 'number1'\nUndefined variable: number2\nUndefined variable: number1\nUndefined function: print",
+      "code": "def checkgreaternumber(number1, number2):\n    if number1 > number2:\n        print(\"Greater number is \", number1)\n    else:\n        print(\"Greater number is\", number2)\n\ncheckgreaternumber(2, 3)\ncheckgreaternumber(3, 1)"
+    },
+    {
+      "hash": "de0f01885f10127a",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at '-'",
+      "expected": "-10",
+      "got": "Syntax error at '-'",
+      "code": "print(---10 )"
+    },
+    {
+      "hash": "3c94d7a2899cedeb",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'foo'",
+      "expected": "vor foo: 12\n  in foo: 9\nnach foo: 12",
+      "got": "Syntax error at 'foo'\nSyntax error at '  in foo: {var}'\nSyntax error at ' vor foo: {var}'\nUndefined function: foo\nSyntax error at 'nach foo: {var}'",
+      "code": "var = 12\ndef foo():\n    var = 9\n    print(f\"  in foo: {var}\")\n\n#def main...\nprint(f\" vor foo: {var}\")\nfoo()\nprint(f\"nach foo: {var}\")"
+    },
+    {
+      "hash": "8c90776a8235d598",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at end of input",
+      "expected": "the hallway is 11.25 sqm\nthe kitchen is 18.0 sqm\nthe living room is 20.0 sqm\nthe bedroom is 10.75 sqm\nthe bathroom is 9.5 sqm",
+      "got": "Syntax error at end of input\nSyntax error at ','\nSyntax error at ','\nSyntax error at ','\nSyntax error at ']'\nSyntax error: missing end",
+      "code": "# house list of lists\nhouse = [[\"hallway\", 11.25],\n         [\"kitchen\", 18.0],\n         [\"living room\", 20.0],\n         [\"bedroom\", 10.75],\n         [\"bathroom\", 9.50]]\n\n# Build a for loop from scratch\nfor x in house:\n    print(\"the \" + x[0] + \" is \" + str(x[1]) + \" sqm\")"
+    },
+    {
+      "hash": "a60dc52bc28b2478",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "selim\nmuhammet\nselim muhammet",
+      "got": "Undefined function: print\nUndefined function: print\nUndefined function: print",
+      "code": "#method 'lower' prints string with lovercase\n\nfull_name = \"SELIM MUHAMMET\"\n\nfirst_name = \"SeLiM\"\nlast_name = \"Muhammet\"\n\nprint(first_name.lower())\n\nprint(last_name.lower())\n\nprint(full_name.lower())"
+    },
+    {
+      "hash": "db523559fbfdafde",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'solve'",
+      "expected": "13",
+      "got": "Syntax error at 'solve'\nUndefined variable: arr\nUndefined variable: duration\nSyntax error at 'len'\nUndefined variable: arr\nSyntax error at ':'\nError: return used outside a function",
+      "code": "def solve(arr, duration):\n    if len(arr) == 0:\n        return 0\n\n    result = 0\n    start = arr[0]\n\n    for i in range(1, len(arr)):\n        if arr[i] - arr[i - 1] > duration:\n            result += arr[i - 1] + duration - start\n            start = arr[i]\n\n    result += arr[-1] + duration - start\n    return result\n\n\nA = [1, 2, 3, 4, 5, 6, 7, 8, 9]\nB = 5\nprint(solve(A, B))"
+    },
+    {
+      "hash": "c7a80c93b36dc34f",
+      "parses": false,
+      "matches": false,
+      "reason": "Illegal character: '''",
+      "expected": "Hi, I am an student of python. I have a lot to do in another branch too.\nThats the second commit in branch test1.\nBranch mesclado.",
+      "got": "Illegal character: '''\nUndefined variable: Hi\nSyntax error at 'am'\nIllegal character: '''\nSyntax error at '-'\nIllegal character: '''\nSyntax error at 'the'\nUndefined variable: test1\nIllegal character: ",
+      "code": "# Branch master\n\nprint('Hi, I am an student of python. I have a lot to do in another branch too.')\na = 0\nd = -1\nb = 1\nfor i in range(5):\n    a += 1\n    b = a + 1\n    d = d - a\nc = b * a\n\nprint('Thats the second commit in branch test1.')\nprint('Branch mesclado.')"
+    },
+    {
+      "hash": "8a82488ede25b7e2",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "55",
+      "got": "Undefined function: print",
+      "code": "# Somando valores de um la\u00e7o for:\nsoma = 0\nfor c in range(1, 11):\n    soma += c\nprint(soma)"
+    },
+    {
+      "hash": "9a666404deffc560",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'y'",
+      "expected": "9",
+      "got": "Syntax error at 'y'\nUndefined function: print\nSyntax error: unexpected else\nSyntax error at 'y'\nSyntax error at ':'\nUndefined function: print\nSyntax error: unexpected else\nUndefined function: print",
+      "code": "y = 8\nif y == 0:\n    print(\"1\")\nelse:\n    if y % 2 == 1:\n        x = 2 * (y / 2)\n        print(x)\n    else:\n        y = y + 1\n        print(y)"
+    },
+    {
+      "hash": "33086ce45dfbdc25",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error: missing end",
+      "expected": "1 * 1 = 1\n1 * 2 = 2\n1 * 3 = 3\n1 * 4 = 4\n1 * 5 = 5\n1 * 6 = 6\n1 * 7 = 7\n1 * 8 = 8\n1 * 9 = 9\n1 * 10 = 10\n2 * 1 = 2\n2 * 2 = 4\n2 * 3 = 6\n2 * 4 = 8\n2 * 5 = 10\n2 * 6 = 12\n2 * 7 = 14\n2 * 8 = 16\n2 * 9 = 18\n2 *",
+      "got": "Syntax error: missing end\nSyntax error: missing end\nSyntax error at '{x1} * {x2} = {result}'\nSyntax error at '{x1} * {x2} = {result}'\nSyntax error at '{x1} * {x2} = {result}'\nSyntax error at '{x1} * {",
+      "code": "for x1 in range(1, 11):\n    for x2 in range(1, 11):\n        result = x1 * x2\n        print(f\"{x1} * {x2} = {result}\")"
+    },
+    {
+      "hash": "53d2b54cac838ab8",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at '_fact'",
+      "expected": "1\n1\n2\n6\n24\n120\n720\n5040\n40320\n362880\n3628800\n39916800\n479001600\n6227020800\n87178291200\n1307674368000\n20922789888000\n355687428096000\n6402373705728000\n121645100408832000",
+      "got": "Syntax error at '_fact'\nUndefined variable: a\nUndefined variable: b\nSyntax error at 'b'\nUndefined variable: a\nError: return used outside a function",
+      "code": "def _fact(a, b):\n    if b == 0:\n        return a\n    return _fact(a * b, b - 1)\n\n\n\ndef fact(n):\n    return _fact(1, n)\n\n\nfor i in range(20):\n    print(fact(i))"
+    },
+    {
+      "hash": "317690ebb6080794",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "Neighbors of vertex 0:  [1, 2]\nNeighbors of vertex 3:  [4, 5]\n\nPrint all adjacency lists with corresponding vertex\n0 : [1, 2]\n1 : [2, 3]\n2 : [4]\n3 : [4, 5]\n4 : [5]\n5 : []",
+      "got": "Undefined function: print\nUndefined function: print\nUndefined function: print\nSyntax error: missing end\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function",
+      "code": "# list of lists\nadjLists = [ [1,2], [2,3], [4], [4,5], [5], [] ]\n\n# testing\nprint(\"Neighbors of vertex 0: \", adjLists[0])\nprint(\"Neighbors of vertex 3: \", adjLists[3])\n \nprint(\"\\nPrint all adjacency lists with corresponding vertex\")\nn = len(adjLists)\nfor v in range(0,n):\n      print(v, \":\", adjLists[v])"
+    },
+    {
+      "hash": "9c3fc067d193d5c0",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'recusion'",
+      "expected": "3.5500000000000003\n3.5500000000000003",
+      "got": "Syntax error at 'recusion'\nUndefined variable: n\nSyntax error at ':'\nSyntax error at 'n'\nError: return used outside a function",
+      "code": "def recusion(n):\n    if n <= 0:\n        return 0\n    if n == 1:\n        return 1/2\n    else:\n        return n/(n+1) + recusion(n-1)\n\ndef iterator(n):\n    sum = 0\n    for i in range(1, n+1):\n        sum += (i)/(i+1)\n    return sum\n\nprint(recusion(5))\nprint(iterator(5))"
+    },
+    {
+      "hash": "21532f24d99e89b0",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "French\nPolish",
+      "got": "Undefined function: print\nUndefined function: print",
+      "code": "language = [\"French\", \"German\", \"English\", \"Polish\"]\n\n# Accessing first element\nprint(language[0])\n\n# Accessing fourth element\nprint(language[3])"
+    },
+    {
+      "hash": "6dec101a2f955652",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "40",
+      "got": "Undefined function: print",
+      "code": "x = 35\ny = x + 5\nprint(y)"
+    },
+    {
+      "hash": "081304c5b37fc759",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error: missing end",
+      "expected": "0:0\n0:1\n0:2\n0:3\n0:4\n0:5\n0:6\n0:7\n0:8\n0:9\n0:10\n0:11\n0:12\n0:13\n0:14\n0:15\n0:16\n0:17\n0:18\n0:19\n0:20\n0:21\n0:22\n0:23\n0:24\n0:25\n0:26\n0:27\n0:28\n0:29\n0:30\n0:31\n0:32\n0:33\n0:34\n0:35\n0:36\n0:37\n0:38\n0:39\n0:40\n0:41\n",
+      "got": "Syntax error: missing end\nSyntax error: missing end\nError: cannot add int and str\nError: cannot add NoneType and int\nUndefined function: print\nError: cannot add int and str\nError: cannot add NoneType ",
+      "code": "for hours in range(24):\n    for minutes in range(60):\n        print(hours + \":\" + minutes)"
+    },
+    {
+      "hash": "6e4bc24e58c07e37",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "[1, 2, 3, 4, 5, 6]",
+      "got": "Undefined function: print",
+      "code": "liste = [1,2,3,4,5]\nliste.append(6)\nprint(liste)"
+    },
+    {
+      "hash": "324f7db5c1da4bf2",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "Hello Guild!",
+      "got": "Undefined function: print",
+      "code": "msg = \"Hello Guild!\"\n\nprint(msg)"
+    },
+    {
+      "hash": "1f7b643d28778393",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 're'",
+      "expected": "['01', '2021', '1', '0', '5', '0']",
+      "got": "Syntax error at 're'\nIllegal character: '''\nIllegal character: '\\'\nSyntax error at 'd'\nIllegal character: '''\nUndefined variable: re\nError: no method 'findall' on int\nUndefined function: print",
+      "code": "import re\n\nLine =\"Dec-01-2021\\t1.0 miles\\t5.0 min\"\nSearchStr = r'\\d+'\nResult = re.findall(SearchStr, Line)\n\nprint(Result)"
+    },
+    {
+      "hash": "447d2c2fb8801ca7",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'add'",
+      "expected": "xxxxxxxxxx",
+      "got": "Syntax error at 'add'\nUndefined variable: num1\nUndefined variable: num2\nUndefined variable: num1\nUndefined variable: num2\nError: return used outside a function",
+      "code": "def add(num1, num2):\n    return num1 + num2\n\n\ndef multiply(num1, num2):\n    return num1 * num2\n\n\n# print(add(10, 20))\nprint(multiply(10, 'x'))\n\n\n# sum = add(10, 20)\n# print(sum)\n# print(add(20, 40))\n# print(add(40, 80))"
+    },
+    {
+      "hash": "c8e8c7019185f7e5",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error: missing end",
+      "expected": "1\n-2\n3\n-4\n5\n-6\n7\n-8\n9\n-10\n11\n-12\n13\n-14\n15\n-16\n17\n-18\n19\n-20\n21\n-22\n23\n-24\n25\n-26\n27\n-28\n29\n-30\n31\n-32\n33\n-34\n35\n-36\n37\n-38\n39\n-40\n41\n-42\n43\n-44\n45\n-46\n47\n-48\n49\n-50\n51\n-52\n53\n-54\n55\n-56\n57\n-58\n59\n-60",
+      "got": "Syntax error: missing end\nSyntax error at 'num'\nSyntax error at ':'\nSyntax error at '-'\nSyntax error: unexpected else\nUndefined function: print\nSyntax error at 'num'\nSyntax error at ':'\nSyntax error a",
+      "code": "# 1,-2,3,-4,5 ESE 100 TAKK PRINT KRE\n\n\nnum=1\nwhile num<=100:\n    if num%2==0:\n        print(num*-1)\n    else:\n        print(num)\n    num=num+1"
+    },
+    {
+      "hash": "18f2ee8fb14b3917",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "Hello, I am SKL\nWelcome to my learning space",
+      "got": "Undefined function: print\nUndefined function: print",
+      "code": "# This is created from Notebook++\n\nprint(\"Hello, I am SKL\")\n\nprint(\"Welcome to my learning space\")"
+    },
+    {
+      "hash": "8ae0ee0b9a40a1cc",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "[1, 4, 9, 16, 25]\n[4, 9, 16]",
+      "got": "Undefined function: print\nUndefined function: print",
+      "code": "squares = [1, 4, 9, 16, 25]   # create new list\nprint(squares)\nslice=squares[1:4]\nprint(slice)"
+    },
+    {
+      "hash": "512036b8610b5ad9",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error: missing end",
+      "expected": "88\n99\n89\n90\n78\n89\n99\n79",
+      "got": "Syntax error: missing end\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function: print\nUndefined function",
+      "code": "data = [88, 99, 89, 90, 78, 89, 99, 79]\ni = 0\n\nwhile i <= 7:\n    print(data[i])\n    i += 1"
+    },
+    {
+      "hash": "274772dc723651ed",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "\u0413\u043e\u0434\u043e\u0432\u0430\u044f \u0434\u043e\u0445\u043e\u0434\u043d\u043e\u0441\u0442\u044c \u043d\u0430\u0448\u0435\u0433\u043e \u0434\u0435\u043f\u043e\u0437\u0438\u0442\u0430 10.55%.",
+      "got": "Undefined function: print",
+      "code": "percent = 10.55\npercent_str = \"\u0413\u043e\u0434\u043e\u0432\u0430\u044f \u0434\u043e\u0445\u043e\u0434\u043d\u043e\u0441\u0442\u044c \u043d\u0430\u0448\u0435\u0433\u043e \u0434\u0435\u043f\u043e\u0437\u0438\u0442\u0430 %.2f%%.\" % percent\n\nprint(percent_str)"
+    },
+    {
+      "hash": "bf3f7b9ac10fb83c",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at ' here is the demo line '",
+      "expected": "here is the demo line",
+      "got": "Syntax error at ' here is the demo line '\nUndefined function: print",
+      "code": "#! /usr/bin/python3\n\ntmp = \"\"\" here is the demo line \"\"\"\n\nprint(tmp)"
+    },
+    {
+      "hash": "a6702a3a084d3ce1",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'kuukiondo'",
+      "expected": "E",
+      "got": "Syntax error at 'kuukiondo'\nUndefined function: print\nSyntax error: unexpected elif\nUndefined function: print\nSyntax error: unexpected elif\nUndefined function: print\nSyntax error: unexpected elif\nUnde",
+      "code": "kuukiondo = 70\nshitsudo = 100\n\nif kuukiondo >= 100:\n    print(\"A\")\nelif kuukiondo >= 92 and shitsudo > 75:\n    print(\"B\")\nelif kuukiondo > 88 and shitsudo >= 85:\n    print(\"C\")\nelif kuukiondo == 75 and shitsudo <= 65:\n    print(\"D\")\nelse:\n    print(\"E\")"
+    },
+    {
+      "hash": "a23a6f2330308d4e",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "ol\u00e1 mundo cru\u00e9l\nnossa, s\u00e3o iguais :-> 5\n1\n2\n3\n4\n5\n6\n7\n8\n9",
+      "got": "Undefined function: print\nSyntax error at 'X'\nUndefined function: str\nError: cannot add str and NoneType\nUndefined function: print\nSyntax error: unexpected elif\nUndefined function: str\nError: cannot a",
+      "code": "# -*- coding: utf-8 -*-\nminha_var = \"ol\u00e1 mundo cru\u00e9l\"\nprint(minha_var)\n\nX = 5\nY = 5\nZ = 5\n\nif X > Y:\n    print(\"O X \u00e9 Maior D\u00e3rrrr :-> \" + str(X))\nelif X == Y:\n    print(\"nossa, s\u00e3o iguais :-> \" + str(X))\nelse:\n    print(\"O X \u00e9 menor que Y :-> \" + str(Y))\n\nx = 1\nwhile x < 10:\n    print(x)\n    x += 1"
+    },
+    {
+      "hash": "e39843ca7d3f5bb8",
+      "parses": false,
+      "matches": false,
+      "reason": "Illegal character: '''",
+      "expected": "Curso de p\n4",
+      "got": "Illegal character: '''\nSyntax error at 'de'\nIllegal character: '''\nUndefined variable: python3\nError: invalid slice\nUndefined function: print\nUndefined function: print",
+      "code": "mistring = 'Curso de python3'\nprint(mistring[0:10])\n\npalabra = \"hola\"\n\nprint(len(palabra))"
+    },
+    {
+      "hash": "cb2876edd3d84568",
+      "parses": false,
+      "matches": false,
+      "reason": "Illegal character: '''",
+      "expected": "hello world\nhey i did something\nwhat happens if i do a ;\napparently nothing",
+      "got": "Illegal character: '''\nSyntax error at 'world'\nIllegal character: '''\nIllegal character: '''\nSyntax error at 'i'\nIllegal character: '''\nIllegal character: '''\nSyntax error at 'happens'\nIllegal charact",
+      "code": "print ('hello world')\nprint ('hey i did something')\nprint ('what happens if i do a ;');\nprint ('apparently nothing')"
+    },
+    {
+      "hash": "cb712eca1eedd65c",
+      "parses": false,
+      "matches": false,
+      "reason": "Undefined function: print",
+      "expected": "Hello Hello Hello",
+      "got": "Undefined function: print",
+      "code": "# String repeat\nstr = \"Hello \" * 3\nprint(str)"
+    },
+    {
+      "hash": "c744c1a0bd7764eb",
+      "parses": false,
+      "matches": false,
+      "reason": "Syntax error at 'texto'",
+      "expected": "~~~~~~~~~~~~~~~~~\n  Allan Nemesio  \n~~~~~~~~~~~~~~~~~\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n  Futuro Programador em Python  \n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n~~~~~~~~~~~~~~~\n  Em breve...  \n~~~~~~~~~~~~~~~",
+      "got": "Syntax error at 'texto'\nUndefined variable: msg\nSyntax error at ':'\nIllegal character: '''\nIllegal character: '~'\nIllegal character: '''\nSyntax error at '*'\nUndefined variable: msg\n\nTraceback (most re",
+      "code": "def texto(msg):\n    print('~' * (len(msg) + 4))\n    print('  ' + msg + '  ')\n    print('~' * (len(msg) + 4))\n\n\n#PROGRAMA PRINCIPAL\ntexto('Allan Nemesio')\ntexto('Futuro Programador em Python')\ntexto('Em breve...')"
+    }
+  ]
+}
