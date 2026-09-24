@@ -27,7 +27,18 @@ test('inline and display LaTeX render as formatted math', () => {
   assert.match(html, /<mfrac>/);
   assert.doesNotMatch(html, /\$y = -x\^2 \+ 3\$/);
   assert.match(sameLine, /<mfrac>/);
+  assert.match(sameLine, /class="katex-display"/);
   assert.doesNotMatch(sameLine, /\$\$/);
+});
+test('long fractions and tall expressions get their own line while short math stays inline', () => {
+  const fraction = render('So, the final answer is $\\frac{8x+3}{8x^2+6x}\\cdot\\frac{3}{4}$.');
+  assert.match(fraction, /<p>So, the final answer is <\/p>\s*<span class="katex-display">/);
+  assert.match(fraction, /<mfrac>/);
+  assert.match(render('The derivative is $\\frac{dy}{dx}$.'), /<p>The derivative is <span class="katex">/);
+  assert.doesNotMatch(render('The derivative is $\\frac{dy}{dx}$.'), /class="katex-display"/);
+  assert.match(render('Use $\\begin{pmatrix}1 & 2 \\\\ 3 & 4\\end{pmatrix}$ here.'), /class="katex-display"/);
+  assert.match(render('- Result: $\\frac{8x+3}{8x^2+6x}$'), /<li>Result: \s*<span class="katex-display">/);
+  assert.doesNotMatch(render('Code: `$\\frac{8x+3}{8x^2+6x}$`'), /class="katex"/);
 });
 test('currency prices do not become one long math expression', () => {
   const html = render("Texas regular is $3.9480, California regular is $6.1533. So an average of $5.05065 for the whole trip. That's 225 * $5.05065 = $1136.39 dollars, so about $1,136.");
