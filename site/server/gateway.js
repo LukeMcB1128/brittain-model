@@ -1,5 +1,6 @@
 import { executeTool, TOOL_DEFINITIONS } from './tools.js';
 import { searchCurriculum } from './curriculum.js';
+import { COLLAPSE_NOTE, collapsePoint } from './collapse.js';
 import { PDF_TOOL_DEFINITIONS } from './pdf-tools.js';
 import { recordExchange } from './transcript-log.js';
 import { MAX_MEMORY_CHARS, modelMessages, planCompaction, summarizeCompaction } from './compaction.js';
@@ -377,6 +378,9 @@ async function readModelStream(response, onEvent) {
   let finishReason = null;
   let usage = null;
   let complete = false;
+  // Where to cut a reply that collapsed into a loop, or -1. See collapse.js.
+  let collapsedAt = -1;
+  let checkedAt = 0;
   function consume(line) {
     if (!line.startsWith('data:')) return;
     const value = line.slice(5).trim();
@@ -388,7 +392,18 @@ async function readModelStream(response, onEvent) {
     const choice = data.choices?.find(item => item.index === 0);
     if (!choice) return;
     const delta = choice.delta || {};
-    if (delta.content) { content += delta.content; onEvent({ type: 'content', text: delta.content }); }
+    if (delta.content) {
+      content += delta.content;
+      onEvent({ type: 'content', text: delta.content });
+      // Every 400 characters rather than every token: the check rescans the
+      // reply, and a loop takes hundreds of words to show anyway.
+      if (content.length - checkedAt >= 400) {
+        checkedAt = content.length;
+        collapsedAt = collapsePoint(content);
+        // Stopping reading drops the connection, and vLLM stops generating.
+        if (collapsedAt >= 0) { complete = true; return; }
+      }
+    }
     if (choice.finish_reason) finishReason = choice.finish_reason;
     for (const fragment of delta.tool_calls || []) {
       const index = fragment.index ?? 0;
@@ -413,6 +428,10 @@ async function readModelStream(response, onEvent) {
   } finally {
     await reader.cancel().catch(() => {});
     reader.releaseLock();
+  }
+  if (collapsedAt >= 0) {
+    // A tool call begun inside a loop is not one to act on.
+    return { content: content.slice(0, collapsedAt).trimEnd(), finishReason: 'collapsed', usage, toolCalls: [], collapsed: true };
   }
   return { content, finishReason, usage, toolCalls: [...calls.entries()].sort(([a], [b]) => a - b).map(([, call]) => call) };
 }
@@ -533,6 +552,18 @@ function streamChat(systemMessage, conversation, request, env, fetchUpstream, at
           const guardedFinalRound = finalRound && !toolsSuppressed;
           const finalContentEvents = [];
           const result = await readModelStream(response, guardedFinalRound ? event => finalContentEvents.push(event) : emit);
+          if (result.collapsed) {
+            // Take back what was shown and send the part before the loop, with
+            // a line saying it was cut. The client clears on `reset`. A final
+            // round held its text back, so there the buffer is replaced.
+            result.content = result.content ? `${result.content}\n\n${COLLAPSE_NOTE}` : COLLAPSE_NOTE;
+            if (guardedFinalRound) {
+              finalContentEvents.splice(0, finalContentEvents.length, { type: 'content', text: result.content });
+            } else {
+              emit({ type: 'reset' });
+              emit({ type: 'content', text: result.content });
+            }
+          }
           if (guardedFinalRound && result.toolCalls.length) {
             throw new Error('The model kept requesting tools after tool use ended. It did not complete the answer. Please retry.');
           }

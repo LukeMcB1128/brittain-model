@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PDFDocument } from 'pdf-lib';
 import { handleApi, toolInstructions, isBareGreeting } from './gateway.js';
+import { COLLAPSE_NOTE } from './collapse.js';
 const env = { BRITTAIN4_API_KEY: 'test-only-secret' };
 function req(body = { messages: [{ role: 'user', content: 'Please help with this task.' }] }, extra = {}) {
   return new Request('https://site.example/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json', 'oai-authenticated-user-id': 'test-user', ...extra }, body: JSON.stringify(body) });
@@ -702,6 +703,32 @@ test('BRITTAIN4_THINKING=off turns thinking off without a deploy', async () => {
   await response.text();
   assert.equal(payload.chat_template_kwargs.enable_thinking, false);
   assert.equal(payload.max_tokens, 2048);
+});
+
+test('a reply that collapses into a loop is cut, not streamed to the limit', async () => {
+  // A live run5b reply on AP Calculus ended in hundreds of words cycling
+  // "triangle square rectangle parallelogram rhombus ..." until the token
+  // limit. The stream is stopped once the loop shows, what was shown is taken
+  // back with a reset, and the part before the loop is sent with a note.
+  const opening = 'Here is the review.\n\n'
+    + 'The unit circle is centred at the origin with radius one, and every point on it '
+    + 'pairs an angle with its cosine and sine. Radians measure arc length directly, '
+    + 'which is why calculus uses them.';
+  const loop = Array(80).fill('triangle square rectangle parallelogram rhombus').join(' ');
+  const chunks = [opening, '\n\n'];
+  for (let at = 0; at < loop.length; at += 300) chunks.push(loop.slice(at, at + 300));
+  const response = await handleApi(req(), env, async () => sse([
+    ...chunks.map(text => ({ choices: [{ index: 0, delta: { content: text } }] })),
+    { choices: [{ index: 0, delta: {}, finish_reason: 'length' }] },
+    '[DONE]',
+  ]));
+  const events = (await response.text()).split('\n\n').filter(Boolean).map(line => JSON.parse(line.slice(6)));
+  const reset = events.findIndex(event => event.type === 'reset');
+  assert.ok(reset >= 0, 'what had been shown is taken back');
+  const after = events.slice(reset + 1).filter(event => event.type === 'content').map(event => event.text).join('');
+  assert.equal(after, `${opening}\n\n${COLLAPSE_NOTE}`);
+  assert.doesNotMatch(after, /rhombus/);
+  assert.equal(events.find(event => event.type === 'done').finishReason, 'collapsed');
 });
 
 test('executes only declared tools and returns the final streamed reply', async () => {
