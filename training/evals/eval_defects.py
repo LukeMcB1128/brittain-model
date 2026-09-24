@@ -30,6 +30,11 @@ VLLM = os.environ.get("BRITTAIN4_URL", "http://localhost:11435/v1/chat/completio
 # Everything is scored thinking-off, the path the web chat serves and the
 # only one the adapters were trained on. --think measures the other one.
 THINKING = False
+# --sampling qwen: Qwen's thinking-mode sampling, no frequency penalty, and a
+# thinking budget. See ab_sampling.py for why the penalty had to go.
+SAMPLING = {}
+QWEN = {"temperature": 0.6, "top_p": 0.95, "top_k": 20, "frequency_penalty": 0.0,
+        "presence_penalty": 0.5, "thinking_token_budget": 2048}
 STATS = {"requests": 0, "seconds": 0.0, "cut_off": 0}
 
 
@@ -414,6 +419,7 @@ def ask(turns, system, key, model, tools=None):
     if tools:
         body["tools"] = tools
         body["tool_choice"] = "auto"
+    body.update(SAMPLING)
     request = urllib.request.Request(VLLM, json.dumps(body).encode(), {
         "Authorization": "Bearer " + key, "Content-Type": "application/json"})
     import time
@@ -472,6 +478,7 @@ def main():
     parser.add_argument("--samples", type=int, default=8)
     parser.add_argument("--model", default="run3-step-0116")
     parser.add_argument("--out", default=None)
+    parser.add_argument("--sampling", choices=("production", "qwen"), default="production")
     parser.add_argument("--think", action="store_true",
                         help="enable_thinking on -- a path the adapters were not trained on")
     parser.add_argument("--heldout", action="store_true",
@@ -483,6 +490,8 @@ def main():
     args = parser.parse_args()
     global THINKING
     THINKING = args.think
+    if args.sampling == "qwen":
+        SAMPLING.update(QWEN)
 
     system = system_prompt()
     key = vllm_key()

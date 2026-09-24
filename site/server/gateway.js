@@ -32,6 +32,32 @@ function modelName(env) {
 function thinking(env) {
   return String(env?.BRITTAIN4_THINKING || 'on').toLowerCase() !== 'off';
 }
+// Sampling is per path, and each set is the one that path was measured with.
+//
+// THINKING ON. frequency_penalty 0.3 was wrecking reasoning. It grows with
+// every repeat of a token, and a long chain of math repeats x, = and digits
+// hundreds of times until every sensible next token is penalised: on eight
+// hand-checked calculus problems, twice each, it got 5 of 16 right and stalled
+// on 5, with replies like "world peace achieved universal peace attained".
+// Qwen's thinking-mode sampling with no frequency penalty got 15 of 16.
+// Presence penalty is flat -- a token is penalised once for having appeared --
+// so it does not compound: at 0.5 it still got 14 of 16, and cut the
+// short-reply loop the frequency penalty had been added for to at worst six
+// repeats (none at all needs 1.0, which cost math: 11 of 16). The collapse
+// guard catches a loop that still runs long. thinking_token_budget ends the
+// reasoning at 2048 tokens and moves on to the answer; without it a hard
+// problem could think the whole max_tokens away and return nothing, which a
+// user hit twice. Held-out tool probes under these settings: pushback checked
+// 24/24, moving facts 24/24, over-reach 0/24.
+//
+// THINKING OFF. Unchanged, because the rollback should behave as it did:
+// frequency_penalty 0.3 took a short reply that looped 3 times in 48 to 0.
+function sampling(env) {
+  return thinking(env)
+    ? { max_tokens: 4096, temperature: 0.6, top_p: 0.95, top_k: 20,
+        presence_penalty: 0.5, thinking_token_budget: 2048 }
+    : { max_tokens: 2048, temperature: 0.7, frequency_penalty: 0.3 };
+}
 // What the browser calls it. Deliberately not the checkpoint id: the client
 // renders this as the assistant's name beside every reply.
 const DISPLAY_MODEL = 'brittain4';
@@ -521,19 +547,8 @@ function streamChat(systemMessage, conversation, request, env, fetchUpstream, at
             model: modelName(env),
             messages: finalRound && !toolsSuppressed
               ? finalAnswerMessages(answerBaseMessages, recorded.toolCalls) : messages,
-            // Reasoning spends from the same budget as the reply: at 2048, one
-            // settled-question answer in 24 ran out mid-thought and came back
-            // empty.
-            max_tokens: thinking(env) ? 4096 : 2048, temperature: 0.7, stream: true,
-            // A live chat repeated the same five lines eight times before the
-            // model said "I am going in circles, so I'll stop there". vLLM's
-            // defaults are no penalty at all, and on a reply the model has to
-            // write from nothing -- the search had failed -- 3 replies in 48
-            // repeated a sentence three or more times, one of them twelve
-            // times. At 0.3 that is 0 in 48, and nothing else moved: routing
-            // to each tool was unchanged or better and every tool call still
-            // parsed as JSON.
-            frequency_penalty: 0.3,
+            ...sampling(env),
+            stream: true,
             stream_options: { include_usage: true }, chat_template_kwargs: { enable_thinking: thinking(env) },
           };
           if (!finalRound) {

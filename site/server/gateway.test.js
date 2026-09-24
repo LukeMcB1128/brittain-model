@@ -674,23 +674,41 @@ test('re-grounding is skipped when there is nothing to re-ground', async () => {
   ] }, undefined)), false);
 });
 
-test('every request carries a frequency penalty', async () => {
-  // Without one, a live chat repeated the same five lines eight times before
-  // the model said it was going in circles. vLLM defaults to no penalty, so
-  // it has to be sent, and it has to be sent on the final round too -- that
-  // is the round that writes the long answer where this happened.
-  const payloads = [];
-  let round = 0;
-  const response = await handleApi(req({ messages: [{ role: 'user', content: 'Search the web for a language reference.' }] }), env,
-    async (_url, options) => {
-      payloads.push(JSON.parse(options.body));
-      round += 1;
-      if (round === 1) return modelToolCalls([['web_search', { query: 'language reference' }]]);
-      return sse([{ choices: [{ index: 0, delta: { content: 'Here it is.' }, finish_reason: 'stop' }] }, '[DONE]']);
-    });
-  await response.text();
-  assert.ok(payloads.length >= 2, 'expected a tool round and an answer round');
-  for (const payload of payloads) assert.equal(payload.frequency_penalty, 0.3);
+test('each path sends the sampling it was measured with, on every round', async () => {
+  // Thinking on: frequency_penalty wrecked long reasoning -- 5 of 16 hand-checked
+  // calculus problems right, against 14 under these settings -- and without a
+  // thinking budget a hard problem could spend all of max_tokens thinking and
+  // return nothing. It has to hold on the final round, which writes the answer.
+  const rounds = async environment => {
+    const payloads = [];
+    let round = 0;
+    const response = await handleApi(req({ messages: [{ role: 'user', content: 'Search the web for a language reference.' }] }), environment,
+      async (_url, options) => {
+        payloads.push(JSON.parse(options.body));
+        round += 1;
+        if (round === 1) return modelToolCalls([['web_search', { query: 'language reference' }]]);
+        return sse([{ choices: [{ index: 0, delta: { content: 'Here it is.' }, finish_reason: 'stop' }] }, '[DONE]']);
+      });
+    await response.text();
+    assert.ok(payloads.length >= 2, 'expected a tool round and an answer round');
+    return payloads;
+  };
+  for (const payload of await rounds(env)) {
+    assert.equal(payload.chat_template_kwargs.enable_thinking, true);
+    assert.equal(payload.temperature, 0.6);
+    assert.equal(payload.top_p, 0.95);
+    assert.equal(payload.top_k, 20);
+    assert.equal(payload.presence_penalty, 0.5);
+    assert.equal(payload.thinking_token_budget, 2048);
+    assert.equal(payload.frequency_penalty, undefined);
+  }
+  // Thinking off keeps what that path was measured with: 0.3 stopped a short
+  // reply looping 3 times in 48.
+  for (const payload of await rounds({ ...env, BRITTAIN4_THINKING: 'off' })) {
+    assert.equal(payload.chat_template_kwargs.enable_thinking, false);
+    assert.equal(payload.frequency_penalty, 0.3);
+    assert.equal(payload.thinking_token_budget, undefined);
+  }
 });
 
 test('BRITTAIN4_THINKING=off turns thinking off without a deploy', async () => {
