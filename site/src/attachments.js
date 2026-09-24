@@ -2,6 +2,11 @@ export const ACCEPTED_ATTACHMENTS = '.txt,.md,.markdown,.csv,.tsv,.json,.js,.jsx
 export const MAX_ATTACHMENT_COUNT = 5;
 export const MAX_ATTACHMENT_BYTES = 10_000_000;
 
+// The gateway accepts at most 10 file assets, 8 image parts, and a 30 MB
+// request. Keep room for conversation text and JSON when old files accumulate.
+const MAX_REQUEST_ASSETS = 10;
+const MAX_REQUEST_IMAGES = 8;
+const MAX_REQUEST_BINARY_CHARS = 27_000_000;
 const MAX_IMAGE_BYTES = 5_000_000;
 const MAX_TEXT_BYTES = 2_000_000;
 // Leave space in the 32k web-chat window for the system prompt, tools,
@@ -99,26 +104,85 @@ export async function importAttachment(file) {
   throw new Error(`${name} is not a supported image, PDF, text, code, CSV, JSON, or Markdown file.`);
 }
 
-export function messageContent(prompt, attachments = []) {
+export function messageContent(prompt, attachments = [], retainedIds = null) {
   if (!attachments.length) return prompt;
   return [
     { type: 'text', text: prompt.trim() || 'Review the attached content.' },
     ...attachments.flatMap(attachment => attachment.kind === 'image'
-      ? attachment.dataUrl
+      ? attachment.dataUrl && (!retainedIds || retainedIds.has(attachment.id))
         ? [{ type: 'text', text: `Attached image: ${safeName(attachment.name)}` }, { type: 'image_url', image_url: { url: attachment.dataUrl } }]
-        : [{ type: 'text', text: `An image named ${safeName(attachment.name)} was attached in an earlier request. Its binary data is no longer available.` }]
-      : [{ type: 'text', text: `Attached file: ${safeName(attachment.name)}${attachment.truncated ? ' (content truncated)' : ''}\n\n${attachment.content}` }]),
+        : [{ type: 'text', text: `An image named ${safeName(attachment.name)} was attached earlier but is not available in this request. Ask the user to attach it again if you need to inspect it.` }]
+      : [{ type: 'text', text: `Attached file: ${safeName(attachment.name)}${attachment.truncated ? ' (content truncated)' : ''}${attachment.kind === 'pdf' && retainedIds && !retainedIds.has(attachment.id) ? ' (PDF file no longer available for tools; ask the user to attach it again if needed)' : ''}\n\n${attachment.content}` }]),
   ];
 }
 
-export function requestAssets(turns = []) {
+export function planRequestAttachments(turns = []) {
   const assets = [];
   const seen = new Set();
-  for (const item of turns.flatMap(turn => [...(turn.attachments || []), ...(turn.artifacts || [])])) {
-    const supported = item?.kind === 'pdf' || (item?.kind === 'image' && ['image/png', 'image/jpeg'].includes(item.type));
-    if (!item?.id || seen.has(item.id) || !item.dataUrl || !supported) continue;
-    seen.add(item.id);
-    assets.push({ id: item.id, name: item.name, type: item.type, dataUrl: item.dataUrl, ...(item.kind === 'pdf' ? { pageCount: item.pageCount, pageImages: item.pageImages || [] } : {}) });
+  const retainedIds = new Set();
+  let imageCount = 0;
+  let binaryChars = 0;
+  // New files have priority. Old file data is optional; the saved text and
+  // replies stay in the conversation even when its binary data is omitted.
+  for (const turn of [...turns].reverse()) {
+    const selectedPdfs = [];
+    for (const item of [...(turn.attachments || []), ...(turn.artifacts || [])]) {
+      if (!item?.id || seen.has(item.id)) continue;
+      seen.add(item.id);
+      if (!item.dataUrl) continue;
+      const image = item.kind === 'image';
+      const pdf = item.kind === 'pdf';
+      if (!image && !pdf) continue;
+      if (image && imageCount >= MAX_REQUEST_IMAGES) continue;
+      const supportedAsset = pdf || (image && ['image/png', 'image/jpeg'].includes(item.type));
+      if (supportedAsset && assets.length >= MAX_REQUEST_ASSETS) continue;
+      // PNG and JPEG bytes appear once in the message and once in the asset
+      // list, while WebP appears only in the message.
+      const cost = item.dataUrl.length * (image && supportedAsset ? 2 : 1);
+      if (binaryChars + cost > MAX_REQUEST_BINARY_CHARS) continue;
+      binaryChars += cost;
+      retainedIds.add(item.id);
+      if (image) imageCount += 1;
+      if (pdf) {
+        const asset = { id: item.id, name: item.name, type: item.type, dataUrl: item.dataUrl, pageCount: item.pageCount, pageImages: [] };
+        assets.push(asset);
+        selectedPdfs.push({ source: item, asset });
+      } else if (supportedAsset) {
+        assets.push({ id: item.id, name: item.name, type: item.type, dataUrl: item.dataUrl });
+      }
+    }
+    // Reserve all files from this turn before its page images. Then add older
+    // turns, so a new scanned PDF keeps visual pages before old files take space.
+    for (const { source, asset } of selectedPdfs) {
+      for (const page of (source.pageImages || []).slice(0, 4)) {
+        if (typeof page?.dataUrl !== 'string') continue;
+        if (binaryChars + page.dataUrl.length > MAX_REQUEST_BINARY_CHARS) break;
+        asset.pageImages.push(page);
+        binaryChars += page.dataUrl.length;
+      }
+    }
   }
-  return assets;
+  return { assets, retainedIds };
+}
+
+export function requestAssets(turns = []) {
+  return planRequestAttachments(turns).assets;
+}
+
+export function chatForSave(chat) {
+  return {
+    ...chat,
+    messages: (chat.messages || []).map((message, index) => ({
+      ...message,
+      // The account store keeps file names and extracted text, not binary data.
+      // Remove it before upload rather than sending every old file on each save.
+      attachments: (message.attachments || []).map(({ dataUrl: _dataUrl, pageImages: _pageImages, ...attachment }) => ({
+        ...attachment,
+        // Compacted turns are represented by conversation memory. Their file
+        // text need not be saved or sent to the model again.
+        ...(chat.memory && index < (chat.contextStart || 0) && ['pdf', 'text'].includes(attachment.kind) ? { content: '' } : {}),
+      })),
+      artifacts: undefined,
+    })),
+  };
 }

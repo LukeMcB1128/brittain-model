@@ -5,7 +5,7 @@ import { readCompletion } from './brittain4.js';
 import MarkdownReply from './MarkdownReply.js';
 import { contextUsage } from './context-usage.js';
 import { withoutReferenceNotes } from './chat.js';
-import { ACCEPTED_ATTACHMENTS, importAttachment, MAX_ATTACHMENT_BYTES, MAX_ATTACHMENT_COUNT, messageContent, requestAssets } from './attachments.js';
+import { ACCEPTED_ATTACHMENTS, chatForSave, importAttachment, MAX_ATTACHMENT_BYTES, MAX_ATTACHMENT_COUNT, messageContent, planRequestAttachments } from './attachments.js';
 import { assistantToolHistory } from './chat-history.js';
 import { activityProgressMessage, toolActivityItems } from './tool-activity.js';
 
@@ -176,7 +176,7 @@ export default function Chat({ session, initialChatId = '' }) {
   }
   async function saveChat(chat) {
     const response = await fetch(`/api/chats/${encodeURIComponent(chat.id)}`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(chat),
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(chatForSave(chat)),
     });
     if (!response.ok) {
       let data; try { data = await response.json(); } catch { data = {}; }
@@ -299,9 +299,10 @@ export default function Chat({ session, initialChatId = '' }) {
     const previous = retry ? messages.slice(0, -1) : messages;
     const contextStart = Math.min(current?.contextStart || 0, previous.length);
     const contextTurns = previous.slice(contextStart);
+    const requestAttachments = planRequestAttachments([...contextTurns, turn]);
     const history = contextTurns.flatMap(m => {
       const tools = assistantToolHistory(m.tools);
-      return [{ role: 'user', content: messageContent(m.prompt, m.attachments), turnId: m.id }, ...(m.answer ? [{ role: 'assistant', content: m.answer, turnId: m.id, ...(tools.length ? { tools } : {}) }] : [])];
+      return [{ role: 'user', content: messageContent(m.prompt, m.attachments, requestAttachments.retainedIds), turnId: m.id }, ...(m.answer ? [{ role: 'assistant', content: m.answer, turnId: m.id, ...(tools.length ? { tools } : {}) }] : [])];
     });
     const changedAt = new Date().toISOString();
     let workingChat = current ? { ...current, updatedAt: changedAt, messages: [...previous, turn] } : { id, title: (draft.trim() || turnAttachments[0]?.name || turn.prompt).slice(0, 60), createdAt: changedAt, updatedAt: changedAt, messages: [turn] };
@@ -337,7 +338,7 @@ export default function Chat({ session, initialChatId = '' }) {
       };
       try { await saveChat(savedBeforeReply); }
       catch (saveError) { setHistoryStatus('error'); showNotice(saveError.message); }
-      const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: [...history, { role: 'user', content: messageContent(turn.prompt, turnAttachments), turnId: turn.id }], attachments: requestAssets([...contextTurns, turn]), memory: current?.memory || '' }), signal: abort.signal });
+      const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: [...history, { role: 'user', content: messageContent(turn.prompt, turnAttachments, requestAttachments.retainedIds), turnId: turn.id }], attachments: requestAttachments.assets, memory: current?.memory || '' }), signal: abort.signal });
       await readCompletion(response, chunk => {
         if (chunk.type === 'tool') { updateTool(chunk); return; }
         if (chunk.type === 'artifact') { updateArtifact(chunk); return; }
