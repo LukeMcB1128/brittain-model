@@ -50,6 +50,15 @@ export default {
       }
       if (url.pathname.startsWith('/api/')) {
         const session = await accountSession(request, env);
+        if (url.pathname === '/api/chat/cancel') {
+          if (request.method !== 'POST') return securityHeaders(new Response(null, { status: 405 }));
+          if (!session?.user) return securityHeaders(Response.json({ error: 'Sign in to use chat.' }, { status: 401 }));
+          const origin = request.headers.get('origin');
+          if (origin && origin !== url.origin) return securityHeaders(Response.json({ error: 'Request origin is not allowed.' }, { status: 403 }));
+          if (!env.CHAT_CAPACITY) return securityHeaders(new Response(null, { status: 204 }));
+          const gate = env.CHAT_CAPACITY.get(env.CHAT_CAPACITY.idFromName('brittain-4'));
+          return securityHeaders(await gate.fetch(internalChatRequest(request, session.user.id)));
+        }
         if (url.pathname.startsWith('/api/chats')) {
           return securityHeaders(await handleChats(request, env, session?.user));
         }

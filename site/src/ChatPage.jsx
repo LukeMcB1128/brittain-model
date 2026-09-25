@@ -105,6 +105,7 @@ export default function Chat({ session, initialChatId = '' }) {
   const [active, setActive] = useState(null);
   const [connection, setConnection] = useState('loading');
   const [busy, setBusy] = useState(false);
+  const [stopping, setStopping] = useState(false);
   const [contextLimit, setContextLimit] = useState(32768);
   const [copyNotice, setCopyNotice] = useState('');
   const [attachments, setAttachments] = useState([]);
@@ -118,6 +119,8 @@ export default function Chat({ session, initialChatId = '' }) {
   const [pendingDelete, setPendingDelete] = useState(null);
   const [notice, setNotice] = useState('');
   const controller = useRef(null);
+  const activeRequestId = useRef(null);
+  const stopPending = useRef(null);
   const input = useRef(null);
   const fileInput = useRef(null);
   const deleteTimer = useRef(null);
@@ -183,6 +186,16 @@ export default function Chat({ session, initialChatId = '' }) {
       throw new Error(data.error || 'The conversation could not be saved.');
     }
   }
+  function stopResponse() {
+    if (!controller.current || stopPending.current || !activeRequestId.current) return;
+    const id = activeRequestId.current;
+    stopPending.current = fetch('/api/chat/cancel', {
+      method: 'POST', headers: { 'X-Brittain-Request-Id': id }, keepalive: true,
+      signal: AbortSignal.timeout(8_000),
+    }).then(response => response.ok, () => false);
+    setStopping(true);
+    controller.current.abort();
+  }
   useEffect(() => { chatsRef.current = chats; }, [chats]);
   // This effect owns the page lifetime and must run once.
   /* oxlint-disable react-hooks/exhaustive-deps */
@@ -195,7 +208,7 @@ export default function Chat({ session, initialChatId = '' }) {
     };
     window.addEventListener('popstate', onPopState);
     return () => {
-      controller.current?.abort();
+      stopResponse();
       window.removeEventListener('popstate', onPopState);
       clearTimeout(deleteTimer.current); clearTimeout(noticeTimer.current);
       if (pendingDeleteRef.current) commitDelete(pendingDeleteRef.current, true);
@@ -335,7 +348,9 @@ export default function Chat({ session, initialChatId = '' }) {
     else { setChats(items => [workingChat, ...items]); setActive(id); setChatUrl(id, true); }
     if (!retry) { setDraft(''); clearImports(); }
     const abort = new AbortController();
+    const requestId = crypto.randomUUID();
     controller.current = abort;
+    activeRequestId.current = requestId;
     setBusy(true);
     function update(patch) {
       workingChat = { ...workingChat, messages: workingChat.messages.map(m => m.id === turn.id ? { ...m, ...patch } : m) };
@@ -363,7 +378,7 @@ export default function Chat({ session, initialChatId = '' }) {
       };
       try { await saveChat(savedBeforeReply); }
       catch (saveError) { setHistoryStatus('error'); showNotice(saveError.message); }
-      const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: [...history, { role: 'user', content: messageContent(turn.prompt, turnAttachments, requestAttachments.retainedIds), turnId: turn.id }], attachments: requestAttachments.assets, memory: current?.memory || '' }), signal: abort.signal });
+      const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Brittain-Request-Id': requestId }, body: JSON.stringify({ messages: [...history, { role: 'user', content: messageContent(turn.prompt, turnAttachments, requestAttachments.retainedIds), turnId: turn.id }], attachments: requestAttachments.assets, memory: current?.memory || '' }), signal: abort.signal });
       await readCompletion(response, chunk => {
         if (chunk.type === 'tool') { updateTool(chunk); return; }
         if (chunk.type === 'artifact') { updateArtifact(chunk); return; }
@@ -392,9 +407,12 @@ export default function Chat({ session, initialChatId = '' }) {
     } catch (error) {
       update({ status: abort.signal.aborted ? 'stopped' : 'error', activityPhase: 'done', error: abort.signal.aborted ? '' : error.message });
     } finally {
+      const stopConfirmed = stopPending.current ? await stopPending.current : true;
       try { await saveChat(workingChat); setHistoryStatus('ready'); }
       catch (saveError) { setHistoryStatus('error'); setCopyNotice(saveError.message); }
-      controller.current = null; setBusy(false);
+      if (!stopConfirmed) showNotice('Could not confirm that the response stopped. Please retry in a moment.');
+      controller.current = null; activeRequestId.current = null; stopPending.current = null;
+      setStopping(false); setBusy(false);
       if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) input.current?.focus();
     }
   }
@@ -414,7 +432,7 @@ export default function Chat({ session, initialChatId = '' }) {
       <AttachmentCards attachments={attachments} onRemove={id => setAttachments(items => items.filter(item => item.id !== id))}/>
       <label className="sr-only" htmlFor="chat-message">Message Brittain 4</label>
       <textarea ref={input} id="chat-message" placeholder="Message Brittain 4…" value={draft} onChange={e => setDraft(e.target.value)} rows={2} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) send(e); }}/>
-      <div className="c-composer-controls"><button type="button" className="c-attach" disabled={busy || importing || attachments.length >= MAX_ATTACHMENT_COUNT} onClick={() => fileInput.current?.click()} aria-label={importing ? 'Adding attachments' : 'Add files or images'} title="Add files or images"><Icon name="attach"/></button><span>{importing ? 'Adding…' : attachments.length ? `${attachments.length} / ${MAX_ATTACHMENT_COUNT}` : 'Files and images'}</span>{busy ? <button type="button" className="c-send" onClick={() => controller.current?.abort()} aria-label="Stop reply">■</button> : <button type="submit" className="c-send" disabled={(!draft.trim() && !attachments.length) || !preview || importing} aria-label="Send message"><Icon name="arrow"/></button>}</div>
+      <div className="c-composer-controls"><button type="button" className="c-attach" disabled={busy || importing || attachments.length >= MAX_ATTACHMENT_COUNT} onClick={() => fileInput.current?.click()} aria-label={importing ? 'Adding attachments' : 'Add files or images'} title="Add files or images"><Icon name="attach"/></button><span>{stopping ? 'Stopping…' : importing ? 'Adding…' : attachments.length ? `${attachments.length} / ${MAX_ATTACHMENT_COUNT}` : 'Files and images'}</span>{busy ? <button type="button" className="c-send" onClick={stopResponse} disabled={stopping} aria-label={stopping ? 'Stopping reply' : 'Stop reply'}>■</button> : <button type="submit" className="c-send" disabled={(!draft.trim() && !attachments.length) || !preview || importing} aria-label="Send message"><Icon name="arrow"/></button>}</div>
       {dragging && <div className="c-drop-message">Drop files to attach</div>}
     </form>
     {attachmentError && <p className="c-attachment-error" role="alert">{attachmentError}</p>}
