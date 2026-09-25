@@ -110,6 +110,9 @@
 .c-open.c-is-collapsed { display: inline-grid; }
 .c-scrim { display: none; }
 @media (max-width: 760px) {
+  /* The visible viewport shrinks when the phone keyboard opens. Keep the
+     composer at its bottom instead of leaving space below the chat. */
+  .release-site.chat-route { position: fixed; top: var(--chat-visual-top, 0px); left: 0; right: 0; height: var(--chat-visual-height, 100dvh); }
   .c-app { grid-template-columns: minmax(0,1fr); }
   .c-sidebar { display: none; }
   .c-desktop { display: none; }

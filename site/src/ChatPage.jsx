@@ -203,11 +203,36 @@ export default function Chat({ session, initialChatId = '' }) {
   }, []);
   /* oxlint-enable react-hooks/exhaustive-deps */
   const preview = connection === 'ready';
-  const end = useRef(null);
+  const conversation = useRef(null);
   const current = chats.find(chat => chat.id === active);
   const messages = current?.messages || [];
   const context = contextUsage(messages, contextLimit);
-  useEffect(() => { end.current?.scrollIntoView({ block: 'nearest' }); }, [chats, active]);
+  useEffect(() => {
+    if (conversation.current) conversation.current.scrollTop = conversation.current.scrollHeight;
+  }, [chats, active]);
+  useEffect(() => {
+    const page = document.querySelector('.release-site.chat-route');
+    const viewport = window.visualViewport;
+    if (!page || !viewport) return;
+    let frame = 0;
+    const update = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        page.style.setProperty('--chat-visual-height', `${viewport.height}px`);
+        page.style.setProperty('--chat-visual-top', `${viewport.offsetTop}px`);
+      });
+    };
+    update();
+    viewport.addEventListener('resize', update);
+    viewport.addEventListener('scroll', update);
+    return () => {
+      cancelAnimationFrame(frame);
+      viewport.removeEventListener('resize', update);
+      viewport.removeEventListener('scroll', update);
+      page.style.removeProperty('--chat-visual-height');
+      page.style.removeProperty('--chat-visual-top');
+    };
+  }, []);
   useEffect(() => {
     const onKey = e => { if (e.key === 'Escape') { if (sidebar) closeSidebar(); setInfo(false); } };
     const onPointer = e => { if (info && modelWrap.current && !modelWrap.current.contains(e.target)) setInfo(false); };
@@ -369,7 +394,8 @@ export default function Chat({ session, initialChatId = '' }) {
     } finally {
       try { await saveChat(workingChat); setHistoryStatus('ready'); }
       catch (saveError) { setHistoryStatus('error'); setCopyNotice(saveError.message); }
-      controller.current = null; setBusy(false); input.current?.focus();
+      controller.current = null; setBusy(false);
+      if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) input.current?.focus();
     }
   }
   async function copyAnswer(answer) {
@@ -410,7 +436,7 @@ export default function Chat({ session, initialChatId = '' }) {
     </aside>
     <section className="c-main">
       <header className="c-header"><div className="c-header-left"><button ref={sidebarToggle} className={`c-icon c-open ${collapsed ? 'c-is-collapsed' : ''}`} aria-label="Open sidebar" aria-expanded={sidebar} aria-controls="chat-navigation" onClick={() => { setCollapsed(false); setSidebar(true); }}><Icon name="panel"/></button><div className="c-model-wrap" ref={modelWrap}><button className="c-model-button" onClick={() => setInfo(!info)} aria-expanded={info} aria-controls="model-information">Brittain 4<Icon name="down"/></button>{info && <div id="model-information" className="c-model-info" role="region" aria-label="Brittain 4 information"><strong>Brittain 4</strong><p>9B dense model</p><dl><div><dt>Web chat</dt><dd>{contextLimit.toLocaleString()} tokens</dd></div><div><dt>Model maximum</dt><dd>262k</dd></div></dl><a href="/models/brittain-4">View model details ↗</a></div>}</div></div><div className="c-header-right"><span className="c-preview">{busy ? 'Responding…' : preview ? 'Connected' : 'Not connected'}</span></div></header>
-      {messages.length === 0 ? <div className="c-start"><div className="c-start-inner"><h1>What can I help with?</h1>{composer}<div className="c-suggestions">{suggestions.map(([icon,label,prompt]) => <button key={icon} onClick={() => { setDraft(prompt); input.current?.focus(); }}><Icon name={icon}/>{label}</button>)}</div></div></div> : <><div className="c-conversation" role="log" aria-label="Conversation"><div className="c-message-column">{messages.map((message, index) => <div className="c-turn" key={message.id}><div className="c-user-message"><AttachmentCards attachments={message.attachments}/><span>{message.prompt}</span></div><div className="c-reply"><BrandLogo/><div className="c-response"><DownloadCards artifacts={message.artifacts}/><ToolActivity message={message}/>{message.answer && <MarkdownReply text={withoutReferenceNotes(message.answer)}/>}{message.error && <p className="c-error" role="alert">{message.error}</p>}{message.status === 'stopped' && <p>Reply stopped.</p>}{message.note && <p>{message.note}</p>}<div className="c-reply-actions">{message.answer && <button onClick={() => copyAnswer(withoutReferenceNotes(message.answer))}>Copy</button>}{!busy && index === messages.length - 1 && <button onClick={e => send(e, true)}>Retry</button>}</div></div></div></div>)}<span className="sr-only" role="status">{copyNotice}</span><div ref={end}/></div></div><div className="c-bottom-composer">{composer}</div></>}
+      {messages.length === 0 ? <div className="c-start"><div className="c-start-inner"><h1>What can I help with?</h1>{composer}<div className="c-suggestions">{suggestions.map(([icon,label,prompt]) => <button key={icon} onClick={() => { setDraft(prompt); input.current?.focus(); }}><Icon name={icon}/>{label}</button>)}</div></div></div> : <><div ref={conversation} className="c-conversation" role="log" aria-label="Conversation"><div className="c-message-column">{messages.map((message, index) => <div className="c-turn" key={message.id}><div className="c-user-message"><AttachmentCards attachments={message.attachments}/><span>{message.prompt}</span></div><div className="c-reply"><BrandLogo/><div className="c-response"><DownloadCards artifacts={message.artifacts}/><ToolActivity message={message}/>{message.answer && <MarkdownReply text={withoutReferenceNotes(message.answer)}/>}{message.error && <p className="c-error" role="alert">{message.error}</p>}{message.status === 'stopped' && <p>Reply stopped.</p>}{message.note && <p>{message.note}</p>}<div className="c-reply-actions">{message.answer && <button onClick={() => copyAnswer(withoutReferenceNotes(message.answer))}>Copy</button>}{!busy && index === messages.length - 1 && <button onClick={e => send(e, true)}>Retry</button>}</div></div></div></div>)}<span className="sr-only" role="status">{copyNotice}</span></div></div><div className="c-bottom-composer">{composer}</div></>}
     </section>
     {(notice || pendingDelete) && <div className="c-toast" role="status"><span>{pendingDelete ? `“${pendingDelete.chat.title}” removed.` : notice}</span>{pendingDelete && <button type="button" onClick={undoDelete}>Undo</button>}</div>}
   </main>;
