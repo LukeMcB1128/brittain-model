@@ -75,7 +75,7 @@ export async function summarizeCompaction(plan, memory, fetchUpstream, upstream,
   for (const transcript of batches) {
     const response = await fetchUpstream(upstream, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'X-Brittain-Surface': 'web-compaction' },
       body: JSON.stringify({
         model,
         messages: [

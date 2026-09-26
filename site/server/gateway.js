@@ -557,7 +557,9 @@ function streamChat(systemMessage, conversation, request, env, fetchUpstream, at
           }
           const response = await fetchUpstream(upstreamUrl, {
             method: 'POST',
-            headers: { Authorization: `Bearer ${env.BRITTAIN4_API_KEY}`, 'Content-Type': 'application/json' },
+            // The recorder in front of vLLM files requests by this label; unlabelled
+            // traffic is Brittain Code.
+            headers: { Authorization: `Bearer ${env.BRITTAIN4_API_KEY}`, 'Content-Type': 'application/json', 'X-Brittain-Surface': 'web-chat' },
             body: JSON.stringify(body),
             signal: AbortSignal.any([requestSignal, AbortSignal.timeout(180000)]),
           });

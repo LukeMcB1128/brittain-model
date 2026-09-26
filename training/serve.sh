@@ -59,11 +59,39 @@ export VLLM_ALLOW_RUNTIME_LORA_UPDATING=1
 # 5. The first --lora-modules entry is production; the rest are rollbacks.
 # Changing the served adapter means changing it here AND DEFAULT_MODEL in
 # site/server/gateway.js, then deploying the site.
-exec vllm serve \
+#
+# Port 11435 belongs to the recorder, not vLLM: it passes every request through
+# to vLLM on 127.0.0.1:11436 and keeps a copy of tunnel traffic in
+# ~/brittain4/records (see scripts/inference/recorder.py). The tunnel, the site,
+# Brittain Code and the eval scripts all keep using 11435. vLLM binds to
+# loopback so nothing can reach it around the recorder. RECORDER=off serves
+# vLLM directly on 11435, as before.
+#
+# The recorder restarts itself if it dies -- it is on the path of every reply --
+# and goes when vLLM does. No `exec` below, or the trap would never run.
+if [ "${RECORDER:-on}" = "off" ]; then
+    VLLM_HOST=0.0.0.0; VLLM_PORT=11435
+else
+    VLLM_HOST=127.0.0.1; VLLM_PORT=11436
+    RECORDER_PY="${RECORDER_PY:-/mnt/c/Coding/brittain-model/scripts/inference/recorder.py}"
+    pkill -f "[r]ecorder.py --port 11435" 2>/dev/null
+    (
+        while true; do
+            python "$RECORDER_PY" --port 11435 --upstream "http://127.0.0.1:$VLLM_PORT" \
+                --records "$HOME/brittain4/records"
+            echo "recorder exited ($?); restarting" >&2
+            sleep 1
+        done
+    ) &
+    RECORDER_LOOP=$!
+    trap 'kill $RECORDER_LOOP 2>/dev/null; pkill -f "[r]ecorder.py --port 11435"' EXIT
+fi
+
+vllm serve \
     --model /home/lukeb/brittain4/models/brittain4-base-w4a16 \
     --served-model-name brittain4 \
-    --host 0.0.0.0 \
-    --port 11435 \
+    --host "$VLLM_HOST" \
+    --port "$VLLM_PORT" \
     --max-model-len 32768 \
     --gpu-memory-utilization 0.90 \
     --max-num-batched-tokens 2048 \

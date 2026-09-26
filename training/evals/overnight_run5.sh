@@ -24,7 +24,7 @@ SERVER_PID=""
 mkdir -p "$RES"
 say() { echo "[$(date '+%H:%M:%S')] $*" | tee -a "$LOG"; }
 
-healthy() { curl -s -m 3 -o /dev/null http://localhost:11435/health; }
+healthy() { curl -sf -m 3 -o /dev/null http://localhost:11435/health; }
 
 register() {  # name, adapter dir
     curl -s -o /dev/null -w "%{http_code}" -m 60 \

@@ -54,6 +54,7 @@ test('validates messages and fixes server-owned model/options', async () => {
   const response = await handleApi(req({ model: 'other', max_tokens: 99999, messages: [{ role: 'user', content: 'Please help with this task.' }] }), env, async (url, options) => {
     assert.equal(url, 'https://api.brittain.app/v1/chat/completions');
     assert.equal(options.headers.Authorization, 'Bearer test-only-secret');
+    assert.equal(options.headers['X-Brittain-Surface'], 'web-chat');
     payload = JSON.parse(options.body);
     return new Response('data: [DONE]\n', { headers: { 'Content-Type': 'text/event-stream' } });
   });
