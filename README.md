@@ -18,7 +18,7 @@ assistants.
 | `brittain2-coder:235m-fim-1k` | 235,180,032 | 1,024 | The base coder continued with fill-in-the-middle training |
 
 The complete release notes and benchmark methodology are in
-[`brittain2-first-models-notes.md`](brittain2-first-models-notes.md).
+[`docs/BRITTAIN2_FIRST_MODELS.md`](docs/BRITTAIN2_FIRST_MODELS.md).
 
 ## Install
 

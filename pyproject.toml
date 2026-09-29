@@ -31,3 +31,9 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pyright]
+include = ["src", "scripts", "tests"]
+exclude = ["checkpoints", "data", "runs"]
+extraPaths = ["src"]
+typeCheckingMode = "basic"

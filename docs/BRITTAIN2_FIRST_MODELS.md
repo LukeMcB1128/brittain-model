@@ -24,7 +24,7 @@ fixtures across every checkpoint, so it remains comparable even when the
 tokenizers are different. The image includes the four new BRITTAIN-2 models and
 BRITTAIN-1 as the baseline.
 
-![BRITTAIN model benchmark comparison](release-assets/image-1.png)
+![BRITTAIN model benchmark comparison](../release-assets/image-1.png)
 
 | Model | Parameters | Context | Code BPB | Prose BPB | HumanEval p@1 | HumanEval p@10 | HumanEval+ p@1 | HumanEval+ p@10 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -166,7 +166,7 @@ them beside the repository when using the `.pt` checkpoints.
 | `brittain2_235m_weights.pt` | `81831f8f6a0aaf8c0a06df4534b9e8a36d04f6855f974fb8d6f6c6d4fe79107e` |
 | `brittain2_235m_fim.pt` | `82810e78c44afa0844dcf81cff37abc434445c264b67fe0b88b074c1896fe4c0` |
 
-Setup and inference commands are in the main [`README.md`](README.md). Frozen
+Setup and inference commands are in the main [`README.md`](../README.md). Frozen
 benchmark outputs are under `benchmarks/results/` so the reported scores do not
 exist only in a screenshot. `release-assets/SHA256SUMS` can be uploaded beside
 the four weights on the GitHub release.
@@ -176,4 +176,4 @@ the four weights on the GitHub release.
 The four BRITTAIN model weights are released under the Apache License 2.0 along
 with the repository code and tokenizer assets. Third-party training datasets are
 not part of the release and keep their own licenses and terms. See
-[`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
+[`LICENSE`](../LICENSE) and [`NOTICE`](../NOTICE).

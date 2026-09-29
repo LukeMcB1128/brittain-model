@@ -16,4 +16,4 @@ files include their architecture and tokenizer metadata. Use
 `scripts/inference/sample.py` for either format; it detects the difference.
 
 SHA-256 hashes are recorded in
-[`brittain2-first-models-notes.md`](../brittain2-first-models-notes.md#downloads-and-checksums).
+[`docs/BRITTAIN2_FIRST_MODELS.md`](../docs/BRITTAIN2_FIRST_MODELS.md#downloads-and-checksums).
