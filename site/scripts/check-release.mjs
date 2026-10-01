@@ -7,7 +7,7 @@ async function get(path) {
   return fetch(`${origin}${path}`, { signal: AbortSignal.timeout(15000), redirect: 'manual' });
 }
 try {
-  for (const path of ['/', '/chat', '/models', '/privacy', '/chat/11111111-1111-4111-8111-111111111111']) {
+  for (const path of ['/', '/chat', '/models', '/about', '/terms', '/privacy', '/chat/11111111-1111-4111-8111-111111111111']) {
     const response = await get(path);
     const html = await response.text();
     check(response.status === 200 && html.includes('id="root"') && !html.includes('signin-with-chatgpt'), `${path} serves the standalone application`);

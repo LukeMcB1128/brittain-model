@@ -32,7 +32,7 @@ Updated 2026-09-22 (America/Chicago).
 
 ## External setup still needed
 
-- Policies: select a support/privacy mailbox, retention periods, and final terms. No contact address or retention promise has been invented.
+- Policies: the site now lists `contact@brittain.app`; set up inbound routing for it (Resend only sends). Retention periods are still undecided, and the plain demo terms at `/terms` need attorney review before the LLC launch.
 - Staging model/email tests: the separate site is live, but chat is paused and model/email credentials are absent. Add test service configuration before testing those flows.
 - Release assets: model files, license, hardware requirements, and evaluation results.
 - Monitoring: health endpoint is available, but external uptime checks and alert recipients are not configured.
